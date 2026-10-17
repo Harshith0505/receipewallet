@@ -16,7 +16,13 @@ Every select, insert, update, and delete is restricted to the authenticated owne
 
 Official references: [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [publishable keys](https://supabase.com/docs/guides/api/api-keys), [email/password auth](https://supabase.com/docs/guides/auth/passwords).
 
-Local recipes remain available before cloud setup. Hosted project creation and live integration checks require a connected Supabase account.
+The hosted **Recipe Wallet** project is live: `vxfifvgnkoaezobuaidv`, region `us-east-1`.
+
+Dashboard: https://supabase.com/dashboard/project/vxfifvgnkoaezobuaidv
+
+Migration `202610170001_recipes.sql` was applied once through SQL Editor on October 17, 2026. Do not rerun it on this project. For a fresh project, follow the setup steps above. SQL Editor application does not register a Supabase CLI migration history entry; reconcile migration history before adopting CLI database pushes against this existing project.
+
+This laptop has the public project URL and publishable key in ignored `supabase.properties`. Each teammate can copy the example and obtain the same public values from the project’s Connect dialog. Database passwords and secret/service-role keys are not needed by Android.
 
 ## Android behavior
 
@@ -32,4 +38,15 @@ From `supabase/tests`, run `npm ci` then `npm test`. PGlite runs the real Postgr
 
 Android `CloudStorageTest` checks encrypted session persistence, account/project cache isolation, token rotation, refresh owner checks, versioned saves, email confirmation and offline sign-out using a fake transport. These tests do not contact Supabase or send email. `RecipeLibraryTest` and `SavedRecipeFlowTest` cover local save/edit and continuation through grocery checkout.
 
-Live hosted sign-in and sync still need verification after configuring a real project. No hosted project is created by these source files.
+Hosted verification passed: the real database save function inserts and updates with version increments; stale versions fail; cross-user reads, updates, deletes and forged-owner inserts are blocked. `tests/hosted-smoke.sql` runs these checks transactionally and rolls back all synthetic users and recipes. The live REST API also rejects anonymous reads and saves with database permission code `42501`.
+
+`LiveSupabaseConnectionTest` is separate from the fake-transport storage tests and is opt-in with instrumentation argument `-e runLiveSupabase true`. It contacts the configured public Auth settings endpoint and checks anonymous recipe access is denied, without creating users or sending email.
+
+A real account’s email confirmation and signed-in tablet-to-cloud recipe sync still require a user-created account for final end-to-end verification. Use Saved recipes → Back up & sync, create/confirm an account, sign in, then explicitly import device recipes.
+
+
+## Current tablet check
+
+The configured build is installed on Samsung SM-T225. Both account-page navigation and recipe save/edit checks pass. The first opt-in live connection attempt failed with `UnknownHostException`; the tablet reported no active default network. Connect it to internet and rerun the opt-in check before claiming tablet-to-cloud connectivity.
+
+For email confirmation, Supabase’s default SMTP service sends only to project organization team addresses and currently limits sending to two emails per hour. Use an organization member’s email for the initial demo account, or configure custom SMTP before inviting other users. Keep email verification enabled. [Supabase SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp).
