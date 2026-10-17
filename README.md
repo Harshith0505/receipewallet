@@ -8,4 +8,6 @@ The native Android project and local Node.js backend live in **[recipe-wallet-an
 
 Example: “Find me a vegetarian noodle dinner under $12. I already have garlic.” Then: “I already have soy sauce too.” Review the changed basket and approve it before entering Stripe test checkout.
 
-Prices, store locations and Visa reward programs are illustrative. Ingredient estimates price portions and exclude tax. No real grocery order, delivery or earned rewards result. The agent has no payment tool; Stripe payment details remain outside the AI conversation.
+Prices, store locations and Visa reward programs are illustrative. Shopping totals use whole packages, explicit fulfillment fees, and a configured 0% demo tax. No real grocery order, delivery or earned rewards result. The agent has no payment tool; Stripe payment details remain outside the AI conversation.
+
+Task 3 grocery planning is integrated in the Android flow. See [tablet setup](recipe-wallet-android/TABLET_SETUP.md) and [planner contract](recipe-wallet-android/GROCERY_PLANNER.md).

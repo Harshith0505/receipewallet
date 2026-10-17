@@ -1,6 +1,9 @@
 package com.recipewallet.app
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -74,7 +77,7 @@ class MainActivity: ComponentActivity() {
      Panel {
       Text(if(vm.agentReply.isBlank()) "Plan my shop" else "Revise your plan",color=Ink,fontWeight=FontWeight.Bold,fontSize=18.sp)
       OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=600) vm.preference=it},label={Text(if(vm.agentReply.isBlank()) "e.g. Vegetarian dinner under $12" else "e.g. I already have garlic too")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=4,enabled=!vm.aiBusy)
-      if(vm.agentReply.isBlank() && !vm.aiBusy) TextButton(onClick={vm.preference="Find me a vegetarian noodle dinner under $12. I already have garlic."}) { Text("Try an example request") }
+      if(vm.agentReply.isBlank() && !vm.aiBusy) TextButton(onClick={vm.preference="Find me a vegetarian noodle dinner under $30. I already have garlic."}) { Text("Try an example request") }
       Primary(if(vm.aiBusy) "Agent is planning your shop…" else if(vm.agentReply.isBlank()) "Plan my shop · AI" else "Update my plan · AI",enabled=!vm.aiBusy&&vm.preference.isNotBlank(),onClick={vm.suggest()})
       if(vm.aiBusy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
       Text("Your request and recent meal preferences are sent to Gemini. No payment details are shared with the AI. Local planning sessions expire after 20 minutes.",color=Muted,fontSize=11.sp)
@@ -94,14 +97,14 @@ class MainActivity: ComponentActivity() {
         Text("Already owned: "+planned.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" },color=Muted,fontSize=13.sp)
         Text("${q.store.name} · ${q.card.name}",color=Ink,fontWeight=FontWeight.Bold)
         Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi · ${q.store.address}",color=Muted,fontSize=12.sp)
-        Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee))
+        Line("Grocery estimate",money(q.groceries)); Line("Fulfillment fees",money(q.fees))
         Line("Amount charged before rewards",money(q.charge),true)
         Line("Estimated future rewards",money(q.rewards))
         Line("Estimated cost after rewards",money(q.net),true)
         Text(q.card.label+". "+q.card.notes,color=Muted,fontSize=12.sp)
         if(!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.",color=Color(0xFF9A3A28),fontWeight=FontWeight.Bold)
-        Text("Correct a preference or pantry item in the revision box above. Estimates price ingredient portions, exclude tax, and do not guarantee dietary or allergy safety.",color=Muted,fontSize=12.sp)
-        Primary("Approve basket and continue  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
+        Text("Correct a preference or pantry item in the revision box above. Package totals are recalculated from your selected servings and shopping preferences. Review the store screen before payment.",color=Muted,fontSize=12.sp)
+        Primary("Review package-priced basket  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
        }
        TextButton(onClick={vm.newPlan()},enabled=!vm.aiBusy) { Text("Start a new shop") }
        DemoNote()
@@ -120,49 +123,71 @@ class MainActivity: ComponentActivity() {
        }
       }
      }
-     Text("All recipes, stores, cards and prices are illustrative demo data. Ingredient prices estimate the portion used, not full retail packages. Tax is excluded from this demo.",color=Muted,fontSize=12.sp)
+     Text("All recipes, stores, cards and prices are illustrative demo data. Manual shopping uses whole packages and a configured 0% demo tax. AI suggestions are recalculated before checkout.",color=Muted,fontSize=12.sp)
     }
     1 -> {
-     Eyebrow("MAKE IT YOURS")
+     Eyebrow("YOUR RECIPE, YOUR SHOPPING LIST")
      Title(vm.recipe.name)
-     Text("Keep what you love. Leave out what you don't.",color=Muted)
+     Text("Unchecked ingredients are already in your pantry. Prices below are for whole packages.",color=Muted)
+     ShoppingControls(vm)
      Panel {
       vm.recipe.ingredients.forEach { i ->
-       Row(Modifier.fillMaxWidth().clickable { vm.toggle(i.id) }.padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically) {
+       Row(Modifier.fillMaxWidth().clickable { vm.toggle(i.id) },verticalAlignment=Alignment.CenterVertically) {
         Checkbox(checked=i.id in vm.selected,onCheckedChange={vm.toggle(i.id)})
-        Column(Modifier.weight(1f)) { Text(i.name,color=Ink,fontWeight=FontWeight.Medium); Text(i.qty,color=Muted,fontSize=12.sp) }
-        Text(money(i.basePrice),color=Ink)
+        Column(Modifier.weight(1f)) {
+         Text(i.name,color=Ink,fontWeight=FontWeight.Bold)
+         Text("${kotlin.math.ceil(i.quantity.toDouble()*vm.servings/vm.recipe.baseServings).toLong()} ${i.unit} needed"+if(i.id !in vm.selected) " · already owned" else "",color=Muted,fontSize=12.sp)
+        }
        }
       }
-      HorizontalDivider(color=Cream)
-      Line("Raw ingredient estimate",money(vm.subtotal),true)
      }
-     if(vm.selected.isEmpty()) Text("Choose at least one ingredient to compare stores.",color=Muted)
-     Primary("Compare stores  →",enabled=vm.selected.isNotEmpty(),onClick={vm.compare()})
+     if(vm.selected.isEmpty()) Text("Your pantry covers this recipe. No grocery purchase is needed.",color=Ink)
+     if(vm.rankings.none { it.complete }) Text("No store can supply this selection. Review your organic preference or fulfillment choice.",color=Color(0xFF9A3A28))
+     Primary("Compare complete baskets →",enabled=vm.selected.isNotEmpty()&&vm.rankings.any { it.complete },onClick={vm.compare()})
      DemoNote()
     }
     2 -> {
-     Eyebrow("A LITTLE COMPARISON GOES A LONG WAY")
-     Title("Your basket.\nIts best price.")
-     Text("Ranked only by estimated cost after rewards. Each store is paired with its best sample Visa card.",color=Muted)
+     Eyebrow("WHOLE PACKAGES · CLEAR TOTALS")
+     Title("Your meal.\nYour best store.")
+     Text("Complete baskets ranked by today's payable total. Ratings describe stores, not ingredient quality.",color=Muted)
+     ShoppingControls(vm)
      vm.rankings.forEachIndexed { index,q ->
       Panel {
-       if(index==0) Tag("LOWEST ESTIMATED COST",Lime)
-       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(q.store.name,fontSize=20.sp,color=Ink,fontWeight=FontWeight.Bold); Text("#${index+1}",color=Muted) }
-       Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi",color=Muted,fontSize=13.sp)
+       if(index==0&&q.complete) Tag("LOWEST UPFRONT TOTAL",Lime)
+       Text(q.store.name,fontSize=22.sp,color=Ink,fontWeight=FontWeight.Bold)
        Text(q.store.address,color=Muted,fontSize=12.sp)
-       Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee)); Line("Rewards · ${q.card.name}","−${money(q.rewards)}")
-       HorizontalDivider(color=Cream)
-       Line("Estimated cost after rewards",money(q.net),true)
-       Text("Demo prices & estimates",color=Muted,fontSize=11.sp)
-       Primary(if(index==0) "Continue with this store  →" else "Choose this store",onClick={vm.checkout(q.store.id)})
+       if(!q.complete) {
+        Text("Unavailable: "+q.missing.joinToString(),color=Color(0xFF9A3A28))
+        Text("Partial baskets cannot be checked out.",color=Muted)
+       } else {
+        q.items.forEach { line ->
+         Line("${line.name} · ${line.packages} × ${line.product.packageQuantity} ${line.unit}",money(line.cost))
+         Text("Need ${line.quantity} ${line.unit} · buy ${line.packages*line.product.packageQuantity} ${line.unit}"+if("organic" in line.product.tags) " · organic" else "",fontSize=11.sp,color=Muted)
+        }
+        HorizontalDivider()
+        Line("Whole-package groceries",money(q.groceries))
+        Line(if(vm.fulfillment=="pickup") "Pickup fee" else "Delivery + service fees",money(q.fees))
+        Line("Demo tax (0%)",money(q.tax))
+        Line("Pay today",money(q.charge),true)
+        Line("Estimated future rewards",money(q.rewards))
+        Text("${q.card.name} · ${q.card.label}",fontSize=12.sp,color=Muted)
+        Primary("Review checkout →",onClick={vm.checkout(q.store.id)})
+       }
+       val context=LocalContext.current
+       OutlinedButton(onClick={
+        val uri=Uri.parse("https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(q.store.address)+"&travelmode=walking")
+        try { context.startActivity(Intent(Intent.ACTION_VIEW,uri)) } catch (_:Exception) { vm.error="No browser or maps app is available" }
+       }) { Text("Walking directions · Google Maps") }
+       Text("Real store location. Product prices, availability and fulfillment are simulated; no retailer integration.",color=Muted,fontSize=11.sp)
       }
      }
+     vm.error?.let { Text(it,color=Color(0xFF9A3A28)) }
     }
     3 -> {
      Eyebrow("MAKE YOUR CARD WORK HARDER")
      Title("The finishing touch.")
-     Text("${vm.current.store.name} · ${vm.recipe.name}",color=Muted)
+     Text("${vm.current.store.name} · ${vm.recipe.name} · ${vm.servings} servings · ${vm.fulfillment}",color=Muted)
+     vm.current.items.forEach { Line("${it.name} · ${it.packages} package(s)",money(it.cost)) }
      DemoNote()
      val best=vm.catalog.cards.maxBy { it.rewards(vm.current.groceries) }
      vm.catalog.cards.forEach { card ->
@@ -175,8 +200,8 @@ class MainActivity: ComponentActivity() {
       }
      }
      Panel {
-      Line("Grocery estimate",money(vm.current.groceries)); Line("Delivery estimate",money(vm.current.store.deliveryFee))
-      Line("Test payment amount",money(vm.current.charge),true)
+      Line("Grocery estimate",money(vm.current.groceries)); Line("Fulfillment fees",money(vm.current.fees))
+      Line("Demo tax (0%)",money(vm.current.tax)); Line("Test payment amount",money(vm.current.charge),true)
       Line("Estimated future rewards","−${money(vm.current.rewards)}")
       HorizontalDivider(color=Cream)
       Line("Estimated cost after rewards",money(vm.current.net),true)
@@ -184,7 +209,7 @@ class MainActivity: ComponentActivity() {
      }
      vm.error?.let { Text(it,color=Color(0xFF9A3A28),modifier=Modifier.background(Color(0xFFFFECE4),RoundedCornerShape(12.dp)).padding(14.dp)) }
      if(vm.busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-     Primary(if(vm.busy) "Processing…" else "Pay ${money(vm.current.charge)} · Stripe test",enabled=!vm.busy,onClick=pay)
+     Primary(if(vm.busy) "Processing…" else "Pay ${money(vm.current.charge)} · Stripe test",enabled=!vm.busy&&vm.current.complete,onClick=pay)
      if(vm.canVerify) OutlinedButton(onClick={vm.verify()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Verify pending test payment") }
      TextButton(onClick={vm.walkthrough()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Preview confirmation without payment") }
     }
@@ -217,3 +242,22 @@ class MainActivity: ComponentActivity() {
 @Composable private fun Line(label: String,value: String,bold: Boolean=false) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) { Text(label,color=if(bold) Ink else Muted,fontSize=13.sp,fontWeight=if(bold) FontWeight.Bold else FontWeight.Normal,modifier=Modifier.weight(1f).padding(end=12.dp)); Text(value,color=Ink,fontSize=if(bold) 19.sp else 14.sp,fontWeight=if(bold) FontWeight.Bold else FontWeight.Normal) } }
 @Composable private fun Primary(text: String,enabled: Boolean=true,onClick: ()->Unit) { Button(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) { Text(text,fontWeight=FontWeight.Bold) } }
 @Composable private fun DemoNote() { Text("SIMULATED CHECKOUT · No real grocery order is placed. Prices, fees and rewards are demo estimates. No actual rewards are earned.",fontSize=12.sp,color=Ink,modifier=Modifier.fillMaxWidth().background(Color(0xFFE9EDDC),RoundedCornerShape(12.dp)).padding(15.dp)) }
+
+@Composable private fun ShoppingControls(vm:WalletViewModel) {
+ Panel {
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+   OutlinedButton(onClick={vm.servings--;vm.settingsChanged()},enabled=vm.servings>1) { Text("−") }
+   Text("${vm.servings} servings",fontWeight=FontWeight.Bold,color=Ink)
+   OutlinedButton(onClick={vm.servings++;vm.settingsChanged()},enabled=vm.servings<12) { Text("+") }
+  }
+  Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+   FilterChip(selected=vm.fulfillment=="pickup",onClick={vm.fulfillment="pickup";vm.settingsChanged()},label={Text("Pick up")})
+   FilterChip(selected=vm.fulfillment=="delivery",onClick={vm.fulfillment="delivery";vm.settingsChanged()},label={Text("Delivery")})
+  }
+  Row(verticalAlignment=Alignment.CenterVertically) {
+   Switch(checked=vm.organicOnly,onCheckedChange={vm.organicOnly=it;vm.settingsChanged()})
+   Text("Organic products only",modifier=Modifier.padding(start=12.dp),color=Ink)
+  }
+  Text("Organic is an explicit demo product attribute. No quality is inferred from store rating.",fontSize=11.sp,color=Muted)
+ }
+}

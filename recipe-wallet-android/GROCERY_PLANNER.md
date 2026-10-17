@@ -1,89 +1,70 @@
-# Grocery planner: package-pricing foundation
+# Task 3: grocery planner
 
-This is Person 3's first slice: price the packages that must actually be bought,
-subtract pantry quantities, and compare complete grocery baskets across stores.
-The three new pasta offers are fictional demo data, mirrored in the Android asset.
+The Android manual flow, AI basket comparison, and server payment calculation now
+use whole-package product offers. All 16 unique recipe ingredients have offers at
+three demo stores. Quantities are curated for two servings and scale to 1–12.
 
-The planner is available now through a separate backend endpoint. The Android
-screens, AI planner, reward calculator, and Stripe checkout still use the existing
-portion-price flow. Do not send a new grocery quote to the old payment flow: its
-amount is calculated using the legacy catalog. Wiring the full recipe catalog and
-approved checkout amount together is the next integration step.
+## What to try on the tablet
 
-## Try it
+1. Choose Tomato basil pasta. Adjust servings and uncheck olive oil to mark it as
+   already owned. Compare the package counts and leftover quantities.
+2. Switch pickup to delivery. Fees are included in today's total. The Trader
+   Joe's demo option disables delivery and cannot be checked out.
+3. Enable organic-only. The QFC demo has organic basil out of stock; it appears
+   unavailable rather than silently substituting conventional basil. Another
+   complete store remains selectable.
+4. Open walking directions. The app launches Google Maps at the chosen address.
+5. Review package line items and today's charge. Future rewards are separate.
+   Preview the confirmation without keys, or use Stripe test checkout with the
+   local backend. No grocery order or delivery is actually submitted.
 
-From `recipe-wallet-android/backend`, run `npm start`. No Gemini or Stripe key is
-needed for grocery quotes. In another terminal:
+Real locations used for directions:
+- [QFC University Village](https://www.qfc.com/stores/grocery/wa/seattle/university-village/705/00807)
+- [Trader Joe's U District](https://locations.traderjoes.com/wa/seattle/)
+- [Whole Foods Roosevelt Square](https://www.wholefoodsmarket.com/stores/rooseveltsquare)
 
-```bash
-curl http://127.0.0.1:4242/grocery-quotes \
-  -H 'Content-Type: application/json' \
-  -d '{"requirements":[{"ingredientId":"pasta","quantity":600,"pantryQuantity":100,"unit":"g"}]}'
-```
+Prices, stock, product attributes, ratings, fees, and fulfillment options are
+fictional demo data, not quotes or integrations with those retailers. The configured
+0% demo tax is displayed explicitly; it does not determine real tax liability.
 
-For this example the recipe needs 600 g and the shopper owns 100 g:
+## API contracts
 
-| Store ID | Product package | Packages to buy | Grocery subtotal |
-| --- | --- | --- | --- |
-| market | 500 g for $3.49 | 1 | $3.49 |
-| fresh | 250 g for $2.09 | 2 | $4.18 |
-| pantry | 1,000 g for $5.99 | 1 | $5.99 |
-
-With `pantryQuantity: 0`, the quotes are market $6.98, fresh $6.27, and pantry
-$5.99. The cheapest store changes because the shopper buys whole packages.
-
-## Input contract
+`POST /grocery-quotes` accepts normalized requirements:
 
 ```json
-{
-  "requirements": [
-    {"ingredientId": "pasta", "quantity": 600, "pantryQuantity": 100, "unit": "g"}
-  ],
-  "storeIds": ["market", "fresh", "pantry"]
-}
+{"requirements":[{"ingredientId":"pasta","quantity":600,"pantryQuantity":100,"unit":"g"}],"fulfillment":"pickup","organicOnly":false}
 ```
 
-- `storeIds` is optional; omitting it compares all demo stores.
-- Requirements must have unique ingredient IDs and non-negative integer
-  quantities in `g`, `ml`, or `each`. `pantryQuantity` defaults to zero.
-- The caller normalizes recipe quantities before calling. The planner does not
-  parse display text such as `8 oz`, infer densities, or convert cups to grams.
-- Product prices, package sizes, and stock come from the server's `productOffers`
-  catalog. Client-supplied prices and totals cannot change the calculation.
-- Each product offer has `id`, `ingredientId`, `storeId`, `packageQuantity`, `unit`,
-  `priceCents`, `stockPackages`, and descriptive `tags`.
+Optional `storeIds` selects stores. Units are integer `g`, `ml`, or `each`; the
+caller converts other display units. The planner does not guess ingredient
+ densities. Duplicate requirements and invalid quantities are rejected.
 
-## Output contract
+Each quote returns items, package counts, purchased quantities, prices in cents,
+missing ingredients and completeness. With a fulfillment choice it also returns
+fees, configured tax, availability and payable total. Without fulfillment, the
+response remains groceries-only for compatibility. Incomplete grocery baskets have
+null subtotals; fulfillment-unavailable baskets have null payable totals. Complete
+baskets rank first by payable total (or grocery subtotal for groceries-only calls).
 
-The response has `demo: true`, `currency: "usd"`, `pricingScope: "groceries-only"`,
-and `quotes`. Each quote contains:
+For each ingredient the planner selects a sufficient single-SKU offer, preferring
+lowest package cost, least overbuy, then product ID. Mixing pack sizes, multi-store
+optimization, live stock reservation and real delivery dispatch are outside this
+single-store prototype.
 
-- `storeId`, `complete`, and `grocerySubtotalCents`.
-- `items`: product ID, required/pantry/purchased quantities, packages needed,
-  package price, line price, unit, and tags.
-- `missingIngredients`: quantity still needed and a reason of `not-stocked`,
-  `insufficient-stock`, or `unit-mismatch`.
+`POST /payment-intent` requires `pricingVersion: "packages-v1"`, recipeId,
+ingredientIds, storeId, cardId, servings, fulfillment, organicOnly, and attempt.
+The server recalculates from its own catalog and rejects incomplete baskets. The
+Android client checks that amount before opening PaymentSheet. Legacy price math
+remains only for compatibility tests, not the current payment endpoint.
 
-An incomplete basket has a **null subtotal**, not a misleading partial total.
-Complete baskets sort first by grocery subtotal, then store ID. Fully pantry-owned
-ingredients require no product purchase, even when a store does not stock them.
-For each ingredient the first version picks the cheapest sufficient single-SKU
-offer, breaking ties by least overbuy and then product ID. It does not mix package
-sizes for the same ingredient.
+The AI defaults to a two-serving pickup basket; manual controls adjust the approved
+shopping plan. Person 4 can extend the existing illustrative reward profiles without
+changing the grocery subtotal. Person 2 can extend intent parsing using these
+structured inputs. Keep Android and backend demo catalogs identical.
 
-This endpoint does not reserve inventory or place an order. Stock is a demo
-snapshot. Fees, taxes, fulfillment options, quality filtering, substitutions,
-rewards, and route planning are subsequent work; none are silently included in
-the grocery subtotal. Tags describe fictional products, not inferred quality.
+## Verification
 
-## Team handoff
-
-- Person 1 can consume `/grocery-quotes` for package counts and store comparisons.
-- Person 2 supplies explicit quantities after servings and pantry adjustments.
-  Missing ingredients must be resolved or reviewed, never silently omitted.
-- Person 4 adds applicable fees/taxes and rewards after the grocery quote is
-  selected, with server recalculation before payment.
-- Keep `backend/demo.json` and `app/src/main/assets/demo.json` identical.
-
-Run `npm test` in `backend` for package, pantry, stock, validation, catalog parity,
-HTTP-contract checks, and the existing AI and payment-calculation regressions.
+Run `npm test` in `backend`. `generate-grocery-parity.mjs` regenerates the shared
+288-scenario matrix when catalog data changes. Android JVM tests read the same
+catalog and matrix to compare its calculator with server totals. Run
+`./gradlew :app:testDebugUnitTest :app:assembleDebug` with JDK 17 and SDK 36.

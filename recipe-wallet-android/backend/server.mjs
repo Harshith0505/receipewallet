@@ -33,9 +33,10 @@ export async function handleRequest(req,res) {
    try { return send(200,await recommend(input.preference)); } catch(e) { return send(503,{error:e.message}); }
   }
   if(req.url==='/payment-intent') {
+   if(input.pricingVersion!=='packages-v1') return send(400,{error:'Update the app to use whole-package checkout.'});
    let q;try {q=calculate(input);} catch(e){return send(400,{error:e.message});}
    if(typeof input.attempt!=='string'||!/^[a-f0-9-]{36}$/.test(input.attempt)) return send(400,{error:'Invalid payment attempt'});
-   const form=new URLSearchParams({amount:String(q.amount),currency:'usd','payment_method_types[]':'card',description:'Recipe Wallet TEST — no grocery order','metadata[application]':'recipe-wallet-demo','metadata[recipe]':input.recipeId,'metadata[store]':input.storeId,'metadata[advisoryCard]':input.cardId,'metadata[estimatedRewards]':String(q.rewards)});
+   const form=new URLSearchParams({amount:String(q.amount),currency:'usd','payment_method_types[]':'card',description:'Recipe Wallet TEST — no grocery order','metadata[application]':'recipe-wallet-demo','metadata[recipe]':input.recipeId,'metadata[store]':input.storeId,'metadata[advisoryCard]':input.cardId,'metadata[estimatedRewards]':String(q.rewards),'metadata[pricingVersion]':'packages-v1','metadata[fulfillment]':input.fulfillment||'pickup'});
    const intent=await stripe('payment_intents',form,`recipe-wallet-${input.attempt}`);
    return send(200,{clientSecret:intent.client_secret,paymentIntentId:intent.id,publishableKey,amount:q.amount});
   }

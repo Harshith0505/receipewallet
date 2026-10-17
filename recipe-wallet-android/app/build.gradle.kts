@@ -6,11 +6,12 @@ android {
   applicationId = "com.recipewallet.app"
   minSdk = 26
   targetSdk = 36
-  versionCode = 1
-  versionName = "1.1"
+  versionCode = 2
+  versionName = "1.2-task3"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-  buildConfigField("String", "BACKEND_URL", "\"${providers.gradleProperty("BACKEND_URL").getOrElse("http://10.0.2.2:4242")}\"")
+  buildConfigField("String", "BACKEND_URL", "\"${providers.gradleProperty("BACKEND_URL").getOrElse("http://127.0.0.1:4242")}\"")
  }
+ sourceSets.getByName("test").resources.srcDir("src/main/assets")
  buildFeatures { compose = true; buildConfig = true }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
 }
@@ -26,6 +27,7 @@ dependencies {
  implementation("com.stripe:stripe-android:23.23.0")
  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
  testImplementation("junit:junit:4.13.2")
+ testImplementation("org.json:json:20250517")
  androidTestImplementation(platform("androidx.compose:compose-bom:2025.08.00"))
  androidTestImplementation("androidx.compose.ui:ui-test-junit4")
  androidTestImplementation("androidx.test:runner:1.6.2")

@@ -55,7 +55,7 @@ function quoteStore(requirements, storeId, offers) {
 
     const matches = offers.filter(offer => offer.storeId === storeId && offer.ingredientId === requirement.ingredientId);
     const matchingUnits = matches.filter(offer => offer.unit === requirement.unit);
-    const candidates = matchingUnits.map(offer => {
+    const candidates = matchingUnits.filter(offer => !requirement.organicOnly || offer.tags.includes('organic')).map(offer => {
       // Keep ceiling division exact even at the supported safe-integer boundary.
       const packagesNeeded = Number((BigInt(quantityToBuy) + BigInt(offer.packageQuantity) - 1n) / BigInt(offer.packageQuantity));
       if (packagesNeeded > offer.stockPackages) return null;
@@ -85,7 +85,7 @@ function quoteStore(requirements, storeId, offers) {
         ingredientId: requirement.ingredientId,
         quantityToBuy,
         unit: requirement.unit,
-        reason: !matches.length ? 'not-stocked' : !matchingUnits.length ? 'unit-mismatch' : 'insufficient-stock'
+        reason: !matches.length ? 'not-stocked' : !matchingUnits.length ? 'unit-mismatch' : requirement.organicOnly && !matchingUnits.some(o => o.tags.includes('organic')) ? 'preference-unavailable' : 'insufficient-stock'
       });
       continue;
     }
@@ -114,8 +114,30 @@ export function planGroceries(input, catalog) {
       storeIds.some(id => !catalog.stores.some(store => store.id === id))) {
     throw new Error('Choose valid, unique store IDs');
   }
-  const quotes = storeIds.map(id => quoteStore(input.requirements, id, catalog.productOffers));
+  if (input.organicOnly !== undefined && typeof input.organicOnly !== 'boolean') throw new Error('organicOnly must be boolean');
+  if (input.fulfillment !== undefined && !['pickup', 'delivery'].includes(input.fulfillment)) throw new Error('Choose pickup or delivery');
+  const requirements = input.requirements.map(r => ({...r, organicOnly: input.organicOnly === true}));
+  const quotes = storeIds.map(id => {
+    const q = quoteStore(requirements, id, catalog.productOffers);
+    if (!input.fulfillment) return q;
+    const store = catalog.stores.find(s => s.id === id);
+    const available = input.fulfillment !== 'delivery' || store.deliveryEnabled;
+    const feesCents = input.fulfillment === 'delivery' ? store.packageDeliveryFee + store.serviceFee : store.pickupFee;
+    const taxCents = q.complete ? Math.round(q.grocerySubtotalCents * store.taxBps / 10000) : null;
+    return {...q, storeName: store.name, fulfillment: input.fulfillment, fulfillmentAvailable: available,
+      complete: q.complete && available, feesCents, taxCents,
+      payableCents: q.complete && available ? q.grocerySubtotalCents + feesCents + taxCents : null};
+  });
   quotes.sort((a, b) => Number(b.complete) - Number(a.complete) ||
-    (a.complete ? a.grocerySubtotalCents - b.grocerySubtotalCents : 0) || a.storeId.localeCompare(b.storeId));
-  return {demo: true, currency: 'usd', pricingScope: 'groceries-only', quotes};
+    (a.complete ? (a.payableCents ?? a.grocerySubtotalCents) - (b.payableCents ?? b.grocerySubtotalCents) : 0) || a.storeId.localeCompare(b.storeId));
+  return {demo: true, currency: 'usd', pricingScope: input.fulfillment ? 'checkout-total' : 'groceries-only', quotes};
+}
+
+export function recipeGroceries(input, catalog) {
+  const recipe = catalog.recipes.find(r => r.id === input.recipeId);
+  if (!recipe) throw new Error('Unknown recipe');
+  const servings = input.servings ?? recipe.baseServings;
+  if (!Number.isInteger(servings) || servings < 1 || servings > 12) throw new Error('Choose 1–12 servings');
+  if (!Array.isArray(input.ingredientIds) || !input.ingredientIds.length || new Set(input.ingredientIds).size !== input.ingredientIds.length || input.ingredientIds.some(id => !recipe.ingredients.some(i => i.id === id))) throw new Error('Choose valid, unique ingredients');
+  return planGroceries({requirements: recipe.ingredients.filter(i => input.ingredientIds.includes(i.id)).map(i => ({ingredientId:i.id, unit:i.unit, quantity:Math.ceil(i.quantity*servings/recipe.baseServings)})), storeIds:[input.storeId], fulfillment:input.fulfillment ?? 'pickup', organicOnly:input.organicOnly ?? false}, catalog).quotes[0];
 }

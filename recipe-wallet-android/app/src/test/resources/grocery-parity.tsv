@@ -1,0 +1,289 @@
+recipe	store	servings	fulfillment	organic	pantryId	complete	groceries	fees	amount
+noodles	market	1	pickup	false		true	1743	0	1743
+noodles	market	1	pickup	false	noodles	true	1415	0	1415
+noodles	market	1	pickup	true		true	2343	0	2343
+noodles	market	1	pickup	true	noodles	true	1915	0	1915
+noodles	market	1	delivery	false		true	1743	498	2241
+noodles	market	1	delivery	false	noodles	true	1415	498	1913
+noodles	market	1	delivery	true		true	2343	498	2841
+noodles	market	1	delivery	true	noodles	true	1915	498	2413
+noodles	market	2	pickup	false		true	1743	0	1743
+noodles	market	2	pickup	false	noodles	true	1415	0	1415
+noodles	market	2	pickup	true		true	2343	0	2343
+noodles	market	2	pickup	true	noodles	true	1915	0	1915
+noodles	market	2	delivery	false		true	1743	498	2241
+noodles	market	2	delivery	false	noodles	true	1415	498	1913
+noodles	market	2	delivery	true		true	2343	498	2841
+noodles	market	2	delivery	true	noodles	true	1915	498	2413
+noodles	market	4	pickup	false		true	2003	0	2003
+noodles	market	4	pickup	false	noodles	true	1675	0	1675
+noodles	market	4	pickup	true		true	2803	0	2803
+noodles	market	4	pickup	true	noodles	true	2375	0	2375
+noodles	market	4	delivery	false		true	2003	498	2501
+noodles	market	4	delivery	false	noodles	true	1675	498	2173
+noodles	market	4	delivery	true		true	2803	498	3301
+noodles	market	4	delivery	true	noodles	true	2375	498	2873
+noodles	market	12	pickup	false		true	3699	0	3699
+noodles	market	12	pickup	false	noodles	true	2715	0	2715
+noodles	market	12	pickup	true		true	5499	0	5499
+noodles	market	12	pickup	true	noodles	true	4215	0	4215
+noodles	market	12	delivery	false		true	3699	498	4197
+noodles	market	12	delivery	false	noodles	true	2715	498	3213
+noodles	market	12	delivery	true		true	5499	498	5997
+noodles	market	12	delivery	true	noodles	true	4215	498	4713
+noodles	fresh	1	pickup	false		true	1697	0	1697
+noodles	fresh	1	pickup	false	noodles	true	1401	0	1401
+noodles	fresh	1	pickup	true		true	2297	0	2297
+noodles	fresh	1	pickup	true	noodles	true	1901	0	1901
+noodles	fresh	1	delivery	false		false	0	0	0
+noodles	fresh	1	delivery	false	noodles	false	0	0	0
+noodles	fresh	1	delivery	true		false	0	0	0
+noodles	fresh	1	delivery	true	noodles	false	0	0	0
+noodles	fresh	2	pickup	false		true	1697	0	1697
+noodles	fresh	2	pickup	false	noodles	true	1401	0	1401
+noodles	fresh	2	pickup	true		true	2297	0	2297
+noodles	fresh	2	pickup	true	noodles	true	1901	0	1901
+noodles	fresh	2	delivery	false		false	0	0	0
+noodles	fresh	2	delivery	false	noodles	false	0	0	0
+noodles	fresh	2	delivery	true		false	0	0	0
+noodles	fresh	2	delivery	true	noodles	false	0	0	0
+noodles	fresh	4	pickup	false		true	1961	0	1961
+noodles	fresh	4	pickup	false	noodles	true	1665	0	1665
+noodles	fresh	4	pickup	true		true	2761	0	2761
+noodles	fresh	4	pickup	true	noodles	true	2365	0	2365
+noodles	fresh	4	delivery	false		false	0	0	0
+noodles	fresh	4	delivery	false	noodles	false	0	0	0
+noodles	fresh	4	delivery	true		false	0	0	0
+noodles	fresh	4	delivery	true	noodles	false	0	0	0
+noodles	fresh	12	pickup	false		true	3609	0	3609
+noodles	fresh	12	pickup	false	noodles	true	2721	0	2721
+noodles	fresh	12	pickup	true		true	5409	0	5409
+noodles	fresh	12	pickup	true	noodles	true	4221	0	4221
+noodles	fresh	12	delivery	false		false	0	0	0
+noodles	fresh	12	delivery	false	noodles	false	0	0	0
+noodles	fresh	12	delivery	true		false	0	0	0
+noodles	fresh	12	delivery	true	noodles	false	0	0	0
+noodles	pantry	1	pickup	false		true	1918	0	1918
+noodles	pantry	1	pickup	false	noodles	true	1579	0	1579
+noodles	pantry	1	pickup	true		true	2518	0	2518
+noodles	pantry	1	pickup	true	noodles	true	2079	0	2079
+noodles	pantry	1	delivery	false		true	1918	448	2366
+noodles	pantry	1	delivery	false	noodles	true	1579	448	2027
+noodles	pantry	1	delivery	true		true	2518	448	2966
+noodles	pantry	1	delivery	true	noodles	true	2079	448	2527
+noodles	pantry	2	pickup	false		true	1918	0	1918
+noodles	pantry	2	pickup	false	noodles	true	1579	0	1579
+noodles	pantry	2	pickup	true		true	2518	0	2518
+noodles	pantry	2	pickup	true	noodles	true	2079	0	2079
+noodles	pantry	2	delivery	false		true	1918	448	2366
+noodles	pantry	2	delivery	false	noodles	true	1579	448	2027
+noodles	pantry	2	delivery	true		true	2518	448	2966
+noodles	pantry	2	delivery	true	noodles	true	2079	448	2527
+noodles	pantry	4	pickup	false		true	2194	0	2194
+noodles	pantry	4	pickup	false	noodles	true	1855	0	1855
+noodles	pantry	4	pickup	true		true	2994	0	2994
+noodles	pantry	4	pickup	true	noodles	true	2555	0	2555
+noodles	pantry	4	delivery	false		true	2194	448	2642
+noodles	pantry	4	delivery	false	noodles	true	1855	448	2303
+noodles	pantry	4	delivery	true		true	2994	448	3442
+noodles	pantry	4	delivery	true	noodles	true	2555	448	3003
+noodles	pantry	12	pickup	false		true	3976	0	3976
+noodles	pantry	12	pickup	false	noodles	true	2959	0	2959
+noodles	pantry	12	pickup	true		true	5776	0	5776
+noodles	pantry	12	pickup	true	noodles	true	4459	0	4459
+noodles	pantry	12	delivery	false		true	3976	448	4424
+noodles	pantry	12	delivery	false	noodles	true	2959	448	3407
+noodles	pantry	12	delivery	true		true	5776	448	6224
+noodles	pantry	12	delivery	true	noodles	true	4459	448	4907
+bowl	market	1	pickup	false		true	1194	0	1194
+bowl	market	1	pickup	false	rice	true	772	0	772
+bowl	market	1	pickup	true		true	1694	0	1694
+bowl	market	1	pickup	true	rice	true	1172	0	1172
+bowl	market	1	delivery	false		true	1194	498	1692
+bowl	market	1	delivery	false	rice	true	772	498	1270
+bowl	market	1	delivery	true		true	1694	498	2192
+bowl	market	1	delivery	true	rice	true	1172	498	1670
+bowl	market	2	pickup	false		true	1194	0	1194
+bowl	market	2	pickup	false	rice	true	772	0	772
+bowl	market	2	pickup	true		true	1694	0	1694
+bowl	market	2	pickup	true	rice	true	1172	0	1172
+bowl	market	2	delivery	false		true	1194	498	1692
+bowl	market	2	delivery	false	rice	true	772	498	1270
+bowl	market	2	delivery	true		true	1694	498	2192
+bowl	market	2	delivery	true	rice	true	1172	498	1670
+bowl	market	4	pickup	false		true	1966	0	1966
+bowl	market	4	pickup	false	rice	true	1544	0	1544
+bowl	market	4	pickup	true		true	2866	0	2866
+bowl	market	4	pickup	true	rice	true	2344	0	2344
+bowl	market	4	delivery	false		true	1966	498	2464
+bowl	market	4	delivery	false	rice	true	1544	498	2042
+bowl	market	4	delivery	true		true	2866	498	3364
+bowl	market	4	delivery	true	rice	true	2344	498	2842
+bowl	market	12	pickup	false		true	5165	0	5165
+bowl	market	12	pickup	false	rice	true	4321	0	4321
+bowl	market	12	pickup	true		true	7665	0	7665
+bowl	market	12	pickup	true	rice	true	6621	0	6621
+bowl	market	12	delivery	false		true	5165	498	5663
+bowl	market	12	delivery	false	rice	true	4321	498	4819
+bowl	market	12	delivery	true		true	7665	498	8163
+bowl	market	12	delivery	true	rice	true	6621	498	7119
+bowl	fresh	1	pickup	false		true	1148	0	1148
+bowl	fresh	1	pickup	false	rice	true	764	0	764
+bowl	fresh	1	pickup	true		true	1648	0	1648
+bowl	fresh	1	pickup	true	rice	true	1164	0	1164
+bowl	fresh	1	delivery	false		false	0	0	0
+bowl	fresh	1	delivery	false	rice	false	0	0	0
+bowl	fresh	1	delivery	true		false	0	0	0
+bowl	fresh	1	delivery	true	rice	false	0	0	0
+bowl	fresh	2	pickup	false		true	1148	0	1148
+bowl	fresh	2	pickup	false	rice	true	764	0	764
+bowl	fresh	2	pickup	true		true	1648	0	1648
+bowl	fresh	2	pickup	true	rice	true	1164	0	1164
+bowl	fresh	2	delivery	false		false	0	0	0
+bowl	fresh	2	delivery	false	rice	false	0	0	0
+bowl	fresh	2	delivery	true		false	0	0	0
+bowl	fresh	2	delivery	true	rice	false	0	0	0
+bowl	fresh	4	pickup	false		true	1912	0	1912
+bowl	fresh	4	pickup	false	rice	true	1528	0	1528
+bowl	fresh	4	pickup	true		true	2812	0	2812
+bowl	fresh	4	pickup	true	rice	true	2328	0	2328
+bowl	fresh	4	delivery	false		false	0	0	0
+bowl	fresh	4	delivery	false	rice	false	0	0	0
+bowl	fresh	4	delivery	true		false	0	0	0
+bowl	fresh	4	delivery	true	rice	false	0	0	0
+bowl	fresh	12	pickup	false		true	5028	0	5028
+bowl	fresh	12	pickup	false	rice	true	4260	0	4260
+bowl	fresh	12	pickup	true		true	7528	0	7528
+bowl	fresh	12	pickup	true	rice	true	6560	0	6560
+bowl	fresh	12	delivery	false		false	0	0	0
+bowl	fresh	12	delivery	false	rice	false	0	0	0
+bowl	fresh	12	delivery	true		false	0	0	0
+bowl	fresh	12	delivery	true	rice	false	0	0	0
+bowl	pantry	1	pickup	false		true	1376	0	1376
+bowl	pantry	1	pickup	false	rice	true	885	0	885
+bowl	pantry	1	pickup	true		true	1876	0	1876
+bowl	pantry	1	pickup	true	rice	true	1285	0	1285
+bowl	pantry	1	delivery	false		true	1376	448	1824
+bowl	pantry	1	delivery	false	rice	true	885	448	1333
+bowl	pantry	1	delivery	true		true	1876	448	2324
+bowl	pantry	1	delivery	true	rice	true	1285	448	1733
+bowl	pantry	2	pickup	false		true	1376	0	1376
+bowl	pantry	2	pickup	false	rice	true	885	0	885
+bowl	pantry	2	pickup	true		true	1876	0	1876
+bowl	pantry	2	pickup	true	rice	true	1285	0	1285
+bowl	pantry	2	delivery	false		true	1376	448	1824
+bowl	pantry	2	delivery	false	rice	true	885	448	1333
+bowl	pantry	2	delivery	true		true	1876	448	2324
+bowl	pantry	2	delivery	true	rice	true	1285	448	1733
+bowl	pantry	4	pickup	false		true	2261	0	2261
+bowl	pantry	4	pickup	false	rice	true	1770	0	1770
+bowl	pantry	4	pickup	true		true	3161	0	3161
+bowl	pantry	4	pickup	true	rice	true	2570	0	2570
+bowl	pantry	4	delivery	false		true	2261	448	2709
+bowl	pantry	4	delivery	false	rice	true	1770	448	2218
+bowl	pantry	4	delivery	true		true	3161	448	3609
+bowl	pantry	4	delivery	true	rice	true	2570	448	3018
+bowl	pantry	12	pickup	false		true	5925	0	5925
+bowl	pantry	12	pickup	false	rice	true	4943	0	4943
+bowl	pantry	12	pickup	true		true	8425	0	8425
+bowl	pantry	12	pickup	true	rice	true	7243	0	7243
+bowl	pantry	12	delivery	false		true	5925	448	6373
+bowl	pantry	12	delivery	false	rice	true	4943	448	5391
+bowl	pantry	12	delivery	true		true	8425	448	8873
+bowl	pantry	12	delivery	true	rice	true	7243	448	7691
+pasta	market	1	pickup	false		true	2065	0	2065
+pasta	market	1	pickup	false	pasta	true	1716	0	1716
+pasta	market	1	pickup	true		false	0	0	0
+pasta	market	1	pickup	true	pasta	false	0	0	0
+pasta	market	1	delivery	false		true	2065	498	2563
+pasta	market	1	delivery	false	pasta	true	1716	498	2214
+pasta	market	1	delivery	true		false	0	0	0
+pasta	market	1	delivery	true	pasta	false	0	0	0
+pasta	market	2	pickup	false		true	2065	0	2065
+pasta	market	2	pickup	false	pasta	true	1716	0	1716
+pasta	market	2	pickup	true		false	0	0	0
+pasta	market	2	pickup	true	pasta	false	0	0	0
+pasta	market	2	delivery	false		true	2065	498	2563
+pasta	market	2	delivery	false	pasta	true	1716	498	2214
+pasta	market	2	delivery	true		false	0	0	0
+pasta	market	2	delivery	true	pasta	false	0	0	0
+pasta	market	4	pickup	false		true	2615	0	2615
+pasta	market	4	pickup	false	pasta	true	2266	0	2266
+pasta	market	4	pickup	true		false	0	0	0
+pasta	market	4	pickup	true	pasta	false	0	0	0
+pasta	market	4	delivery	false		true	2615	498	3113
+pasta	market	4	delivery	false	pasta	true	2266	498	2764
+pasta	market	4	delivery	true		false	0	0	0
+pasta	market	4	delivery	true	pasta	false	0	0	0
+pasta	market	12	pickup	false		true	5974	0	5974
+pasta	market	12	pickup	false	pasta	true	4927	0	4927
+pasta	market	12	pickup	true		false	0	0	0
+pasta	market	12	pickup	true	pasta	false	0	0	0
+pasta	market	12	delivery	false		true	5974	498	6472
+pasta	market	12	delivery	false	pasta	true	4927	498	5425
+pasta	market	12	delivery	true		false	0	0	0
+pasta	market	12	delivery	true	pasta	false	0	0	0
+pasta	fresh	1	pickup	false		true	1905	0	1905
+pasta	fresh	1	pickup	false	pasta	true	1696	0	1696
+pasta	fresh	1	pickup	true		true	2305	0	2305
+pasta	fresh	1	pickup	true	pasta	true	2096	0	2096
+pasta	fresh	1	delivery	false		false	0	0	0
+pasta	fresh	1	delivery	false	pasta	false	0	0	0
+pasta	fresh	1	delivery	true		false	0	0	0
+pasta	fresh	1	delivery	true	pasta	false	0	0	0
+pasta	fresh	2	pickup	false		true	1905	0	1905
+pasta	fresh	2	pickup	false	pasta	true	1696	0	1696
+pasta	fresh	2	pickup	true		true	2305	0	2305
+pasta	fresh	2	pickup	true	pasta	true	2096	0	2096
+pasta	fresh	2	delivery	false		false	0	0	0
+pasta	fresh	2	delivery	false	pasta	false	0	0	0
+pasta	fresh	2	delivery	true		false	0	0	0
+pasta	fresh	2	delivery	true	pasta	false	0	0	0
+pasta	fresh	4	pickup	false		true	2651	0	2651
+pasta	fresh	4	pickup	false	pasta	true	2233	0	2233
+pasta	fresh	4	pickup	true		true	3251	0	3251
+pasta	fresh	4	pickup	true	pasta	true	2833	0	2833
+pasta	fresh	4	delivery	false		false	0	0	0
+pasta	fresh	4	delivery	false	pasta	false	0	0	0
+pasta	fresh	4	delivery	true		false	0	0	0
+pasta	fresh	4	delivery	true	pasta	false	0	0	0
+pasta	fresh	12	pickup	false		true	6100	0	6100
+pasta	fresh	12	pickup	false	pasta	true	4846	0	4846
+pasta	fresh	12	pickup	true		true	7600	0	7600
+pasta	fresh	12	pickup	true	pasta	true	6346	0	6346
+pasta	fresh	12	delivery	false		false	0	0	0
+pasta	fresh	12	delivery	false	pasta	false	0	0	0
+pasta	fresh	12	delivery	true		false	0	0	0
+pasta	fresh	12	delivery	true	pasta	false	0	0	0
+pasta	pantry	1	pickup	false		true	2552	0	2552
+pasta	pantry	1	pickup	false	pasta	true	1953	0	1953
+pasta	pantry	1	pickup	true		true	3052	0	3052
+pasta	pantry	1	pickup	true	pasta	true	2353	0	2353
+pasta	pantry	1	delivery	false		true	2552	448	3000
+pasta	pantry	1	delivery	false	pasta	true	1953	448	2401
+pasta	pantry	1	delivery	true		true	3052	448	3500
+pasta	pantry	1	delivery	true	pasta	true	2353	448	2801
+pasta	pantry	2	pickup	false		true	2552	0	2552
+pasta	pantry	2	pickup	false	pasta	true	1953	0	1953
+pasta	pantry	2	pickup	true		true	3052	0	3052
+pasta	pantry	2	pickup	true	pasta	true	2353	0	2353
+pasta	pantry	2	delivery	false		true	2552	448	3000
+pasta	pantry	2	delivery	false	pasta	true	1953	448	2401
+pasta	pantry	2	delivery	true		true	3052	448	3500
+pasta	pantry	2	delivery	true	pasta	true	2353	448	2801
+pasta	pantry	4	pickup	false		true	3156	0	3156
+pasta	pantry	4	pickup	false	pasta	true	2557	0	2557
+pasta	pantry	4	pickup	true		true	3856	0	3856
+pasta	pantry	4	pickup	true	pasta	true	3157	0	3157
+pasta	pantry	4	delivery	false		true	3156	448	3604
+pasta	pantry	4	delivery	false	pasta	true	2557	448	3005
+pasta	pantry	4	delivery	true		true	3856	448	4304
+pasta	pantry	4	delivery	true	pasta	true	3157	448	3605
+pasta	pantry	12	pickup	false		true	6707	0	6707
+pasta	pantry	12	pickup	false	pasta	true	5509	0	5509
+pasta	pantry	12	pickup	true		true	8407	0	8407
+pasta	pantry	12	pickup	true	pasta	true	7009	0	7009
+pasta	pantry	12	delivery	false		true	6707	448	7155
+pasta	pantry	12	delivery	false	pasta	true	5509	448	5957
+pasta	pantry	12	delivery	true		true	8407	448	8855
+pasta	pantry	12	delivery	true	pasta	true	7009	448	7457

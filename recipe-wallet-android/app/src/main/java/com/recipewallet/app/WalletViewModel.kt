@@ -38,7 +38,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
      check(ids.isNotEmpty() && ids.all { id -> r.ingredients.any { it.id==id } }) { "The agent returned an invalid basket. Please retry." }
      val s=catalog.stores.first { it.id==plan.getString("storeId") }
      val c=catalog.cards.first { it.id==plan.getString("cardId") }
-     val q=quote(r.ingredients.filter { it.id in ids }.sumOf { it.basePrice },s,c)
+     val q=packageQuote(r,ids,s,c,catalog.productOffers,2,"pickup",false)
      check(q.charge==plan.getLong("amount") && q.rewards==plan.getLong("rewards") && q.net==plan.getLong("net")) { "Prices changed. Please plan your shop again." }
     }
     agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
@@ -51,18 +51,18 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  }
  val plannedRecipe get() = agentPlan?.let { p -> catalog.recipes.first { it.id==p.getString("recipeId") } }
  fun planIds(key: String): Set<String> = agentPlan?.getJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet()
- val plannedQuote get() = agentPlan?.let { p -> quote(plannedRecipe!!.ingredients.filter { it.id in planIds("ingredientIds") }.sumOf { it.basePrice },catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") }) }
- val planWithinBudget get() = agentPlan?.optBoolean("withinBudget",false)==true
+ val plannedQuote get() = agentPlan?.let { p -> packageQuote(plannedRecipe!!,planIds("ingredientIds"),catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") },catalog.productOffers,servings,fulfillment,organicOnly) }
+ val planWithinBudget get() = plannedQuote?.let { it.complete && (planBudget<0||it.charge<=planBudget) } == true
  val planBudget get() = agentPlan?.getJSONObject("constraints")?.getLong("budgetCents") ?: -1L
  val planDiet get() = agentPlan?.getJSONObject("constraints")?.getString("diet") ?: "any"
  val planTime get() = agentPlan?.getJSONObject("constraints")?.getInt("maxPrepMinutes") ?: 0
  fun approvePlan() {
   val p=agentPlan ?: return
   if(!planWithinBudget || aiBusy) return
-  recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
-  attempt=UUID.randomUUID().toString(); error=null; step=3
+  servings=2;fulfillment="pickup";organicOnly=false;recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
+  attempt=UUID.randomUUID().toString(); error=null; step=2
  }
- fun newPlan() { agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
+ fun newPlan() { servings=2;fulfillment="pickup";organicOnly=false;agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
  var step by mutableIntStateOf(0)
  var recipeId by mutableStateOf(catalog.recipes.first().id)
  var selected by mutableStateOf(catalog.recipes.first().ingredients.map { it.id }.toSet())
@@ -76,12 +76,17 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private var intentId: String? = null
  private var attempt = UUID.randomUUID().toString()
  val recipe get() = catalog.recipes.first { it.id == recipeId }
- val subtotal get() = recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice }
- val rankings get() = ranked(subtotal, catalog.stores, catalog.cards)
- val current get(): Quote { val s = catalog.stores.firstOrNull { it.id == storeId } ?: rankings.first().store; val c = catalog.cards.firstOrNull { it.id == cardId } ?: rankings.first { it.store.id == s.id }.card; return quote(subtotal,s,c) }
- fun choose(id: String) { newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
+ var servings by mutableIntStateOf(2)
+ var fulfillment by mutableStateOf("pickup")
+ var organicOnly by mutableStateOf(false)
+ val subtotal get() = rankings.firstOrNull { it.complete }?.groceries ?: 0L
+ fun groceryQuote(store:Store,card:RewardCard)=packageQuote(recipe,selected,store,card,catalog.productOffers,servings,fulfillment,organicOnly)
+ val rankings get() = catalog.stores.map { s -> catalog.cards.map { groceryQuote(s,it) }.minBy { it.net } }.sortedWith(compareBy<Quote> { !it.complete }.thenBy { it.charge }.thenBy { it.store.id })
+ val current get(): Quote { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).groceries) };return groceryQuote(s,c) }
+ fun settingsChanged(){attempt=UUID.randomUUID().toString();storeId="";cardId="";receipt=null;error=null}
+ fun choose(id: String) { newPlan(); recipeId=id; servings=2; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
  fun toggle(id: String) { selected=if(id in selected) selected-id else selected+id; attempt=UUID.randomUUID().toString() }
- fun compare() { storeId=rankings.first().store.id; cardId=rankings.first().card.id; step=2 }
+ fun compare() { storeId=rankings.first { it.complete }.store.id; cardId=rankings.first { it.complete }.card.id; step=2 }
  fun checkout(store: String) { storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3; error=null; attempt=UUID.randomUUID().toString() }
  fun switchCard(id: String) { cardId=id; attempt=UUID.randomUUID().toString() }
  private suspend fun request(path: String, payload: JSONObject): JSONObject = withContext(Dispatchers.IO) {
@@ -98,10 +103,11 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   } finally { connection.disconnect() }
  }
  fun pay(onReady: (String,String)->Unit) {
+  if(!current.complete) {error="Choose a store with a complete basket";return}
   busy=true; error=null; pending=current
   viewModelScope.launch {
    try {
-    val result=request("/payment-intent",JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt))
+    val result=request("/payment-intent",JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt).put("pricingVersion","packages-v1").put("servings",servings).put("fulfillment",fulfillment).put("organicOnly",organicOnly))
     check(result.getString("publishableKey").startsWith("pk_test_")) { "Only Stripe test keys are allowed" }
     check(result.getLong("amount")==pending!!.charge) { "Price changed. Please review your basket." }
     intentId=result.getString("paymentIntentId")

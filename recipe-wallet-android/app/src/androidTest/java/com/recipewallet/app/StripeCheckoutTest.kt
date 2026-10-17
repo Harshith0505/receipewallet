@@ -24,7 +24,7 @@ class StripeCheckoutTest {
   activityRule.scenario.onActivity {activity->
    directory=activity.getExternalFilesDir(null)!!
    vm=ViewModelProvider(activity)[WalletViewModel::class.java]
-   vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();activity.startTestCheckout()
+   fixture.getJSONObject("plan").getJSONObject("constraints").put("budgetCents",3000);vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();activity.startTestCheckout()
   }
   val device=UiDevice.getInstance(instrumentation)
   val ready=device.wait(Until.hasObject(By.text("Card information")),40000)
@@ -46,9 +46,9 @@ class StripeCheckoutTest {
   device.waitForIdle()
   device.findObject(By.clazz("android.widget.EditText").hasDescendant(By.text("ZIP Code"))).text="98105"
   device.waitForIdle()
-  device.findObject(By.text("Pay $7.79")).click()
+  device.findObject(By.text("Pay ${money(vm.current.charge)}")).click()
   assertTrue("Verified test receipt did not appear",device.wait(Until.hasObject(By.text("STRIPE TEST PAYMENT VERIFIED")),45000))
-  activityRule.scenario.onActivity {assertTrue(vm.paymentVerified);assertEquals(779L,vm.receipt!!.charge)}
+  activityRule.scenario.onActivity {assertTrue(vm.paymentVerified);assertEquals(vm.current.charge,vm.receipt!!.charge)}
   File(directory,"stripe-receipt.png").outputStream().use {instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)}
  }
 }

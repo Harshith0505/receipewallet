@@ -11,39 +11,52 @@
           "id": "noodles",
           "name": "Wheat noodles",
           "qty": "8 oz",
-          "basePrice": 300
+          "basePrice": 300,
+          "quantity": 227,
+          "unit": "g"
         },
         {
           "id": "garlic",
           "name": "Garlic",
           "qty": "1 bulb",
-          "basePrice": 75
+          "basePrice": 75,
+          "quantity": 1,
+          "unit": "each"
         },
         {
           "id": "soy",
           "name": "Soy sauce",
           "qty": "2 tbsp",
-          "basePrice": 80
+          "basePrice": 80,
+          "quantity": 30,
+          "unit": "ml"
         },
         {
           "id": "sesame",
           "name": "Sesame oil",
           "qty": "1 tbsp",
-          "basePrice": 65
+          "basePrice": 65,
+          "quantity": 15,
+          "unit": "ml"
         },
         {
           "id": "chili",
           "name": "Chili flakes",
           "qty": "1 tsp",
-          "basePrice": 40
+          "basePrice": 40,
+          "quantity": 2,
+          "unit": "g"
         },
         {
           "id": "onion",
           "name": "Green onions",
           "qty": "1 bunch",
-          "basePrice": 125
+          "basePrice": 125,
+          "quantity": 1,
+          "unit": "each"
         }
-      ]
+      ],
+      "baseServings": 2
     },
     {
       "id": "bowl",
@@ -56,33 +69,44 @@
           "id": "rice",
           "name": "Brown rice",
           "qty": "1 cup",
-          "basePrice": 150
+          "basePrice": 150,
+          "quantity": 190,
+          "unit": "g"
         },
         {
           "id": "avo",
           "name": "Avocado",
           "qty": "1 whole",
-          "basePrice": 180
+          "basePrice": 180,
+          "quantity": 1,
+          "unit": "each"
         },
         {
           "id": "chickpeas",
           "name": "Chickpeas",
           "qty": "1 can",
-          "basePrice": 140
+          "basePrice": 140,
+          "quantity": 400,
+          "unit": "g"
         },
         {
           "id": "greens",
           "name": "Mixed greens",
           "qty": "4 oz",
-          "basePrice": 220
+          "basePrice": 220,
+          "quantity": 113,
+          "unit": "g"
         },
         {
           "id": "lemon",
           "name": "Lemon",
           "qty": "1 whole",
-          "basePrice": 65
+          "basePrice": 65,
+          "quantity": 1,
+          "unit": "each"
         }
-      ]
+      ],
+      "baseServings": 2
     },
     {
       "id": "pasta",
@@ -95,62 +119,91 @@
           "id": "pasta",
           "name": "Rigatoni",
           "qty": "8 oz",
-          "basePrice": 200
+          "basePrice": 200,
+          "quantity": 227,
+          "unit": "g"
         },
         {
           "id": "tomato",
           "name": "Cherry tomatoes",
           "qty": "1 pint",
-          "basePrice": 300
+          "basePrice": 300,
+          "quantity": 283,
+          "unit": "g"
         },
         {
           "id": "basil",
           "name": "Fresh basil",
           "qty": "1 bunch",
-          "basePrice": 150
+          "basePrice": 150,
+          "quantity": 1,
+          "unit": "each"
         },
         {
           "id": "oil",
           "name": "Olive oil",
           "qty": "2 tbsp",
-          "basePrice": 75
+          "basePrice": 75,
+          "quantity": 30,
+          "unit": "ml"
         },
         {
           "id": "cheese",
           "name": "Parmesan",
           "qty": "1 oz",
-          "basePrice": 110
+          "basePrice": 110,
+          "quantity": 28,
+          "unit": "g"
         }
-      ]
+      ],
+      "baseServings": 2
     }
   ],
   "stores": [
     {
       "id": "market",
-      "name": "Neighborhood Market",
+      "name": "QFC \u00b7 University Village",
       "rating": 4.7,
       "distanceMiles": 0.8,
       "deliveryFee": 199,
       "multiplierBps": 9500,
-      "address": "100 Market Lane \u00b7 fictional demo location"
+      "address": "2746 NE 45th St, Seattle, WA 98105",
+      "sourceUrl": "https://www.qfc.com/stores/grocery/wa/seattle/university-village/705/00807",
+      "pickupFee": 0,
+      "serviceFee": 99,
+      "deliveryEnabled": true,
+      "taxBps": 0,
+      "packageDeliveryFee": 399
     },
     {
       "id": "fresh",
-      "name": "Fresh & Co.",
+      "name": "Trader Joe\u2019s \u00b7 U District",
       "rating": 4.8,
       "distanceMiles": 1.2,
       "deliveryFee": 149,
       "multiplierBps": 10500,
-      "address": "240 Garden Street \u00b7 fictional demo location"
+      "address": "4555 Roosevelt Way NE, Seattle, WA 98105",
+      "sourceUrl": "https://locations.traderjoes.com/wa/seattle/",
+      "pickupFee": 0,
+      "serviceFee": 0,
+      "deliveryEnabled": false,
+      "taxBps": 0,
+      "packageDeliveryFee": 0
     },
     {
       "id": "pantry",
-      "name": "The Daily Pantry",
+      "name": "Whole Foods \u00b7 Roosevelt Square",
       "rating": 4.5,
       "distanceMiles": 2.1,
       "deliveryFee": 299,
       "multiplierBps": 9000,
-      "address": "18 Oak Avenue \u00b7 fictional demo location"
+      "address": "1026 NE 64th St, Seattle, WA 98115",
+      "sourceUrl": "https://www.wholefoodsmarket.com/stores/rooseveltsquare",
+      "pickupFee": 0,
+      "serviceFee": 149,
+      "deliveryEnabled": true,
+      "taxBps": 0,
+      "packageDeliveryFee": 299
     }
   ],
   "cards": [
@@ -215,6 +268,1115 @@
       "tags": [
         "conventional"
       ]
+    },
+    {
+      "id": "market-noodles-standard",
+      "ingredientId": "noodles",
+      "storeId": "market",
+      "packageQuantity": 454,
+      "unit": "g",
+      "priceCents": 328,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-noodles-organic",
+      "ingredientId": "noodles",
+      "storeId": "market",
+      "packageQuantity": 454,
+      "unit": "g",
+      "priceCents": 428,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-garlic-standard",
+      "ingredientId": "garlic",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 91,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-garlic-organic",
+      "ingredientId": "garlic",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 191,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-soy-standard",
+      "ingredientId": "soy",
+      "storeId": "market",
+      "packageQuantity": 300,
+      "unit": "ml",
+      "priceCents": 355,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-soy-organic",
+      "ingredientId": "soy",
+      "storeId": "market",
+      "packageQuantity": 300,
+      "unit": "ml",
+      "priceCents": 455,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-sesame-standard",
+      "ingredientId": "sesame",
+      "storeId": "market",
+      "packageQuantity": 150,
+      "unit": "ml",
+      "priceCents": 511,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-sesame-organic",
+      "ingredientId": "sesame",
+      "storeId": "market",
+      "packageQuantity": 150,
+      "unit": "ml",
+      "priceCents": 611,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-chili-standard",
+      "ingredientId": "chili",
+      "storeId": "market",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 289,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-chili-organic",
+      "ingredientId": "chili",
+      "storeId": "market",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 389,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-onion-standard",
+      "ingredientId": "onion",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 169,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-onion-organic",
+      "ingredientId": "onion",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 269,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-rice-standard",
+      "ingredientId": "rice",
+      "storeId": "market",
+      "packageQuantity": 907,
+      "unit": "g",
+      "priceCents": 422,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-rice-organic",
+      "ingredientId": "rice",
+      "storeId": "market",
+      "packageQuantity": 907,
+      "unit": "g",
+      "priceCents": 522,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-avo-standard",
+      "ingredientId": "avo",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 185,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-avo-organic",
+      "ingredientId": "avo",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 285,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-chickpeas-standard",
+      "ingredientId": "chickpeas",
+      "storeId": "market",
+      "packageQuantity": 400,
+      "unit": "g",
+      "priceCents": 167,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-chickpeas-organic",
+      "ingredientId": "chickpeas",
+      "storeId": "market",
+      "packageQuantity": 400,
+      "unit": "g",
+      "priceCents": 267,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-greens-standard",
+      "ingredientId": "greens",
+      "storeId": "market",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 311,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-greens-organic",
+      "ingredientId": "greens",
+      "storeId": "market",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 411,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-lemon-standard",
+      "ingredientId": "lemon",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 109,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-lemon-organic",
+      "ingredientId": "lemon",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 209,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-pasta-organic",
+      "ingredientId": "pasta",
+      "storeId": "market",
+      "packageQuantity": 500,
+      "unit": "g",
+      "priceCents": 449,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-tomato-standard",
+      "ingredientId": "tomato",
+      "storeId": "market",
+      "packageQuantity": 283,
+      "unit": "g",
+      "priceCents": 311,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-tomato-organic",
+      "ingredientId": "tomato",
+      "storeId": "market",
+      "packageQuantity": 283,
+      "unit": "g",
+      "priceCents": 411,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-basil-standard",
+      "ingredientId": "basil",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 239,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-basil-organic",
+      "ingredientId": "basil",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 339,
+      "stockPackages": 0,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-oil-standard",
+      "ingredientId": "oil",
+      "storeId": "market",
+      "packageQuantity": 500,
+      "unit": "ml",
+      "priceCents": 705,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-oil-organic",
+      "ingredientId": "oil",
+      "storeId": "market",
+      "packageQuantity": 500,
+      "unit": "ml",
+      "priceCents": 805,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "market-cheese-standard",
+      "ingredientId": "cheese",
+      "storeId": "market",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 461,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-cheese-organic",
+      "ingredientId": "cheese",
+      "storeId": "market",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 561,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-noodles-standard",
+      "ingredientId": "noodles",
+      "storeId": "fresh",
+      "packageQuantity": 454,
+      "unit": "g",
+      "priceCents": 296,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-noodles-organic",
+      "ingredientId": "noodles",
+      "storeId": "fresh",
+      "packageQuantity": 454,
+      "unit": "g",
+      "priceCents": 396,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-garlic-standard",
+      "ingredientId": "garlic",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 117,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-garlic-organic",
+      "ingredientId": "garlic",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 217,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-soy-standard",
+      "ingredientId": "soy",
+      "storeId": "fresh",
+      "packageQuantity": 300,
+      "unit": "ml",
+      "priceCents": 365,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-soy-organic",
+      "ingredientId": "soy",
+      "storeId": "fresh",
+      "packageQuantity": 300,
+      "unit": "ml",
+      "priceCents": 465,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-sesame-standard",
+      "ingredientId": "sesame",
+      "storeId": "fresh",
+      "packageQuantity": 150,
+      "unit": "ml",
+      "priceCents": 512,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-sesame-organic",
+      "ingredientId": "sesame",
+      "storeId": "fresh",
+      "packageQuantity": 150,
+      "unit": "ml",
+      "priceCents": 612,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-chili-standard",
+      "ingredientId": "chili",
+      "storeId": "fresh",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 260,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-chili-organic",
+      "ingredientId": "chili",
+      "storeId": "fresh",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 360,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-onion-standard",
+      "ingredientId": "onion",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 147,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-onion-organic",
+      "ingredientId": "onion",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 247,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-rice-standard",
+      "ingredientId": "rice",
+      "storeId": "fresh",
+      "packageQuantity": 907,
+      "unit": "g",
+      "priceCents": 384,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-rice-organic",
+      "ingredientId": "rice",
+      "storeId": "fresh",
+      "packageQuantity": 907,
+      "unit": "g",
+      "priceCents": 484,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-avo-standard",
+      "ingredientId": "avo",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 205,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-avo-organic",
+      "ingredientId": "avo",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 305,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-chickpeas-standard",
+      "ingredientId": "chickpeas",
+      "storeId": "fresh",
+      "packageQuantity": 400,
+      "unit": "g",
+      "priceCents": 144,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-chickpeas-organic",
+      "ingredientId": "chickpeas",
+      "storeId": "fresh",
+      "packageQuantity": 400,
+      "unit": "g",
+      "priceCents": 244,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-greens-standard",
+      "ingredientId": "greens",
+      "storeId": "fresh",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 324,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-greens-organic",
+      "ingredientId": "greens",
+      "storeId": "fresh",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 424,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-lemon-standard",
+      "ingredientId": "lemon",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 91,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-lemon-organic",
+      "ingredientId": "lemon",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 191,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-tomato-standard",
+      "ingredientId": "tomato",
+      "storeId": "fresh",
+      "packageQuantity": 283,
+      "unit": "g",
+      "priceCents": 324,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-tomato-organic",
+      "ingredientId": "tomato",
+      "storeId": "fresh",
+      "packageQuantity": 283,
+      "unit": "g",
+      "priceCents": 424,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-basil-standard",
+      "ingredientId": "basil",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 213,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-basil-organic",
+      "ingredientId": "basil",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 313,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-oil-standard",
+      "ingredientId": "oil",
+      "storeId": "fresh",
+      "packageQuantity": 500,
+      "unit": "ml",
+      "priceCents": 694,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-oil-organic",
+      "ingredientId": "oil",
+      "storeId": "fresh",
+      "packageQuantity": 500,
+      "unit": "ml",
+      "priceCents": 794,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-cheese-standard",
+      "ingredientId": "cheese",
+      "storeId": "fresh",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 465,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-cheese-organic",
+      "ingredientId": "cheese",
+      "storeId": "fresh",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 565,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-noodles-standard",
+      "ingredientId": "noodles",
+      "storeId": "pantry",
+      "packageQuantity": 454,
+      "unit": "g",
+      "priceCents": 339,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-noodles-organic",
+      "ingredientId": "noodles",
+      "storeId": "pantry",
+      "packageQuantity": 454,
+      "unit": "g",
+      "priceCents": 439,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-garlic-standard",
+      "ingredientId": "garlic",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 118,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-garlic-organic",
+      "ingredientId": "garlic",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 218,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-soy-standard",
+      "ingredientId": "soy",
+      "storeId": "pantry",
+      "packageQuantity": 300,
+      "unit": "ml",
+      "priceCents": 417,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-soy-organic",
+      "ingredientId": "soy",
+      "storeId": "pantry",
+      "packageQuantity": 300,
+      "unit": "ml",
+      "priceCents": 517,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-sesame-standard",
+      "ingredientId": "sesame",
+      "storeId": "pantry",
+      "packageQuantity": 150,
+      "unit": "ml",
+      "priceCents": 593,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-sesame-organic",
+      "ingredientId": "sesame",
+      "storeId": "pantry",
+      "packageQuantity": 150,
+      "unit": "ml",
+      "priceCents": 693,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-chili-standard",
+      "ingredientId": "chili",
+      "storeId": "pantry",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 293,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-chili-organic",
+      "ingredientId": "chili",
+      "storeId": "pantry",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 393,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-onion-standard",
+      "ingredientId": "onion",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 158,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-onion-organic",
+      "ingredientId": "onion",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 258,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-rice-standard",
+      "ingredientId": "rice",
+      "storeId": "pantry",
+      "packageQuantity": 907,
+      "unit": "g",
+      "priceCents": 491,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-rice-organic",
+      "ingredientId": "rice",
+      "storeId": "pantry",
+      "packageQuantity": 907,
+      "unit": "g",
+      "priceCents": 591,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-avo-standard",
+      "ingredientId": "avo",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 225,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-avo-organic",
+      "ingredientId": "avo",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 325,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-chickpeas-standard",
+      "ingredientId": "chickpeas",
+      "storeId": "pantry",
+      "packageQuantity": 400,
+      "unit": "g",
+      "priceCents": 203,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-chickpeas-organic",
+      "ingredientId": "chickpeas",
+      "storeId": "pantry",
+      "packageQuantity": 400,
+      "unit": "g",
+      "priceCents": 303,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-greens-standard",
+      "ingredientId": "greens",
+      "storeId": "pantry",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 367,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-greens-organic",
+      "ingredientId": "greens",
+      "storeId": "pantry",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 467,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-lemon-standard",
+      "ingredientId": "lemon",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 90,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-lemon-organic",
+      "ingredientId": "lemon",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 190,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-pasta-organic",
+      "ingredientId": "pasta",
+      "storeId": "pantry",
+      "packageQuantity": 1000,
+      "unit": "g",
+      "priceCents": 699,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-tomato-standard",
+      "ingredientId": "tomato",
+      "storeId": "pantry",
+      "packageQuantity": 283,
+      "unit": "g",
+      "priceCents": 367,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-tomato-organic",
+      "ingredientId": "tomato",
+      "storeId": "pantry",
+      "packageQuantity": 283,
+      "unit": "g",
+      "priceCents": 467,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-basil-standard",
+      "ingredientId": "basil",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 237,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-basil-organic",
+      "ingredientId": "basil",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 337,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-oil-standard",
+      "ingredientId": "oil",
+      "storeId": "pantry",
+      "packageQuantity": 500,
+      "unit": "ml",
+      "priceCents": 813,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-oil-organic",
+      "ingredientId": "oil",
+      "storeId": "pantry",
+      "packageQuantity": 500,
+      "unit": "ml",
+      "priceCents": 913,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-cheese-standard",
+      "ingredientId": "cheese",
+      "storeId": "pantry",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 536,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-cheese-organic",
+      "ingredientId": "cheese",
+      "storeId": "pantry",
+      "packageQuantity": 142,
+      "unit": "g",
+      "priceCents": 636,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
     }
-  ]
+  ],
+  "demoPolicy": {
+    "prices": "Fictional demo prices and stock, not retailer quotes.",
+    "fulfillment": "Simulated fulfillment only. No retailer order is submitted.",
+    "tax": "Demo tax rate is 0%; not a determination of actual tax liability."
+  }
 }

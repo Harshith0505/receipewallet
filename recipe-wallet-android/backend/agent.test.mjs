@@ -2,23 +2,23 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createToolRunner,planShop} from './agent.mjs';
 
-const constraints={mealPreference:'noodle dinner',diet:'vegetarian',maxPrepMinutes:0,budgetCents:1200,pantryIds:['garlic']};
+const constraints={mealPreference:'noodle dinner',diet:'vegetarian',maxPrepMinutes:0,budgetCents:3000,pantryIds:['garlic']};
 test('pantry exclusion, diet filtering and pricing are grounded in catalog tools',()=>{
  const r=createToolRunner();
  const found=r.run('find_recipes',constraints);
  assert.deepEqual(found.recipes.map(x=>x.id),['noodles','bowl']);
  const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
- assert.equal(options[0].amount,779);
- assert.equal(options[0].rewards,29);
+ assert.equal(options[0].amount,1580);
+ assert.equal(options[0].rewards,79);
  assert.ok(!options[0].ingredientIds.includes('garlic'));
  const p=r.run('prepare_basket',{optionId:options[0].optionId,explanation:'Noodles match your request; garlic is already owned.'});
  assert.equal(p.approvalRequired,true);assert.equal(p.withinBudget,true);
  assert.equal(r.trace.length,3);
 });
 test('budget applies to amount charged, even if rewards would make net fit',()=>{
- const r=createToolRunner();r.run('find_recipes',{...constraints,budgetCents:760});
+ const r=createToolRunner();r.run('find_recipes',{...constraints,budgetCents:1550});
  const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
- assert.ok(options[0].net<=760);assert.ok(options[0].amount>760);
+ assert.ok(options[0].net<=1550);assert.ok(options[0].amount>1550);
  assert.equal(r.run('prepare_basket',{optionId:options[0].optionId,explanation:'This is the closest available option.'}).withinBudget,false);
 });
 test('unknown tools, invented pantry items, skipped steps and options are rejected',()=>{
@@ -38,7 +38,7 @@ test('no fitting recipe and all-owned ingredients produce no payable basket',()=
  assert.equal(r.plan,null);
 });
 test('an over-budget selection cannot hide a fitting compared option',()=>{
- const r=createToolRunner();r.run('find_recipes',{...constraints,budgetCents:800});
+ const r=createToolRunner();r.run('find_recipes',{...constraints,budgetCents:1300});
  const {options}=r.run('compare_baskets',{recipeIds:['noodles','bowl']});
  assert.throws(()=>r.run('prepare_basket',{optionId:options.find(o=>!o.withinBudget).optionId,explanation:'Choose this'}),/fits the budget/);
 });
@@ -47,7 +47,7 @@ test('real orchestration executes model-requested tools and preserves signed ste
  const calls=[
   {name:'find_recipes',arguments:constraints},
   {name:'compare_baskets',arguments:{recipeIds:['noodles']}},
-  {name:'prepare_basket',arguments:{optionId:'noodles:market:green',explanation:'Garlic is already owned; this is the best estimated noodle basket.'}}
+  {name:'prepare_basket',arguments:{optionId:'noodles:fresh:green',explanation:'Garlic is already owned; this is the best estimated noodle basket.'}}
  ];
  const result=await planShop('Vegetarian noodles under $12; I own garlic.',{}, {apiKey:'test',fetchImpl:async(url,options)=>{
   const body=JSON.parse(options.body);requests.push(body);
@@ -55,7 +55,7 @@ test('real orchestration executes model-requested tools and preserves signed ste
   const steps=turn<3?[{type:'thought',signature:'test-signature'},{type:'function_call',id:'call_'+turn,...calls[turn]}]:[{type:'model_output',content:[{type:'text',text:'Ready for review.'}]}];
   turn++;return {ok:true,json:async()=>({steps})};
  }});
- assert.equal(result.plan.amount,779);assert.equal(result.trace.length,3);
+ assert.equal(result.plan.amount,1580);assert.equal(result.trace.length,3);
  assert.ok(requests[1].input.some(s=>s.type==='thought'&&s.signature==='test-signature'));
  assert.ok(requests[1].input.some(s=>s.type==='function_result'&&s.call_id==='call_0'));
 });

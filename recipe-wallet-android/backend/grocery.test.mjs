@@ -4,7 +4,7 @@ import {catalog} from './pricing.mjs';
 import {planGroceries, quoteGroceries} from './grocery.mjs';
 
 const pasta = (quantity = 600, pantryQuantity = 0) => ({ingredientId: 'pasta', quantity, unit: 'g', pantryQuantity});
-const market = requirements => quoteGroceries(requirements, 'market', catalog.productOffers);
+const market = requirements => quoteGroceries(requirements, 'market', catalog.productOffers.filter(o => o.ingredientId === 'pasta'));
 
 test('pantry quantities reduce whole-package purchases, not the price of a portion', () => {
   const withPantry = market([pasta(600, 100)]);
@@ -49,7 +49,7 @@ test('multiple ingredients are priced together and unavailable ingredients stay 
     unit: 'ml', priceCents: 499, stockPackages: 3, tags: []};
   const requirements = [pasta(500), {ingredientId: 'oil', quantity: 30, unit: 'ml'}];
   assert.equal(quoteGroceries(requirements, 'market', [...catalog.productOffers, oil]).grocerySubtotalCents, 848);
-  const partial = quoteGroceries(requirements, 'market', catalog.productOffers);
+  const partial = quoteGroceries(requirements, 'market', catalog.productOffers.filter(o => o.ingredientId === 'pasta'));
   assert.equal(partial.complete, false);
   assert.equal(partial.grocerySubtotalCents, null);
   assert.equal(partial.missingIngredients[0].reason, 'not-stocked');
