@@ -174,7 +174,7 @@ internal fun HomeScreen(vm: WalletViewModel) {
             title = { Text("About this demo") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("Recipes, shops, prices, and Visa reward programs are illustrative. Ingredient estimates cover the portion used, not a full retail package. Tax is excluded.")
+                    Text("Recipes, shops, prices, and Visa reward programs are illustrative. Ingredient estimates cover whole retail packages, with serving and pantry controls. Configured demo tax is 0%.")
                     Text("AI meal requests and recent meal preferences are processed by Gemini. Payment details are not sent to the AI. Local planning sessions expire after 20 minutes.")
                     Text("Checkout uses Stripe test mode. No real grocery order, delivery, or rewards result.")
                 }
@@ -196,7 +196,7 @@ private fun MealComposer(vm: WalletViewModel, onManual: () -> Unit, onSubmit: ()
             modifier = Modifier.fillMaxWidth(),
             enabled = !vm.aiBusy,
             label = { Text(if (vm.agentReply.isBlank()) "Meal, budget, and pantry items" else "What would you like to change?") },
-            placeholder = { Text(if (vm.agentReply.isBlank()) "Vegetarian noodles under $12.\nI already have garlic." else "I already have soy sauce too.") },
+            placeholder = { Text(if (vm.agentReply.isBlank()) "Vegetarian noodles under $30.\nI already have garlic." else "I already have soy sauce too.") },
             minLines = 3, maxLines = 5,
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -205,9 +205,9 @@ private fun MealComposer(vm: WalletViewModel, onManual: () -> Unit, onSubmit: ()
         )
         if (vm.agentReply.isBlank() && !vm.aiBusy) {
             TextButton(
-                onClick = { vm.preference = "Find me a vegetarian noodle dinner under $12. I already have garlic." },
+                onClick = { vm.preference = "Find me a vegetarian noodle dinner under $30. I already have garlic." },
                 contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
-            ) { Text("Try: vegetarian noodles under $12", color = HomeInk, fontSize = 13.sp) }
+            ) { Text("Try: vegetarian noodles under $30", color = HomeInk, fontSize = 13.sp) }
         }
         Button(
             onClick = onSubmit, enabled = !vm.aiBusy && vm.preference.isNotBlank(),

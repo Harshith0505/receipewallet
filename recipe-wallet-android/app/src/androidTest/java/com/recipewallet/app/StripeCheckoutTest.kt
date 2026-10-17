@@ -24,7 +24,7 @@ class StripeCheckoutTest {
   activityRule.scenario.onActivity {activity->
    directory=activity.getExternalFilesDir(null)!!
    vm=ViewModelProvider(activity)[WalletViewModel::class.java]
-   vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();activity.startTestCheckout()
+   vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();vm.checkout(vm.storeId);activity.startTestCheckout()
   }
   val device=UiDevice.getInstance(instrumentation)
   val ready=device.wait(Until.hasObject(By.text("Card information")),40000)
@@ -36,12 +36,14 @@ class StripeCheckoutTest {
   activityRule.scenario.onActivity {activity->
    assertTrue(vm.error?.contains("canceled")==true)
    assertEquals(3,vm.step)
-   assertEquals(779L,vm.current.charge)
+   assertEquals(1580L,vm.current.charge)
    assertFalse("garlic" in vm.selected)
    // An uncertain callback must hold the basket and prevent another charge.
    vm.paymentFailed("Simulated connection interruption")
    assertTrue(vm.awaitingVerification)
    vm.switchCard("black");vm.back();vm.walkthrough()
+   vm.changeServings(4);vm.changeFulfillment("delivery");vm.changeOrganicOnly(true)
+   assertEquals(2,vm.servings);assertEquals("pickup",vm.fulfillment);assertFalse(vm.organicOnly)
    vm.pay { _,_->fail("A second checkout opened before verification") }
    assertEquals("green",vm.cardId);assertEquals(3,vm.step)
    vm.verify()
@@ -68,12 +70,13 @@ class StripeCheckoutTest {
   device.waitForIdle()
   device.findObject(By.clazz("android.widget.EditText").hasDescendant(By.text("ZIP Code"))).text="98105"
   device.waitForIdle()
-  device.findObject(By.text("Pay $7.79")).click()
+  device.findObject(By.text("Pay $15.80")).click()
   assertTrue("Verified test receipt did not appear",device.wait(Until.hasObject(By.text("STRIPE TEST PAYMENT VERIFIED")),45000))
   activityRule.scenario.onActivity {
-   assertTrue(vm.paymentVerified);assertEquals(779L,vm.receipt!!.charge)
+   assertTrue(vm.paymentVerified);assertEquals(1580L,vm.receipt!!.charge)
    assertEquals("Spicy garlic noodles",vm.receiptRecipeName)
    assertEquals(5,vm.receiptIngredients.size)
+   assertEquals(5,vm.receipt!!.items.size);assertEquals("pickup",vm.receipt!!.fulfillment)
    assertFalse(vm.receiptIngredients.any { it.id=="garlic" })
    assertTrue(vm.receiptPaymentId!!.startsWith("pi_"))
   }

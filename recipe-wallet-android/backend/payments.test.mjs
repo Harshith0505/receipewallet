@@ -31,3 +31,11 @@ test('basket identity ignores ingredient ordering and untrusted client totals',(
  assert.equal(paymentBasket(input).fingerprint,paymentBasket({...input,ingredientIds:[...input.ingredientIds].reverse(),amount:1}).fingerprint);
  assert.throws(()=>paymentBasket({...input,attempt:'invalid'}));
 });
+test('package receipt binds servings and fulfillment even when the same packs cover both quantities',()=>{
+ const packageInput={...input,pricingVersion:'packages-v1',ingredientIds:['noodles'],servings:2,fulfillment:'pickup',organicOnly:false};
+ const fewerServings={...packageInput,servings:1};
+ assert.equal(paymentBasket(packageInput).quote.amount,paymentBasket(fewerServings).quote.amount);
+ assert.throws(()=>verifyPayment(intentFor(packageInput),fewerServings),/approved basket/);
+ assert.throws(()=>verifyPayment(intentFor(packageInput),{...packageInput,fulfillment:'delivery'}),/approved basket/);
+ assert.equal(verifyPayment(intentFor(packageInput),packageInput).paid,true);
+});

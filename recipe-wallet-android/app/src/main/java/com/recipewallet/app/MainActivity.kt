@@ -1,6 +1,9 @@
 package com.recipewallet.app
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -52,7 +55,7 @@ class MainActivity: ComponentActivity() {
  }
 }
 @Composable private fun Wallet(vm: WalletViewModel, pay: ()->Unit) {
-if(vm.step == 0) { HomeScreen(vm); return }
+ if(vm.step == 0) { HomeScreen(vm); return }
  BackHandler(enabled=vm.step in 1..3) { vm.back() }
  val scroll = key(vm.step) { rememberScrollState() }
  Scaffold(containerColor=Cream) { padding ->
@@ -69,41 +72,64 @@ if(vm.step == 0) { HomeScreen(vm); return }
    }
    when(vm.step) {
     1 -> {
-     Eyebrow("MAKE IT YOURS")
+     Eyebrow("YOUR RECIPE, YOUR SHOPPING LIST")
      Title(vm.recipe.name)
-     Text("Keep what you love. Leave out what you don't.",color=Muted)
+     Text("Unchecked ingredients are already in your pantry. Prices below are for whole packages.",color=Muted)
+     ShoppingControls(vm)
      Panel {
       vm.recipe.ingredients.forEach { i ->
-       Row(Modifier.fillMaxWidth().clickable { vm.toggle(i.id) }.padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically) {
+       Row(Modifier.fillMaxWidth().clickable { vm.toggle(i.id) },verticalAlignment=Alignment.CenterVertically) {
         Checkbox(checked=i.id in vm.selected,onCheckedChange={vm.toggle(i.id)})
-        Column(Modifier.weight(1f)) { Text(i.name,color=Ink,fontWeight=FontWeight.Medium); Text(i.qty,color=Muted,fontSize=12.sp) }
-        Text(money(i.basePrice),color=Ink)
+        Column(Modifier.weight(1f)) {
+         Text(i.name,color=Ink,fontWeight=FontWeight.Bold)
+         Text("${kotlin.math.ceil(i.quantity.toDouble()*vm.servings/vm.recipe.baseServings).toLong()} ${i.unit} needed"+if(i.id !in vm.selected) " · already owned" else "",color=Muted,fontSize=12.sp)
+        }
        }
       }
-      HorizontalDivider(color=Cream)
-      Line("Raw ingredient estimate",money(vm.subtotal),true)
      }
-     if(vm.selected.isEmpty()) Text("Choose at least one ingredient to compare stores.",color=Muted)
-     Primary("Compare stores  →",enabled=vm.selected.isNotEmpty(),onClick={vm.compare()})
+     if(vm.selected.isEmpty()) Text("Your pantry covers this recipe. No grocery purchase is needed.",color=Ink)
+     if(vm.rankings.none { it.complete }) Text("No store can supply this selection. Review your organic preference or fulfillment choice.",color=Color(0xFF9A3A28))
+     Primary("Compare complete baskets →",enabled=vm.selected.isNotEmpty()&&vm.rankings.any { it.complete },onClick={vm.compare()})
      DemoNote()
     }
     2 -> {
-     Eyebrow("A LITTLE COMPARISON GOES A LONG WAY")
-     Title("Your basket.\nIts best price.")
-     Text("Ranked only by estimated cost after rewards. Each store is paired with its best sample Visa card.",color=Muted)
+     Eyebrow("WHOLE PACKAGES · CLEAR TOTALS")
+     Title("Your meal.\nYour best store.")
+     Text("Complete baskets ranked by estimated cost after rewards. Today's charge includes packages and fulfillment fees. Ratings describe stores, not ingredient quality.",color=Muted)
+     ShoppingControls(vm)
      vm.rankings.forEachIndexed { index,q ->
       Panel {
-       if(index==0) Tag("LOWEST ESTIMATED COST",Lime)
-       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(q.store.name,fontSize=20.sp,color=Ink,fontWeight=FontWeight.Bold); Text("#${index+1}",color=Muted) }
-       Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi",color=Muted,fontSize=13.sp)
+       if(index==0&&q.complete) Tag("LOWEST ESTIMATED COST",Lime)
+       Text(q.store.name,fontSize=22.sp,color=Ink,fontWeight=FontWeight.Bold)
+       Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi",color=Muted,fontSize=12.sp)
        Text(q.store.address,color=Muted,fontSize=12.sp)
-       Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee)); Line("Rewards · ${q.card.name}","−${money(q.rewards)}")
-       HorizontalDivider(color=Cream)
-       Line("Estimated cost after rewards",money(q.net),true)
-       Text("Demo prices & estimates",color=Muted,fontSize=11.sp)
-       Primary(if(index==0) "Continue with this store  →" else "Choose this store",onClick={vm.checkout(q.store.id)})
+       if(!q.complete) {
+        Text("Unavailable: "+q.missing.joinToString(),color=Color(0xFF9A3A28))
+        Text("Partial baskets cannot be checked out.",color=Muted)
+       } else {
+        q.items.forEach { line ->
+         Line("${line.name} · ${line.packages} × ${line.product.packageQuantity} ${line.unit}",money(line.cost))
+         Text("Need ${line.quantity} ${line.unit} · buy ${line.packages*line.product.packageQuantity} ${line.unit}"+if("organic" in line.product.tags) " · organic" else "",fontSize=11.sp,color=Muted)
+        }
+        HorizontalDivider()
+        Line("Whole-package groceries",money(q.groceries))
+        Line(if(vm.fulfillment=="pickup") "Pickup fee" else "Delivery + service fees",money(q.fees))
+        Line("Demo tax (0%)",money(q.tax))
+        Line("Pay today",money(q.charge),true)
+        Line("Estimated future rewards",money(q.rewards))
+        Line("Estimated cost after rewards",money(q.net),true)
+        Text("${q.card.name} · ${q.card.label}",fontSize=12.sp,color=Muted)
+        Primary("Review checkout →",onClick={vm.checkout(q.store.id)})
+       }
+       val context=LocalContext.current
+       OutlinedButton(onClick={
+        val uri=Uri.parse("https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(q.store.address)+"&travelmode=walking")
+        try { context.startActivity(Intent(Intent.ACTION_VIEW,uri)) } catch (_:Exception) { vm.error="No browser or maps app is available" }
+       }) { Text("Walking directions · Google Maps") }
+       Text("Real store location. Product prices, availability and fulfillment are simulated; no retailer integration.",color=Muted,fontSize=11.sp)
       }
      }
+     vm.error?.let { Text(it,color=Color(0xFF9A3A28)) }
     }
     3 -> {
      Eyebrow("REVIEW & APPROVE")
@@ -112,12 +138,13 @@ if(vm.step == 0) { HomeScreen(vm); return }
      Panel {
       Text(vm.current.store.name,color=Ink,fontWeight=FontWeight.Bold,fontSize=20.sp)
       Text(vm.current.store.address,color=Muted,fontSize=12.sp)
-      Text("Delivery · demo estimate",color=Muted,fontSize=12.sp)
+      Text("${vm.servings} servings · ${vm.fulfillment} · demo estimate",color=Muted,fontSize=12.sp)
       Text(vm.recipe.name,color=Ink,fontWeight=FontWeight.Bold)
-      vm.recipe.ingredients.filter { it.id in vm.selected }.forEach { item ->
-       Line(item.name,item.qty)
+      vm.current.items.forEach { item ->
+       Line("${item.name} · ${item.packages} × ${item.product.packageQuantity} ${item.unit}",money(item.cost))
+       Text("Need ${item.quantity} ${item.unit} · buy ${item.packages*item.product.packageQuantity} ${item.unit}",color=Muted,fontSize=12.sp)
       }
-      Text("Quantities and prices represent portions used. Whole-package pricing is not included yet. Tax is excluded.",color=Muted,fontSize=12.sp)
+      Text("Whole-package prices, stock and fulfillment fees are demo estimates. Configured demo tax: 0%.",color=Muted,fontSize=12.sp)
       TextButton(onClick={vm.back()},enabled=vm.canEditCheckout) { Text("Edit basket or store") }
      }
      Eyebrow("CHOOSE A SAMPLE CARD")
@@ -132,7 +159,8 @@ if(vm.step == 0) { HomeScreen(vm); return }
       }
      }
      Panel {
-      Line("Grocery estimate",money(vm.current.groceries)); Line("Delivery estimate",money(vm.current.store.deliveryFee))
+      Line("Whole-package groceries",money(vm.current.groceries)); Line("Fulfillment fees",money(vm.current.fees))
+      Line("Demo tax (0%)",money(vm.current.tax))
       Line("Total charged today · test",money(vm.current.charge),true)
       Line("Estimated future rewards",money(vm.current.rewards))
       HorizontalDivider(color=Cream)
@@ -140,12 +168,14 @@ if(vm.step == 0) { HomeScreen(vm); return }
       Text("Rewards do not reduce today's charge. Sample card selection is advisory; use a Stripe test card in PaymentSheet. No actual rewards are earned.",color=Muted,fontSize=12.sp)
      }
      vm.error?.let { Text(it,color=Color(0xFF9A3A28),modifier=Modifier.background(Color(0xFFFFECE4),RoundedCornerShape(12.dp)).padding(14.dp)) }
+     if(!vm.current.complete) Text("This store cannot supply the complete basket. Review your store or shopping preferences.",color=Color(0xFF9A3A28))
+     if(!vm.checkoutWithinBudget) Text("This revised basket exceeds your budget. Review the basket or revise your meal request before paying.",color=Color(0xFF9A3A28))
      if(vm.awaitingVerification) Text("Checking your existing test payment comes first. Your approved basket is held until its status is confirmed.",color=Ink,fontWeight=FontWeight.Medium)
      if(vm.busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-     Primary(if(vm.busy) "Processing…" else if(vm.awaitingVerification) "Verification required" else "Approve & pay ${money(vm.current.charge)}",enabled=vm.canEditCheckout,onClick=pay)
+     Primary(if(vm.busy) "Processing…" else if(vm.awaitingVerification) "Verification required" else "Approve & pay ${money(vm.current.charge)}",enabled=vm.canEditCheckout&&vm.current.complete&&vm.checkoutWithinBudget&&vm.selected.isNotEmpty(),onClick=pay)
      Text("Opens Stripe test checkout. Use test card 4242 4242 4242 4242, a future expiry, any three-digit CVC and a test ZIP code.",color=Muted,fontSize=12.sp)
      if(vm.canVerify) OutlinedButton(onClick={vm.verify()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Verify pending test payment") }
-     TextButton(onClick={vm.walkthrough()},enabled=vm.canEditCheckout,modifier=Modifier.fillMaxWidth()) { Text("Preview confirmation without payment") }
+     TextButton(onClick={vm.walkthrough()},enabled=vm.canEditCheckout&&vm.current.complete&&vm.selected.isNotEmpty(),modifier=Modifier.fillMaxWidth()) { Text("Preview confirmation without payment") }
     }
     4 -> {
      val receipt=vm.receipt!!
@@ -155,10 +185,12 @@ if(vm.step == 0) { HomeScreen(vm); return }
      Panel {
       Text(receipt.store.name,fontSize=22.sp,color=Ink,fontWeight=FontWeight.Bold)
       Text(vm.receiptRecipeName,color=Ink,fontWeight=FontWeight.Bold)
-      vm.receiptIngredients.forEach { item -> Line(item.name,item.qty) }
+      Text("${receipt.fulfillment} · whole-package basket",color=Muted,fontSize=12.sp)
+      receipt.items.forEach { item -> Line("${item.name} · ${item.packages} × ${item.product.packageQuantity} ${item.unit}",money(item.cost)) }
       HorizontalDivider(color=Cream)
       Line("Grocery estimate",money(receipt.groceries))
-      Line("Delivery estimate",money(receipt.store.deliveryFee))
+      Line("Fulfillment fees",money(receipt.fees))
+      Line("Demo tax (0%)",money(receipt.tax))
       Line(if(vm.paymentVerified) "Test amount paid · USD" else "Test amount preview · USD",money(receipt.charge),true)
       Text("Sample rewards card: ${receipt.card.name}",color=Muted,fontSize=12.sp)
       Line("Estimated future rewards",money(receipt.rewards))
@@ -198,18 +230,37 @@ if(vm.step == 0) { HomeScreen(vm); return }
         Text("Already owned: "+planned.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" },color=Muted,fontSize=13.sp)
         Text("${q.store.name} · ${q.card.name}",color=Ink,fontWeight=FontWeight.Bold)
         Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi · ${q.store.address}",color=Muted,fontSize=12.sp)
-        Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee))
+        Line("Whole-package groceries",money(q.groceries)); Line("Fulfillment fees",money(q.fees)); Line("Demo tax (0%)",money(q.tax))
         Line("Amount charged before rewards",money(q.charge),true)
         Line("Estimated future rewards",money(q.rewards))
         Line("Estimated cost after rewards",money(q.net),true)
         Text(q.card.label+". "+q.card.notes,color=Muted,fontSize=12.sp)
         if(!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.",color=Color(0xFF9A3A28),fontWeight=FontWeight.Bold)
-        Text("Correct a preference or pantry item in the revision box above. Estimates price ingredient portions, exclude tax, and do not guarantee dietary or allergy safety.",color=Muted,fontSize=12.sp)
-        Primary("Approve basket and continue  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
+        Text("This plan prices whole packages for two servings with pickup. Adjust servings, pantry items, organic preference or fulfillment on the store screen. Dietary and allergy safety are not guaranteed.",color=Muted,fontSize=12.sp)
+        Primary("Review package-priced basket  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
        }
        TextButton(onClick={vm.newPlan()},enabled=!vm.aiBusy) { Text("Start a new shop") }
        DemoNote()
       }
      }
 
+}
+
+@Composable private fun ShoppingControls(vm:WalletViewModel) {
+ Panel {
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+   OutlinedButton(onClick={vm.changeServings(vm.servings-1)},enabled=vm.canEditCheckout&&vm.servings>1) { Text("−") }
+   Text("${vm.servings} servings",fontWeight=FontWeight.Bold,color=Ink)
+   OutlinedButton(onClick={vm.changeServings(vm.servings+1)},enabled=vm.canEditCheckout&&vm.servings<12) { Text("+") }
+  }
+  Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+   FilterChip(enabled=vm.canEditCheckout,selected=vm.fulfillment=="pickup",onClick={vm.changeFulfillment("pickup")},label={Text("Pick up")})
+   FilterChip(enabled=vm.canEditCheckout,selected=vm.fulfillment=="delivery",onClick={vm.changeFulfillment("delivery")},label={Text("Delivery")})
+  }
+  Row(verticalAlignment=Alignment.CenterVertically) {
+   Switch(enabled=vm.canEditCheckout,checked=vm.organicOnly,onCheckedChange={vm.changeOrganicOnly(it)})
+   Text("Organic products only",modifier=Modifier.padding(start=12.dp),color=Ink)
+  }
+  Text("Organic is an explicit demo product attribute. No quality is inferred from store rating.",fontSize=11.sp,color=Muted)
+ }
 }

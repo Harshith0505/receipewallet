@@ -8,6 +8,13 @@ export function paymentBasket(input) {
  const fingerprint=createHash('sha256').update(JSON.stringify({
   recipeId:input.recipeId,ingredientIds:[...input.ingredientIds].sort(),
   storeId:input.storeId,cardId:input.cardId,
+  pricingVersion:input.pricingVersion ?? 'legacy-portions',
+  ...(quote.groceryQuote ? {
+   servings:input.servings ?? 2,fulfillment:quote.groceryQuote.fulfillment,
+   organicOnly:input.organicOnly ?? false,
+   fees:quote.groceryQuote.feesCents,tax:quote.groceryQuote.taxCents,
+   items:quote.groceryQuote.items
+  } : {}),
   groceries:quote.groceries,amount:quote.amount,rewards:quote.rewards,currency:'usd'
  })).digest('hex');
  return {quote,fingerprint,attempt:input.attempt};

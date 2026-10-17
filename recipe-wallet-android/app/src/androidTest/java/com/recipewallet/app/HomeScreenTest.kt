@@ -29,7 +29,7 @@ class HomeScreenTest {
 
     @Test fun switchingBuildModesPreservesTheMealDraft() {
         compose.onNodeWithText("Build with AI").assertIsSelected()
-        compose.onNodeWithText("Try: vegetarian noodles under $12").performClick()
+        compose.onNodeWithText("Try: vegetarian noodles under $30").performClick()
         compose.onNodeWithText("Build my meal").assertIsEnabled()
         screenshot("front-page-ai.png")
         compose.onNode(hasSetTextAction()).performClick()
@@ -46,23 +46,23 @@ class HomeScreenTest {
         assertTrue("Keyboard stayed open in manual mode", device.wait(Until.gone(By.pkg(keyboardPackage)), 5000))
         screenshot("front-page-manual.png")
         compose.onNodeWithText("Build with AI").performScrollTo().performClick()
-        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $12. I already have garlic.")
+        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $30. I already have garlic.")
     }
 
     @Test fun manualRecipeOpensAnEditableBasket() {
         compose.onNodeWithText("Build manually").performClick()
         compose.onNodeWithText("Spicy garlic noodles").performScrollTo().performClick()
-        compose.onNodeWithText("Compare stores  →").performScrollTo().assertIsEnabled()
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsEnabled()
         compose.runOnIdle {
             val vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
             assertEquals(1, vm.step)
             assertEquals("noodles", vm.recipeId)
         }
         compose.onNodeWithText("Garlic").performScrollTo().performClick()
-        compose.onNodeWithText("Compare stores  →").performScrollTo().performClick()
-        compose.onNodeWithText("Continue with this store  →").performScrollTo().performClick()
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+        compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().performClick()
         compose.onNodeWithText("Total charged today · test").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Approve & pay $7.79").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Approve & pay $15.80").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
         compose.onNodeWithText("WALKTHROUGH · NO PAYMENT MADE").assertExists()
     }

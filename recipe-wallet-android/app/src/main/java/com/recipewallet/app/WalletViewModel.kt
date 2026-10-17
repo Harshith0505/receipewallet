@@ -38,7 +38,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
      check(ids.isNotEmpty() && ids.all { id -> r.ingredients.any { it.id==id } }) { "The agent returned an invalid basket. Please retry." }
      val s=catalog.stores.first { it.id==plan.getString("storeId") }
      val c=catalog.cards.first { it.id==plan.getString("cardId") }
-     val q=quote(r.ingredients.filter { it.id in ids }.sumOf { it.basePrice },s,c)
+     val q=packageQuote(r,ids,s,c,catalog.productOffers,plan.optInt("servings",2),plan.optString("fulfillment","pickup"),plan.optBoolean("organicOnly",false))
      check(q.charge==plan.getLong("amount") && q.rewards==plan.getLong("rewards") && q.net==plan.getLong("net")) { "Prices changed. Please plan your shop again." }
     }
     agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
@@ -51,8 +51,8 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  }
  val plannedRecipe get() = agentPlan?.let { p -> catalog.recipes.first { it.id==p.getString("recipeId") } }
  fun planIds(key: String): Set<String> = agentPlan?.getJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet()
- val plannedQuote get() = agentPlan?.let { p -> quote(plannedRecipe!!.ingredients.filter { it.id in planIds("ingredientIds") }.sumOf { it.basePrice },catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") }) }
- val planWithinBudget get() = agentPlan?.optBoolean("withinBudget",false)==true
+ val plannedQuote get() = agentPlan?.let { p -> packageQuote(plannedRecipe!!,planIds("ingredientIds"),catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") },catalog.productOffers,p.optInt("servings",2),p.optString("fulfillment","pickup"),p.optBoolean("organicOnly",false)) }
+ val planWithinBudget get() = plannedQuote?.let { it.complete && (planBudget<0 || it.charge<=planBudget) } == true
  val planBudget get() = agentPlan?.getJSONObject("constraints")?.getLong("budgetCents") ?: -1L
  val planDiet get() = agentPlan?.getJSONObject("constraints")?.getString("diet") ?: "any"
  val planTime get() = agentPlan?.getJSONObject("constraints")?.getInt("maxPrepMinutes") ?: 0
@@ -60,10 +60,11 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   val p=agentPlan ?: return
   if(!planWithinBudget || aiBusy || !canEditCheckout) return
   clearPayment()
+  servings=p.optInt("servings",2); fulfillment=p.optString("fulfillment","pickup"); organicOnly=p.optBoolean("organicOnly",false)
   recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
-  attempt=UUID.randomUUID().toString(); error=null; step=3
+  attempt=UUID.randomUUID().toString(); error=null; step=2
  }
- fun newPlan() { agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
+ fun newPlan() { servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
  var step by mutableIntStateOf(0)
  var recipeId by mutableStateOf(catalog.recipes.first().id)
  var selected by mutableStateOf(catalog.recipes.first().ingredients.map { it.id }.toSet())
@@ -89,15 +90,27 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private var intentId: String? = null
  private var attempt = UUID.randomUUID().toString()
  val recipe get() = catalog.recipes.first { it.id == recipeId }
- val subtotal get() = recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice }
- val rankings get() = ranked(subtotal, catalog.stores, catalog.cards)
- val current get(): Quote { val s = catalog.stores.firstOrNull { it.id == storeId } ?: rankings.first().store; val c = catalog.cards.firstOrNull { it.id == cardId } ?: rankings.first { it.store.id == s.id }.card; return quote(subtotal,s,c) }
+ var servings by mutableIntStateOf(2)
+  private set
+ var fulfillment by mutableStateOf("pickup")
+  private set
+ var organicOnly by mutableStateOf(false)
+  private set
+ val subtotal get() = rankings.firstOrNull { it.complete }?.groceries ?: 0L
+ fun groceryQuote(store:Store,card:RewardCard)=packageQuote(recipe,selected,store,card,catalog.productOffers,servings,fulfillment,organicOnly)
+ val rankings get() = catalog.stores.map { s -> catalog.cards.map { groceryQuote(s,it) }.minWith(compareBy<Quote> { it.net }.thenBy { it.card.id }) }.sortedWith(compareBy<Quote> { !it.complete }.thenBy { it.net }.thenBy { it.store.id })
+ val current get(): Quote { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).groceries) };return groceryQuote(s,c) }
+ val checkoutWithinBudget get() = agentPlan==null || planBudget<0 || current.charge<=planBudget
+ fun settingsChanged() { if(!canEditCheckout) return; clearPayment(); storeId=""; cardId=""; receipt=null }
+ fun changeServings(value:Int) { if(!canEditCheckout || value !in 1..12) return; servings=value; settingsChanged() }
+ fun changeFulfillment(value:String) { if(!canEditCheckout || value !in listOf("pickup","delivery")) return; fulfillment=value; settingsChanged() }
+ fun changeOrganicOnly(value:Boolean) { if(!canEditCheckout) return; organicOnly=value; settingsChanged() }
  val canEditCheckout get() = !busy && !awaitingVerification
  private fun clearPayment() { pending=null; pendingPayload=null; intentId=null; error=null; attempt=UUID.randomUUID().toString() }
  fun choose(id: String) { if(!canEditCheckout) return; clearPayment(); newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; step=1 }
  fun toggle(id: String) { if(!canEditCheckout) return; clearPayment(); selected=if(id in selected) selected-id else selected+id }
- fun compare() { storeId=rankings.first().store.id; cardId=rankings.first().card.id; step=2 }
- fun checkout(store: String) { if(!canEditCheckout) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }
+ fun compare() { if(!canEditCheckout || selected.isEmpty()) return; val best=rankings.firstOrNull { it.complete } ?: return; storeId=best.store.id; cardId=best.card.id; step=2 }
+ fun checkout(store: String) { if(!canEditCheckout || selected.isEmpty() || rankings.none { it.store.id==store && it.complete }) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }
  fun switchCard(id: String) { if(!canEditCheckout || id==current.card.id) return; clearPayment(); cardId=id }
  fun back() { if(canEditCheckout && step in 1..3) { step--; error=null } }
  private suspend fun request(path: String, payload: JSONObject): JSONObject = withContext(Dispatchers.IO) {
@@ -115,10 +128,11 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  }
  fun pay(onReady: (String,String)->Unit) {
   if(!canEditCheckout || step!=3 || selected.isEmpty()) return
+  if(!current.complete || !checkoutWithinBudget) { error="Review the basket: it must be complete and within your approved budget."; return }
   busy=true; error=null; pending=current
   pendingIngredients=recipe.ingredients.filter { it.id in selected }.toList()
   pendingRecipeName=recipe.name
-  val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt)
+  val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt).put("pricingVersion","packages-v1").put("servings",servings).put("fulfillment",fulfillment).put("organicOnly",organicOnly)
   pendingPayload=payload
   viewModelScope.launch {
    try {
@@ -156,6 +170,6 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  val canVerify get() = intentId != null
  fun paymentCanceled() { busy=false; error="Payment canceled. Your basket is ready when you are." }
  fun paymentFailed(message: String) { busy=false; awaitingVerification=intentId!=null; error="$message Verify the payment status before retrying." }
- fun walkthrough() { if(!canEditCheckout) return; receipt=current; receiptIngredients=recipe.ingredients.filter { it.id in selected }; receiptRecipeName=recipe.name; receiptPaymentId=null; paymentVerified=false; step=4; error=null }
+ fun walkthrough() { if(!canEditCheckout || !current.complete || selected.isEmpty()) return; receipt=current; receiptIngredients=recipe.ingredients.filter { it.id in selected }; receiptRecipeName=recipe.name; receiptPaymentId=null; paymentVerified=false; step=4; error=null }
  fun restart() { if(!canEditCheckout) return; newPlan(); step=0; receipt=null; receiptIngredients=emptyList(); receiptRecipeName=""; receiptPaymentId=null; paymentVerified=false; clearPayment() }
 }

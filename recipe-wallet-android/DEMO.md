@@ -1,21 +1,19 @@
-# Recipe Wallet — agent demo
+# Recipe Wallet — combined demo
 
-Pitch: “Tell Recipe Wallet what dinner needs to accomplish. Its AI agent builds a basket, compares where to buy it and which sample Visa card to use, then asks you to approve.”
+Pitch: “Tell Recipe Wallet what dinner needs to accomplish. Its AI agent builds a package-priced basket, compares stores and sample Visa rewards, and asks you to review before payment.”
 
-1. Run the local backend with Gemini and Stripe test keys, and launch the Android app.
-2. Enter: **Find me a vegetarian noodle dinner under $12. I already have garlic.**
-3. Show the real tool activity: eligible recipes found, store/card combinations compared, basket prepared for review. The fixture produces a $7.79 upfront noodle basket, with $0.29 estimated future rewards and $7.50 cost after rewards.
-4. Revise: **I already have soy sauce too.** The owned-ingredient list grows and the selected charge drops. Net-cost ties are deterministic; a card/store with more estimated rewards can have a slightly higher charge.
-5. Optionally revise: **Actually my budget is $1.** The agent explains that no basket fits, shows the cheapest available charge, and disables approval. Change the budget back to $12 before checkout.
-6. Tap **Approve basket and continue**. Show the upfront charge, future rewards and eligibility assumptions separately.
-7. Tap **Approve & pay** and pay using Stripe TEST card `4242 4242 4242 4242`, a future expiry and valid test CVC. Show the server-verified test receipt.
+1. Start the backend, run `adb reverse tcp:4242 tcp:4242`, and launch the app. The home screen offers Build with AI, Build manually and Saved recipes.
+2. Request **Find me a vegetarian noodle dinner under $30. I already have garlic.** Show actual recipe search, basket comparison and preparation tool summaries.
+3. Review the two-serving pickup basket. Current fixture: $15.80 charged today, $0.79 illustrative future rewards, $15.01 estimated cost after rewards. The grocery subtotal buys whole packages.
+4. Revise **I already have soy sauce too.** The agent remembers garlic and removes the soy sauce purchase. The live package plan falls to $12.15.
+5. Optionally set a $1 budget. Approval is disabled when no basket fits. Restore the $30 budget before continuing.
+6. Tap **Review package-priced basket**. Show servings, pantry exclusions, pickup/delivery and organic-only controls. Incomplete stores cannot be selected. Complete store recommendations rank by estimated cost after rewards; upfront cost remains visible.
+7. For the stock example, manually choose Tomato basil pasta and enable organic-only. The QFC demo option cannot supply organic basil; another complete store remains available. Delivery availability is also explicit.
+8. Choose **Review checkout**. Review store, package counts, fulfillment fees, configured 0% demo tax and today's charge. Future rewards are shown separately.
+9. Tap **Approve & pay**. Use Stripe test card `4242 4242 4242 4242`, a future expiry, a three-digit test CVC and test ZIP. The paid receipt appears only after server verification and contains the purchased packages and test reference.
 
-All prices are fictional portion estimates, exclude tax, and do not represent a full retail cart. No grocery order, delivery or actual rewards result. Card selection is advisory; the sample Visa card is not automatically loaded into Stripe. Never describe manual selection, mocked test fixtures, or confirmation previews as a live AI response or successful payment.
+Cancellation keeps the basket. Uncertain payment results block a new checkout until verification resolves the existing attempt. Servings and fulfillment changes cannot bypass an agent's upfront budget. Preview confirmation is explicitly labeled no payment made.
 
-If Gemini is unavailable or rate-limited, show the error honestly and use manual recipe selection. Rehearse the request before judging. The local session lasts 20 minutes; “Start a new shop” clears its reference.
+The agent defaults to two servings and pickup; adjust those choices in the store screen. Recipes, package prices, stock, product attributes, fees, ratings and rewards are illustrative. Real store addresses support directions only. No actual grocery order, delivery or rewards result. Saved personal recipes are local notes; shopping comparison uses the demo catalog.
 
-Technical evidence: the live backend completed planning, a pantry revision and an impossible-budget request with Gemini 3.5 Flash-Lite in approximately 2–3 seconds per turn. Stripe's test API created, confirmed and server-verified an idempotent $7.79 payment. The Android device tests also verified live AI planning and revision, approval, opening PaymentSheet, canceling it, and completing a test card payment through the server-verified receipt.
-
-The team reports that a Visa mentor confirmed no Visa API is mandatory; retain Stripe test checkout. Clarify whether UX is weighted 20% or 25% in the conflicting rubric text. Confirm the submission deadline in the participant Hacker Guide or with organizers.
-
-Checkout verification update: 22 backend tests, five Kotlin pricing tests, and three deterministic emulator tests passed. The live native Stripe test also passed cancellation, an uncertain-result guard that blocks editing/new payment, verification of an unpaid intent to unlock retry, and a successful $7.79 test payment with the matching ingredient snapshot and Stripe reference.
+The team reports Visa mentor confirmation that no Visa API is required. Clarify the conflicting UX rubric weights and confirm submission deadlines with organizers. If Gemini is unavailable, show its error honestly and use manual browsing; do not present it as live AI planning.
