@@ -56,3 +56,16 @@ The experience addresses discovery, decision-making, personalization, checkout a
 The mentor-provided rubric lists innovation, technical execution, UX, commerce impact and trust/responsibility. Its table gives UX 20% while the prose gives 25%; confirm the official weighting and any mandatory Visa API requirement with organizers.
 
 References: [Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling), [Interactions API](https://ai.google.dev/gemini-api/docs/interactions-overview), [Stripe Android](https://github.com/stripe/stripe-android), [Stripe test cards](https://docs.stripe.com/testing), [Visa brief](https://dh26.dubhacks.co/#tracks).
+
+
+## Saved recipes and the shopping flow
+
+The native screens share the same typography, restrained green palette, borders, and navigation. The top-right overflow menu opens a scrollable About panel.
+
+Save a personal recipe locally, open it from **Saved recipes**, and tap **Use this recipe**. The ingredient screen suggests matches from a separate 26-product demo grocery catalog. Review each product and its package size, choose pack counts, and uncheck anything not being purchased. Every included ingredient must be matched before comparing shops. Matching uses literal aliases, not dietary or quantity inference; quantities must be reviewed manually.
+
+Personal baskets continue through shop comparison, advisory Visa selection, and Stripe test checkout or a clearly labeled receipt preview. Unlike the original three meal templates' portion estimates, the personal-recipe catalog uses sample full-package prices. Both exclude tax and real grocery fulfillment. All prices and card rules remain fictional.
+
+Android and the backend share identical `products.json` fixtures. Custom checkout sends product IDs and integer pack counts in `customBasket.items`; the backend derives prices from its own catalog and rejects unknown products, duplicated IDs, and counts outside 1–20 per product. It does not accept a client-supplied payment amount. Existing backend key setup is still required for live AI and Stripe test payments.
+
+`SavedRecipeFlowTest` verifies saved recipe selection through receipt preview, plus blocking unmatched ingredients. Backend tests cover custom basket amounts, quantity limits, and fixture parity. Tests create and remove only their own temporary recipes.

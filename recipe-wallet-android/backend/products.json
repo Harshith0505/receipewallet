@@ -1,0 +1,256 @@
+[
+  {
+    "id": "pasta",
+    "name": "Pasta",
+    "pack": "454 g box",
+    "price": 199,
+    "aliases": [
+      "pasta",
+      "rigatoni",
+      "macaroni"
+    ]
+  },
+  {
+    "id": "noodles",
+    "name": "Wheat noodles",
+    "pack": "454 g pack",
+    "price": 299,
+    "aliases": [
+      "noodles",
+      "noodle"
+    ]
+  },
+  {
+    "id": "cheddar",
+    "name": "Cheddar cheese",
+    "pack": "227 g block",
+    "price": 449,
+    "aliases": [
+      "cheddar",
+      "cheese"
+    ]
+  },
+  {
+    "id": "parmesan",
+    "name": "Parmesan",
+    "pack": "142 g tub",
+    "price": 399,
+    "aliases": [
+      "parmesan"
+    ]
+  },
+  {
+    "id": "milk",
+    "name": "Whole milk",
+    "pack": "946 ml carton",
+    "price": 299,
+    "aliases": [
+      "milk"
+    ]
+  },
+  {
+    "id": "butter",
+    "name": "Unsalted butter",
+    "pack": "113 g stick",
+    "price": 199,
+    "aliases": [
+      "butter"
+    ]
+  },
+  {
+    "id": "flour",
+    "name": "All-purpose flour",
+    "pack": "907 g bag",
+    "price": 299,
+    "aliases": [
+      "flour"
+    ]
+  },
+  {
+    "id": "eggs",
+    "name": "Eggs",
+    "pack": "6 eggs",
+    "price": 349,
+    "aliases": [
+      "eggs",
+      "egg"
+    ]
+  },
+  {
+    "id": "breadcrumbs",
+    "name": "Breadcrumbs",
+    "pack": "227 g tub",
+    "price": 199,
+    "aliases": [
+      "breadcrumbs",
+      "bread crumbs"
+    ]
+  },
+  {
+    "id": "garlic",
+    "name": "Garlic",
+    "pack": "1 bulb",
+    "price": 69,
+    "aliases": [
+      "garlic"
+    ]
+  },
+  {
+    "id": "tomatoes",
+    "name": "Cherry tomatoes",
+    "pack": "1 pint",
+    "price": 299,
+    "aliases": [
+      "cherry tomatoes",
+      "tomatoes",
+      "tomato"
+    ]
+  },
+  {
+    "id": "onion",
+    "name": "Yellow onion",
+    "pack": "1 onion",
+    "price": 99,
+    "aliases": [
+      "onion"
+    ]
+  },
+  {
+    "id": "green-onions",
+    "name": "Green onions",
+    "pack": "1 bunch",
+    "price": 125,
+    "aliases": [
+      "green onions",
+      "green onion",
+      "scallions"
+    ]
+  },
+  {
+    "id": "rice",
+    "name": "Brown rice",
+    "pack": "454 g bag",
+    "price": 249,
+    "aliases": [
+      "brown rice",
+      "rice"
+    ]
+  },
+  {
+    "id": "chickpeas",
+    "name": "Chickpeas",
+    "pack": "425 g can",
+    "price": 119,
+    "aliases": [
+      "chickpeas",
+      "chickpea",
+      "garbanzo"
+    ]
+  },
+  {
+    "id": "greens",
+    "name": "Mixed greens",
+    "pack": "113 g bag",
+    "price": 299,
+    "aliases": [
+      "mixed greens",
+      "greens",
+      "salad"
+    ]
+  },
+  {
+    "id": "avocado",
+    "name": "Avocado",
+    "pack": "1 avocado",
+    "price": 129,
+    "aliases": [
+      "avocado",
+      "avocados"
+    ]
+  },
+  {
+    "id": "lemon",
+    "name": "Lemon",
+    "pack": "1 lemon",
+    "price": 69,
+    "aliases": [
+      "lemons",
+      "lemon"
+    ]
+  },
+  {
+    "id": "basil",
+    "name": "Fresh basil",
+    "pack": "1 bunch",
+    "price": 199,
+    "aliases": [
+      "basil"
+    ]
+  },
+  {
+    "id": "olive-oil",
+    "name": "Olive oil",
+    "pack": "250 ml bottle",
+    "price": 649,
+    "aliases": [
+      "olive oil"
+    ]
+  },
+  {
+    "id": "sesame-oil",
+    "name": "Sesame oil",
+    "pack": "148 ml bottle",
+    "price": 499,
+    "aliases": [
+      "sesame oil"
+    ]
+  },
+  {
+    "id": "soy-sauce",
+    "name": "Soy sauce",
+    "pack": "296 ml bottle",
+    "price": 299,
+    "aliases": [
+      "soy sauce"
+    ]
+  },
+  {
+    "id": "chili",
+    "name": "Chili flakes",
+    "pack": "35 g jar",
+    "price": 229,
+    "aliases": [
+      "chili flakes",
+      "chilli flakes",
+      "chili"
+    ]
+  },
+  {
+    "id": "sugar",
+    "name": "Sugar",
+    "pack": "907 g bag",
+    "price": 249,
+    "aliases": [
+      "sugar"
+    ]
+  },
+  {
+    "id": "salt",
+    "name": "Salt",
+    "pack": "737 g container",
+    "price": 129,
+    "aliases": [
+      "salt"
+    ]
+  },
+  {
+    "id": "pepper",
+    "name": "Black pepper",
+    "pack": "42 g jar",
+    "price": 249,
+    "aliases": [
+      "black pepper",
+      "pepper"
+    ]
+  }
+]

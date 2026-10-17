@@ -1,5 +1,6 @@
 package com.recipewallet.app
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,12 +35,13 @@ private val HomeLine = Color(0xFFE1E3DC)
 @Composable
 internal fun HomeScreen(vm: WalletViewModel) {
     var manual by rememberSaveable { mutableStateOf(false) }
-    var libraryPage by rememberSaveable { mutableStateOf("home") }
+    var libraryPage by rememberSaveable { mutableStateOf(if (vm.isPersonal) "saved" else "home") }
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val recipeStore = remember { PersonalRecipeStore(context) }
     var personalRecipes by remember { mutableStateOf(recipeStore.read()) }
     var about by rememberSaveable { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val dismissKeyboard: () -> Unit = { focusManager.clearFocus(force = true); keyboard?.hide() }
@@ -60,6 +61,7 @@ internal fun HomeScreen(vm: WalletViewModel) {
             onAdd = { selectedRecipeId = null; libraryPage = "add" },
             onOpen = { selectedRecipeId = it.id; libraryPage = "detail" },
             onEdit = { libraryPage = "add" },
+            onUse = { dismissKeyboard(); vm.choosePersonal(it) },
             onSave = { recipe ->
                 runCatching {
                     personalRecipes = recipeStore.save(recipe)
@@ -83,12 +85,21 @@ internal fun HomeScreen(vm: WalletViewModel) {
                     Text("recipe wallet", color = HomeInk, fontSize = 22.sp,
                         letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { dismissKeyboard(); libraryPage = "saved" }, enabled = !vm.aiBusy) {
+                        TextButton(onClick = { dismissKeyboard(); personalRecipes = recipeStore.read(); libraryPage = "saved" }, enabled = !vm.aiBusy) {
                             Text("Saved recipes", color = HomeInk, fontSize = 13.sp)
                         }
-                        IconButton(onClick = { about = true }, modifier = Modifier.semantics { contentDescription = "About this demo" }) {
-                            Box(Modifier.size(18.dp).border(1.dp, HomeMuted, CircleShape), contentAlignment = Alignment.Center) {
-                                Text("i", color = HomeMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Box {
+                            IconButton(onClick = { dismissKeyboard(); menuOpen = true },
+                                modifier = Modifier.semantics { contentDescription = "More options" }) {
+                                Canvas(Modifier.size(24.dp)) {
+                                    listOf(-6f, 0f, 6f).forEach { offset ->
+                                        drawCircle(HomeInk, radius = 1.6.dp.toPx(),
+                                            center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2 + offset.dp.toPx()))
+                                    }
+                                }
+                            }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(text = { Text("About this demo") }, onClick = { menuOpen = false; about = true })
                             }
                         }
                     }
@@ -171,11 +182,12 @@ internal fun HomeScreen(vm: WalletViewModel) {
     if (about) {
         AlertDialog(
             onDismissRequest = { about = false },
-            title = { Text("About this demo") },
+            shape = RoundedCornerShape(16.dp),
+            title = { Text("About Recipe Wallet") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("Recipes, shops, prices, and Visa reward programs are illustrative. Ingredient estimates cover the portion used, not a full retail package. Tax is excluded.")
-                    Text("AI meal requests and recent meal preferences are processed by Gemini. Payment details are not sent to the AI. Local planning sessions expire after 20 minutes.")
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Recipes use sample prices, shops, and Visa rewards. Tax is excluded. Saved recipes use the packages you select.")
+                    Text("Meal requests and recent preferences go to Gemini. Card details do not. Planning sessions expire after 20 minutes.")
                     Text("Checkout uses Stripe test mode. No real grocery order, delivery, or rewards result.")
                 }
             },

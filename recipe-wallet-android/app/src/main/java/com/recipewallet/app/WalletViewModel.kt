@@ -15,6 +15,35 @@ import java.util.UUID
 
 class WalletViewModel(app: Application): AndroidViewModel(app) {
  val catalog = Catalog(app)
+ var personalRecipe by mutableStateOf<PersonalRecipe?>(null)
+  private set
+ var productMatches by mutableStateOf<Map<String, String>>(emptyMap())
+  private set
+ var packCounts by mutableStateOf<Map<String, Int>>(emptyMap())
+  private set
+ val isPersonal get() = personalRecipe != null
+ fun productFor(lineId: String) = catalog.products.firstOrNull { it.id == productMatches[lineId] }
+ fun choosePersonal(value: PersonalRecipe) {
+  newPlan(); personalRecipe=value; recipeId="saved:${value.id}"
+  productMatches=value.ingredients.mapIndexedNotNull { index,line -> suggestProduct(line,catalog.products)?.let { "line-$index" to it.id } }.toMap()
+  packCounts=value.ingredients.indices.associate { "line-$it" to 1 }
+  selected=value.ingredients.indices.map { "line-$it" }.toSet()
+  storeId=""; cardId=""; error=null; attempt=UUID.randomUUID().toString(); step=1
+ }
+ fun matchProduct(lineId: String, productId: String) {
+  require(catalog.products.any { it.id==productId })
+  productMatches=productMatches+(lineId to productId); attempt=UUID.randomUUID().toString()
+ }
+ fun setPacks(lineId: String, count: Int) {
+  packCounts=packCounts+(lineId to count.coerceIn(1,20)); attempt=UUID.randomUUID().toString()
+ }
+ val canCompare get() = selected.isNotEmpty() && (!isPersonal || selected.all { productFor(it)!=null })
+ fun customBasketJson(): JSONObject {
+  check(isPersonal && canCompare) { "Match every included ingredient to a product first." }
+  val quantities=selected.groupBy { productMatches.getValue(it) }.mapValues { (_, ids) -> ids.sumOf { packCounts[it] ?: 1 } }
+  check(quantities.values.all { it in 1..20 }) { "Choose no more than 20 packs of the same product." }
+  return JSONObject().put("items",JSONArray(quantities.map { (id,count) -> JSONObject().put("productId",id).put("quantity",count) }))
+ }
  var preference by mutableStateOf("")
  var aiBusy by mutableStateOf(false)
  var agentPlan by mutableStateOf<JSONObject?>(null)
@@ -59,7 +88,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun approvePlan() {
   val p=agentPlan ?: return
   if(!planWithinBudget || aiBusy) return
-  recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
+  personalRecipe=null; recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; step=3
  }
  fun newPlan() { agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
@@ -75,13 +104,19 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private var pending: Quote? = null
  private var intentId: String? = null
  private var attempt = UUID.randomUUID().toString()
- val recipe get() = catalog.recipes.first { it.id == recipeId }
+ val recipe get() = personalRecipe?.let { saved ->
+  Recipe("saved:${saved.id}",saved.name,"","Your saved recipe",saved.prepMinutes ?: 0,
+   saved.ingredients.mapIndexed { index,line ->
+    val id="line-$index"; val product=productFor(id); val packs=packCounts[id] ?: 1
+    Ingredient(id,line,product?.let { "$packs × ${it.pack}" } ?: "Choose a product",(product?.price ?: 0L)*packs)
+   })
+ } ?: catalog.recipes.first { it.id == recipeId }
  val subtotal get() = recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice }
  val rankings get() = ranked(subtotal, catalog.stores, catalog.cards)
  val current get(): Quote { val s = catalog.stores.firstOrNull { it.id == storeId } ?: rankings.first().store; val c = catalog.cards.firstOrNull { it.id == cardId } ?: rankings.first { it.store.id == s.id }.card; return quote(subtotal,s,c) }
- fun choose(id: String) { newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
+ fun choose(id: String) { newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
  fun toggle(id: String) { selected=if(id in selected) selected-id else selected+id; attempt=UUID.randomUUID().toString() }
- fun compare() { storeId=rankings.first().store.id; cardId=rankings.first().card.id; step=2 }
+ fun compare() { if(!canCompare) return; if(isPersonal) { try { customBasketJson() } catch(e: Exception) { error=e.message; return } }; error=null; storeId=rankings.first().store.id; cardId=rankings.first().card.id; step=2 }
  fun checkout(store: String) { storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3; error=null; attempt=UUID.randomUUID().toString() }
  fun switchCard(id: String) { cardId=id; attempt=UUID.randomUUID().toString() }
  private suspend fun request(path: String, payload: JSONObject): JSONObject = withContext(Dispatchers.IO) {
@@ -98,10 +133,13 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   } finally { connection.disconnect() }
  }
  fun pay(onReady: (String,String)->Unit) {
+  if(busy || !canCompare) return
   busy=true; error=null; pending=current
   viewModelScope.launch {
    try {
-    val result=request("/payment-intent",JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt))
+    val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt)
+    if(isPersonal) payload.put("customBasket",customBasketJson())
+    val result=request("/payment-intent",payload)
     check(result.getString("publishableKey").startsWith("pk_test_")) { "Only Stripe test keys are allowed" }
     check(result.getLong("amount")==pending!!.charge) { "Price changed. Please review your basket." }
     intentId=result.getString("paymentIntentId")
@@ -125,5 +163,5 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun paymentCanceled() { busy=false; error="Payment canceled. Your basket is ready when you are." }
  fun paymentFailed(message: String) { busy=false; error=message }
  fun walkthrough() { receipt=current; paymentVerified=false; step=4; error=null }
- fun restart() { newPlan(); step=0; receipt=null; error=null; busy=false; intentId=null; pending=null; attempt=UUID.randomUUID().toString() }
+ fun restart() { newPlan(); personalRecipe=null; step=0; receipt=null; error=null; busy=false; intentId=null; pending=null; attempt=UUID.randomUUID().toString() }
 }

@@ -2,21 +2,21 @@ package com.recipewallet.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,173 +24,235 @@ import com.stripe.android.PaymentConfiguration
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.PaymentSheetResult
 
-private val Ink=Color(0xFF213E30)
-private val Cream=Color(0xFFF7F6EF)
-private val Muted=Color(0xFF677167)
-private val Lime=Color(0xFFD8E9A1)
-class MainActivity: ComponentActivity() {
- private val vm: WalletViewModel by viewModels()
- private lateinit var sheet: PaymentSheet
- override fun onCreate(savedInstanceState: Bundle?) {
-  super.onCreate(savedInstanceState)
-  sheet=PaymentSheet(this) { result -> when(result) {
-   is PaymentSheetResult.Completed -> vm.verify()
-   is PaymentSheetResult.Canceled -> vm.paymentCanceled()
-   is PaymentSheetResult.Failed -> vm.paymentFailed(result.error.localizedMessage ?: "Payment failed. Try again.")
-  } }
-  setContent {
-   MaterialTheme(colorScheme=lightColorScheme(primary=Ink, background=Cream, surface=Color.White, secondary=Lime)) {
-    Wallet(vm) { startTestCheckout() }
-   }
-  }
- }
- fun startTestCheckout() {
-  vm.pay { key, secret ->
-   PaymentConfiguration.init(this,key)
-   sheet.presentWithPaymentIntent(secret,PaymentSheet.Configuration(merchantDisplayName="Recipe Wallet · TEST", allowsDelayedPaymentMethods=false))
-  }
- }
+class MainActivity : ComponentActivity() {
+    private val vm: WalletViewModel by viewModels()
+    private lateinit var sheet: PaymentSheet
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        sheet = PaymentSheet(this) { result -> when (result) {
+            is PaymentSheetResult.Completed -> vm.verify()
+            is PaymentSheetResult.Canceled -> vm.paymentCanceled()
+            is PaymentSheetResult.Failed -> vm.paymentFailed(result.error.localizedMessage ?: "Payment failed. Try again.")
+        } }
+        setContent {
+            MaterialTheme(colorScheme = lightColorScheme(primary = ShopInk, background = ShopPaper,
+                surface = androidx.compose.ui.graphics.Color.White, secondary = ShopInk,
+                onSurface = ShopInk, onSurfaceVariant = ShopMuted, onBackground = ShopInk,
+                outline = ShopLine, outlineVariant = ShopLine, surfaceTint = ShopInk,
+                surfaceContainer = androidx.compose.ui.graphics.Color.White,
+                surfaceContainerLow = androidx.compose.ui.graphics.Color.White,
+                surfaceContainerHigh = androidx.compose.ui.graphics.Color.White,
+                surfaceContainerHighest = ShopTint)) {
+                Wallet(vm) { startTestCheckout() }
+            }
+        }
+    }
+    fun startTestCheckout() {
+        vm.pay { key, secret ->
+            PaymentConfiguration.init(this, key)
+            sheet.presentWithPaymentIntent(secret, PaymentSheet.Configuration(
+                merchantDisplayName = "Recipe Wallet · TEST", allowsDelayedPaymentMethods = false))
+        }
+    }
 }
-@Composable private fun Wallet(vm: WalletViewModel, pay: ()->Unit) {
- if(vm.step == 0) { HomeScreen(vm); return }
- BackHandler(enabled=vm.step in 1..3 && !vm.busy) { vm.step--; vm.error=null }
- val scroll = key(vm.step) { rememberScrollState() }
- Scaffold(containerColor=Cream) { padding ->
-  Column(Modifier.padding(padding).fillMaxSize().verticalScroll(scroll).padding(22.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
-    Text("◒  recipe wallet",color=Ink,fontSize=23.sp,fontWeight=FontWeight.Bold)
-    Tag("DEMO",Lime)
-   }
-   Text("A good meal. A smarter spend.",color=Muted,fontSize=13.sp)
-   if(vm.step<4) {
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-     listOf("Plan","Basket","Store","Pay").forEachIndexed { i,s -> Text("${i+1} $s",modifier=Modifier.weight(1f).background(if(i==vm.step) Ink else Color(0xFFE9EAE1),RoundedCornerShape(9.dp)).padding(vertical=10.dp,horizontal=7.dp),color=if(i==vm.step) Color.White else Muted,fontSize=12.sp) }
+
+@Composable
+private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
+    val back: () -> Unit = { if (!vm.busy) { if (vm.step == 4) vm.restart() else vm.step--; vm.error = null } }
+    BackHandler(enabled = vm.step in 1..4 && !vm.busy, onBack = back)
+    if (vm.step == 0) { HomeScreen(vm); return }
+    key(vm.step) {
+        ShoppingPage(vm.step, onBack = back, backEnabled = !vm.busy) {
+            when (vm.step) {
+                1 -> IngredientPage(vm)
+                2 -> ShopComparison(vm)
+                3 -> CheckoutPage(vm, pay)
+                4 -> ReceiptPage(vm)
+            }
+        }
     }
-   }
-   when(vm.step) {
-    1 -> {
-     Eyebrow("MAKE IT YOURS")
-     Title(vm.recipe.name)
-     Text("Keep what you love. Leave out what you don't.",color=Muted)
-     Panel {
-      vm.recipe.ingredients.forEach { i ->
-       Row(Modifier.fillMaxWidth().clickable { vm.toggle(i.id) }.padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically) {
-        Checkbox(checked=i.id in vm.selected,onCheckedChange={vm.toggle(i.id)})
-        Column(Modifier.weight(1f)) { Text(i.name,color=Ink,fontWeight=FontWeight.Medium); Text(i.qty,color=Muted,fontSize=12.sp) }
-        Text(money(i.basePrice),color=Ink)
-       }
-      }
-      HorizontalDivider(color=Cream)
-      Line("Raw ingredient estimate",money(vm.subtotal),true)
-     }
-     if(vm.selected.isEmpty()) Text("Choose at least one ingredient to compare stores.",color=Muted)
-     Primary("Compare stores  →",enabled=vm.selected.isNotEmpty(),onClick={vm.compare()})
-     DemoNote()
-    }
-    2 -> {
-     Eyebrow("A LITTLE COMPARISON GOES A LONG WAY")
-     Title("Your basket.\nIts best price.")
-     Text("Ranked only by estimated cost after rewards. Each store is paired with its best sample Visa card.",color=Muted)
-     vm.rankings.forEachIndexed { index,q ->
-      Panel {
-       if(index==0) Tag("LOWEST ESTIMATED COST",Lime)
-       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(q.store.name,fontSize=20.sp,color=Ink,fontWeight=FontWeight.Bold); Text("#${index+1}",color=Muted) }
-       Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi",color=Muted,fontSize=13.sp)
-       Text(q.store.address,color=Muted,fontSize=12.sp)
-       Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee)); Line("Rewards · ${q.card.name}","−${money(q.rewards)}")
-       HorizontalDivider(color=Cream)
-       Line("Estimated cost after rewards",money(q.net),true)
-       Text("Demo prices & estimates",color=Muted,fontSize=11.sp)
-       Primary(if(index==0) "Continue with this store  →" else "Choose this store",onClick={vm.checkout(q.store.id)})
-      }
-     }
-    }
-    3 -> {
-     Eyebrow("MAKE YOUR CARD WORK HARDER")
-     Title("The finishing touch.")
-     Text("${vm.current.store.name} · ${vm.recipe.name}",color=Muted)
-     DemoNote()
-     val best=vm.catalog.cards.maxBy { it.rewards(vm.current.groceries) }
-     vm.catalog.cards.forEach { card ->
-      val selected=card.id==vm.current.card.id
-      Column(Modifier.fillMaxWidth().border(if(selected) 2.dp else 1.dp,if(selected) Ink else Color(0xFFDDDFD5),RoundedCornerShape(18.dp)).background(if(selected) Color(0xFFEEF2E2) else Color.White,RoundedCornerShape(18.dp)).clickable(enabled=!vm.busy) { vm.switchCard(card.id) }.padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("${if(selected) "●" else "○"}  ${card.name}",fontWeight=FontWeight.Bold,color=Ink); Text("VISA",color=Ink,fontWeight=FontWeight.Bold,fontSize=15.sp) }
-       if(card.id==best.id) Tag("BEST ESTIMATED REWARDS",Lime)
-       Line(card.label,"${money(card.rewards(vm.current.groceries))} est.")
-       Text(card.notes,color=Muted,fontSize=12.sp)
-      }
-     }
-     Panel {
-      Line("Grocery estimate",money(vm.current.groceries)); Line("Delivery estimate",money(vm.current.store.deliveryFee))
-      Line("Test payment amount",money(vm.current.charge),true)
-      Line("Estimated future rewards","−${money(vm.current.rewards)}")
-      HorizontalDivider(color=Cream)
-      Line("Estimated cost after rewards",money(vm.current.net),true)
-      Text("Rewards do not reduce today's charge. Sample card selection is advisory; use a Stripe test card in PaymentSheet. No actual rewards are earned.",color=Muted,fontSize=12.sp)
-     }
-     vm.error?.let { Text(it,color=Color(0xFF9A3A28),modifier=Modifier.background(Color(0xFFFFECE4),RoundedCornerShape(12.dp)).padding(14.dp)) }
-     if(vm.busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-     Primary(if(vm.busy) "Processing…" else "Pay ${money(vm.current.charge)} · Stripe test",enabled=!vm.busy,onClick=pay)
-     if(vm.canVerify) OutlinedButton(onClick={vm.verify()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Verify pending test payment") }
-     TextButton(onClick={vm.walkthrough()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Preview confirmation without payment") }
-    }
-    4 -> {
-     val receipt=vm.receipt!!
-     Text("✓",fontSize=56.sp,color=Ink,modifier=Modifier.background(Lime,RoundedCornerShape(28.dp)).padding(20.dp))
-     Eyebrow(if(vm.paymentVerified) "STRIPE TEST PAYMENT VERIFIED" else "WALKTHROUGH · NO PAYMENT MADE")
-     Title(if(vm.paymentVerified) "Demo complete.\nDinner imagined." else "Here's your\ndemo receipt.")
-     Panel {
-      Text(receipt.store.name,fontSize=22.sp,color=Ink,fontWeight=FontWeight.Bold)
-      Text(receipt.card.name,color=Muted)
-      Line(if(vm.paymentVerified) "Test amount paid" else "Test amount preview",money(receipt.charge))
-      Line("Illustrative rewards",money(receipt.rewards))
-      Line("Estimated cost after rewards",money(receipt.net),true)
-     }
-     DemoNote()
-     Text("No rewards were earned. No delivery is scheduled. This prototype demonstrates the decision and payment flow.",color=Muted,fontSize=13.sp)
-     Primary("Cook up another idea  →",onClick={vm.restart()})
-    }
-   }
-   if(vm.step in 1..3) TextButton(onClick={vm.step--;vm.error=null},enabled=!vm.busy) { Text("← Back") }
-   Spacer(Modifier.height(12.dp))
-  }
- }
 }
-@Composable private fun Title(text: String) { Text(text,fontSize=34.sp,lineHeight=39.sp,fontWeight=FontWeight.Bold,color=Ink) }
-@Composable private fun Eyebrow(text: String) { Text(text,fontSize=10.sp,letterSpacing=1.6.sp,fontWeight=FontWeight.Bold,color=Muted) }
-@Composable private fun Tag(text: String,bg: Color) { Text(text,fontSize=10.sp,fontWeight=FontWeight.Bold,color=Ink,modifier=Modifier.background(bg,RoundedCornerShape(6.dp)).padding(horizontal=9.dp,vertical=6.dp)) }
-@Composable private fun Panel(modifier: Modifier=Modifier,content: @Composable ColumnScope.()->Unit) { Column(modifier.fillMaxWidth().background(Color.White,RoundedCornerShape(20.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content) }
-@Composable private fun Line(label: String,value: String,bold: Boolean=false) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) { Text(label,color=if(bold) Ink else Muted,fontSize=13.sp,fontWeight=if(bold) FontWeight.Bold else FontWeight.Normal,modifier=Modifier.weight(1f).padding(end=12.dp)); Text(value,color=Ink,fontSize=if(bold) 19.sp else 14.sp,fontWeight=if(bold) FontWeight.Bold else FontWeight.Normal) } }
-@Composable private fun Primary(text: String,enabled: Boolean=true,onClick: ()->Unit) { Button(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) { Text(text,fontWeight=FontWeight.Bold) } }
-@Composable private fun DemoNote() { Text("SIMULATED CHECKOUT · No real grocery order is placed. Prices, fees and rewards are demo estimates. No actual rewards are earned.",fontSize=12.sp,color=Ink,modifier=Modifier.fillMaxWidth().background(Color(0xFFE9EDDC),RoundedCornerShape(12.dp)).padding(15.dp)) }
 
-@Composable internal fun AgentPlanReview(vm: WalletViewModel) {
-     if(vm.agentReply.isNotBlank()) {
-      Panel {
-       Tag("AGENT PLAN · REVIEW BEFORE CHECKOUT",Lime)
-       vm.agentTrace.forEach { Text("✓ $it",color=Muted,fontSize=12.sp) }
-       Text(vm.agentReply,color=Ink)
-       val planned=vm.plannedRecipe
-       val q=vm.plannedQuote
-       if(planned!=null && q!=null) {
-        Text(planned.emoji+"  "+planned.name,color=Ink,fontSize=21.sp,fontWeight=FontWeight.Bold)
-        Text("Interpreted preferences: ${vm.planDiet} · ${if(vm.planBudget>=0) money(vm.planBudget)+" upfront budget" else "no budget set"}${if(vm.planTime>0) " · under ${vm.planTime} minutes" else ""}",color=Muted,fontSize=12.sp)
-        Text("To buy: "+planned.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name },color=Ink,fontSize=13.sp)
-        Text("Already owned: "+planned.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" },color=Muted,fontSize=13.sp)
-        Text("${q.store.name} · ${q.card.name}",color=Ink,fontWeight=FontWeight.Bold)
-        Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi · ${q.store.address}",color=Muted,fontSize=12.sp)
-        Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee))
-        Line("Amount charged before rewards",money(q.charge),true)
-        Line("Estimated future rewards",money(q.rewards))
-        Line("Estimated cost after rewards",money(q.net),true)
-        Text(q.card.label+". "+q.card.notes,color=Muted,fontSize=12.sp)
-        if(!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.",color=Color(0xFF9A3A28),fontWeight=FontWeight.Bold)
-        Text("Correct a preference or pantry item in the revision box above. Estimates price ingredient portions, exclude tax, and do not guarantee dietary or allergy safety.",color=Muted,fontSize=12.sp)
-        Primary("Approve basket and continue  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
-       }
-       TextButton(onClick={vm.newPlan()},enabled=!vm.aiBusy) { Text("Start a new shop") }
-       DemoNote()
-      }
-     }
+@Composable
+private fun IngredientPage(vm: WalletViewModel) {
+    PageHeading("Ingredients", vm.recipe.name)
+    SmallNote(if (vm.isPersonal) "Review the suggested products and pack counts. Uncheck anything you already have or don’t need."
+        else "Uncheck anything you already have or don’t need.")
+    QuietCard {
+        vm.recipe.ingredients.forEachIndexed { index, ingredient ->
+            if (index > 0) HorizontalDivider(color = ShopLine)
+            val included = ingredient.id in vm.selected
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { vm.toggle(ingredient.id) }, verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = included, onCheckedChange = { vm.toggle(ingredient.id) })
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(ingredient.name, color = ShopInk, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        if (!vm.isPersonal) SmallNote(ingredient.qty)
+                    }
+                    if (!vm.isPersonal || vm.productFor(ingredient.id) != null)
+                        Text(money(ingredient.basePrice), color = ShopInk, fontSize = 14.sp)
+                }
+                if (vm.isPersonal && included) ProductChoice(vm, ingredient)
+            }
+        }
+    }
+    if (vm.isPersonal && !vm.canCompare && vm.selected.isNotEmpty())
+        SmallNote("Choose a product for every included ingredient to see the complete estimate.")
+    QuietCard {
+        AmountRow(if (vm.canCompare) "Ingredient estimate" else "Matched items so far", money(vm.subtotal), prominent = true)
+        SmallNote(if (vm.isPersonal) "Sample package prices. Check the pack sizes against your recipe quantities. Shop adjustments and delivery are shown next."
+            else "Sample portion prices. Shop adjustments and delivery are shown next.")
+    }
+    vm.error?.let { SmallNote(it) }
+    ShopButton("Compare stores  →", enabled = vm.canCompare, onClick = { vm.compare() })
+    SmallNote("Demo prices · Tax excluded · No real grocery order")
+}
 
+@Composable
+private fun ProductChoice(vm: WalletViewModel, ingredient: Ingredient) {
+    var expanded by remember(ingredient.id) { mutableStateOf(false) }
+    val product = vm.productFor(ingredient.id)
+    val count = vm.packCounts[ingredient.id] ?: 1
+    Box(Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+            Text(product?.name ?: "Choose a product", modifier = Modifier.weight(1f))
+            Text("⌄")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 320.dp)) {
+            vm.catalog.products.forEach { item ->
+                DropdownMenuItem(text = {
+                    Column { Text(item.name); SmallNote("${item.pack} · ${money(item.price)}") }
+                }, onClick = { vm.matchProduct(ingredient.id, item.id); expanded = false })
+            }
+        }
+    }
+    if (product != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) { SmallNote("${product.pack} · ${money(product.price)} / pack") }
+        TextButton(onClick = { vm.setPacks(ingredient.id, count - 1) }, enabled = count > 1,
+            modifier = Modifier.semantics { contentDescription = "Fewer packs of ${product.name}" }) { Text("−") }
+        Text("$count", color = ShopInk)
+        TextButton(onClick = { vm.setPacks(ingredient.id, count + 1) }, enabled = count < 20,
+            modifier = Modifier.semantics { contentDescription = "More packs of ${product.name}" }) { Text("+") }
+    }
+}
+
+@Composable
+private fun ShopComparison(vm: WalletViewModel) {
+    PageHeading("Choose your shop", vm.recipe.name)
+    SmallNote("Sorted by estimated cost after rewards. Each shop includes its best sample Visa card.")
+    vm.rankings.forEachIndexed { index, quote ->
+        QuietCard {
+            if (index == 0) Text("Lowest estimated total", color = ShopInk, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(quote.store.name, color = ShopInk, fontSize = 21.sp, fontWeight = FontWeight.Medium)
+            SmallNote("${quote.store.rating} rating · ${quote.store.distanceMiles} mi · Demo location")
+            AmountRow("Groceries", money(quote.groceries))
+            AmountRow("Delivery", money(quote.store.deliveryFee))
+            HorizontalDivider(color = ShopLine)
+            AmountRow("Pay today", money(quote.charge), prominent = true)
+            AmountRow("Estimated rewards later", money(quote.rewards))
+            AmountRow("After rewards", money(quote.net))
+            SmallNote(quote.card.name)
+            ShopButton(if (index == 0) "Continue with this store  →" else "Choose this store",
+                outlined = index != 0, onClick = { vm.checkout(quote.store.id) })
+        }
+    }
+    SmallNote("Fictional shops and estimates. Rewards do not reduce today’s charge.")
+}
+
+@Composable
+private fun CheckoutPage(vm: WalletViewModel, pay: () -> Unit) {
+    PageHeading("Review & pay", "${vm.recipe.name} · ${vm.current.store.name}")
+    QuietCard {
+        Text("Your basket", color = ShopInk, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        vm.recipe.ingredients.filter { it.id in vm.selected }.forEach {
+            Text(it.name, color = ShopInk, fontSize = 14.sp)
+            if (vm.isPersonal) SmallNote(it.qty)
+        }
+    }
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Choose your Visa card", color = ShopInk, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        val best = vm.catalog.cards.maxBy { it.rewards(vm.current.groceries) }
+        vm.catalog.cards.forEach { card ->
+            val selected = card.id == vm.current.card.id
+            QuietCard(selected = selected, modifier = Modifier.selectable(selected = selected,
+                enabled = !vm.busy, role = Role.RadioButton, onClick = { vm.switchCard(card.id) })) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = selected, onClick = null)
+                    Column(Modifier.weight(1f).padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(card.name, color = ShopInk, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        SmallNote(card.label)
+                    }
+                    Text(money(card.rewards(vm.current.groceries)), color = ShopInk, fontSize = 19.sp)
+                }
+                if (card.id == best.id) SmallNote("Best estimated rewards for this basket")
+                if (selected) SmallNote(card.notes)
+            }
+        }
+    }
+    QuietCard {
+        AmountRow("Groceries", money(vm.current.groceries))
+        AmountRow("Delivery", money(vm.current.store.deliveryFee))
+        HorizontalDivider(color = ShopLine)
+        AmountRow("Pay today", money(vm.current.charge), prominent = true)
+        AmountRow("Estimated rewards later", money(vm.current.rewards))
+        AmountRow("Estimated cost after rewards", money(vm.current.net))
+        SmallNote("Future rewards are separate from your payment. The card recommendation is advisory; enter a Stripe test card at payment.")
+    }
+    vm.error?.let { QuietCard { Text(it, color = ShopInk, fontSize = 14.sp) } }
+    if (vm.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+    ShopButton(if (vm.busy) "Processing…" else "Pay ${money(vm.current.charge)} · Stripe test",
+        enabled = !vm.busy && vm.canCompare, onClick = pay)
+    if (vm.canVerify) ShopButton("Verify pending test payment", enabled = !vm.busy,
+        outlined = true, onClick = { vm.verify() })
+    ShopButton("Preview confirmation without payment", enabled = !vm.busy,
+        outlined = true, onClick = { vm.walkthrough() })
+    SmallNote("Test checkout only. Tax excluded. No real grocery order, delivery, or rewards.")
+}
+
+@Composable
+private fun ReceiptPage(vm: WalletViewModel) {
+    val receipt = vm.receipt ?: return
+    PageHeading(if (vm.paymentVerified) "Test payment confirmed" else "Receipt preview",
+        if (vm.paymentVerified) "STRIPE TEST PAYMENT VERIFIED" else "No payment was made.")
+    QuietCard {
+        Text(vm.recipe.name, color = ShopInk, fontSize = 21.sp, fontWeight = FontWeight.Medium)
+        SmallNote(receipt.store.name)
+        SmallNote(receipt.card.name)
+        HorizontalDivider(color = ShopLine)
+        AmountRow(if (vm.paymentVerified) "Test amount paid" else "Amount preview", money(receipt.charge), prominent = true)
+        AmountRow("Illustrative rewards later", money(receipt.rewards))
+        AmountRow("Estimated cost after rewards", money(receipt.net))
+    }
+    SmallNote("No real grocery order was placed. No delivery is scheduled and no actual rewards were earned.")
+    ShopButton("Plan another meal", onClick = { vm.restart() })
+}
+
+@Composable
+internal fun AgentPlanReview(vm: WalletViewModel) {
+    QuietCard {
+        Text("Your meal", color = ShopInk, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        Text(vm.agentReply, color = ShopInk, fontSize = 14.sp)
+        val recipe = vm.plannedRecipe
+        val quote = vm.plannedQuote
+        if (recipe != null && quote != null) {
+            Text(recipe.name, color = ShopInk, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+            SmallNote("${vm.planDiet} · ${if (vm.planBudget >= 0) money(vm.planBudget) + " upfront budget" else "No budget set"}${if (vm.planTime > 0) " · Under ${vm.planTime} min" else ""}")
+            Text("To buy: " + recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name }, color = ShopInk, fontSize = 13.sp)
+            SmallNote("Already owned: " + recipe.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" })
+            SmallNote("${quote.store.name} · ${quote.card.name}")
+            AmountRow("Groceries", money(quote.groceries))
+            AmountRow("Delivery", money(quote.store.deliveryFee))
+            AmountRow("Amount charged before rewards", money(quote.charge), prominent = true)
+            AmountRow("Estimated future rewards", money(quote.rewards))
+            AmountRow("Estimated cost after rewards", money(quote.net))
+            if (!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.", color = ShopInk)
+            ShopButton("Approve basket and continue  →", enabled = vm.planWithinBudget && !vm.aiBusy,
+                onClick = { vm.approvePlan() })
+        }
+        var details by remember { mutableStateOf(false) }
+        TextButton(onClick = { details = !details }) { Text(if (details) "Hide comparison details" else "How this was chosen") }
+        if (details) vm.agentTrace.forEach { SmallNote(it) }
+        TextButton(onClick = { vm.newPlan() }, enabled = !vm.aiBusy) { Text("Start a new shop") }
+        SmallNote("Sample prices and card terms. Ingredient portions and tax exclusions apply. Review dietary requirements yourself.")
+    }
 }
