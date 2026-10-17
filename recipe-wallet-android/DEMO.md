@@ -8,7 +8,7 @@ Pitch: “Tell Recipe Wallet what dinner needs to accomplish. Its AI agent build
 4. Revise: **I already have soy sauce too.** The owned-ingredient list grows and the selected charge drops. Net-cost ties are deterministic; a card/store with more estimated rewards can have a slightly higher charge.
 5. Optionally revise: **Actually my budget is $1.** The agent explains that no basket fits, shows the cheapest available charge, and disables approval. Change the budget back to $12 before checkout.
 6. Tap **Approve basket and continue**. Show the upfront charge, future rewards and eligibility assumptions separately.
-7. Pay using Stripe TEST card `4242 4242 4242 4242`, a future expiry and valid test CVC. Show the server-verified test receipt.
+7. Tap **Approve & pay** and pay using Stripe TEST card `4242 4242 4242 4242`, a future expiry and valid test CVC. Show the server-verified test receipt.
 
 All prices are fictional portion estimates, exclude tax, and do not represent a full retail cart. No grocery order, delivery or actual rewards result. Card selection is advisory; the sample Visa card is not automatically loaded into Stripe. Never describe manual selection, mocked test fixtures, or confirmation previews as a live AI response or successful payment.
 
@@ -16,4 +16,6 @@ If Gemini is unavailable or rate-limited, show the error honestly and use manual
 
 Technical evidence: the live backend completed planning, a pantry revision and an impossible-budget request with Gemini 3.5 Flash-Lite in approximately 2–3 seconds per turn. Stripe's test API created, confirmed and server-verified an idempotent $7.79 payment. The Android device tests also verified live AI planning and revision, approval, opening PaymentSheet, canceling it, and completing a test card payment through the server-verified receipt.
 
-Ask the mentor whether a specific Visa API is mandatory and whether UX is weighted 20% or 25% in the conflicting rubric text. Confirm the submission deadline in the participant Hacker Guide or with organizers.
+The team reports that a Visa mentor confirmed no Visa API is mandatory; retain Stripe test checkout. Clarify whether UX is weighted 20% or 25% in the conflicting rubric text. Confirm the submission deadline in the participant Hacker Guide or with organizers.
+
+Checkout verification update: 22 backend tests, five Kotlin pricing tests, and three deterministic emulator tests passed. The live native Stripe test also passed cancellation, an uncertain-result guard that blocks editing/new payment, verification of an unpaid intent to unlock retry, and a successful $7.79 test payment with the matching ingredient snapshot and Stripe reference.

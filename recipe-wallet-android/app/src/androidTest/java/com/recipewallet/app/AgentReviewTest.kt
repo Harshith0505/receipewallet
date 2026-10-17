@@ -42,7 +42,20 @@ class AgentReviewTest {
    assertEquals(3,vm.step);assertEquals(779L,vm.current.charge)
    assertFalse(vm.selected.contains("garlic"));assertEquals("market",vm.storeId)
   }
-  compose.onNodeWithText("Pay $7.79 · Stripe test").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Wheat noodles").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Garlic").assertDoesNotExist()
+  compose.onNodeWithText("Total charged today · test").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Approve & pay $7.79").performScrollTo().assertIsDisplayed()
+ }
+ @Test fun previewReceiptNeverClaimsPaymentAndRetainsReviewedItems() {
+  val vm=showPlan()
+  compose.runOnIdle {vm.approvePlan();vm.walkthrough()}
+  compose.onNodeWithText("WALKTHROUGH · NO PAYMENT MADE").assertExists()
+  compose.runOnIdle {
+   assertFalse(vm.paymentVerified);assertNull(vm.receiptPaymentId)
+   assertEquals(5,vm.receiptIngredients.size)
+   assertFalse(vm.receiptIngredients.any { it.id=="garlic" })
+  }
  }
  @Test fun overBudgetPlanCannotBeApproved() {
   val vm=showPlan(100)
@@ -67,7 +80,7 @@ class AgentReviewTest {
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
   File(compose.activity.getExternalFilesDir(null),"agent-live-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
   compose.onNodeWithText("Approve basket and continue  →").performClick()
-  compose.onNodeWithText("Pay ${money(vm.current.charge)} · Stripe test").performScrollTo().performClick()
+  compose.onNodeWithText("Approve & pay ${money(vm.current.charge)}").performScrollTo().performClick()
   compose.waitUntil(35000) { vm.canVerify || vm.error!=null }
   compose.runOnIdle {assertNull(vm.error);assertTrue(vm.canVerify)}
   val device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())

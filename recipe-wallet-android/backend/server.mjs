@@ -1,5 +1,5 @@
 import http from 'node:http';
-import {calculate} from './pricing.mjs';
+import {paymentBasket,verifyPayment} from './payments.mjs';
 import {recommend} from './recommend.mjs';
 import {sessionPlan} from './agent.mjs';
 const secret=process.env.STRIPE_SECRET_KEY||'';
@@ -29,16 +29,15 @@ const server=http.createServer(async(req,res)=>{
    try { return send(200,await recommend(input.preference)); } catch(e) { return send(503,{error:e.message}); }
   }
   if(req.url==='/payment-intent') {
-   let q;try {q=calculate(input);} catch(e){return send(400,{error:e.message});}
-   if(typeof input.attempt!=='string'||!/^[a-f0-9-]{36}$/.test(input.attempt)) return send(400,{error:'Invalid payment attempt'});
-   const form=new URLSearchParams({amount:String(q.amount),currency:'usd','payment_method_types[]':'card',description:'Recipe Wallet TEST — no grocery order','metadata[application]':'recipe-wallet-demo','metadata[recipe]':input.recipeId,'metadata[store]':input.storeId,'metadata[advisoryCard]':input.cardId,'metadata[estimatedRewards]':String(q.rewards)});
+   let basket;try {basket=paymentBasket(input);} catch(e){return send(400,{error:e.message});}
+   const q=basket.quote;
+   const form=new URLSearchParams({amount:String(q.amount),currency:'usd','payment_method_types[]':'card',description:'Recipe Wallet TEST — no grocery order','metadata[application]':'recipe-wallet-demo','metadata[recipe]':input.recipeId,'metadata[store]':input.storeId,'metadata[advisoryCard]':input.cardId,'metadata[estimatedRewards]':String(q.rewards),'metadata[basket]':basket.fingerprint,'metadata[attempt]':basket.attempt});
    const intent=await stripe('payment_intents',form,`recipe-wallet-${input.attempt}`);
    return send(200,{clientSecret:intent.client_secret,paymentIntentId:intent.id,publishableKey,amount:q.amount});
   }
   if(typeof input.paymentIntentId!=='string'||!/^pi_[A-Za-z0-9]+$/.test(input.paymentIntentId)) return send(400,{error:'Invalid PaymentIntent'});
   const intent=await stripe(`payment_intents/${input.paymentIntentId}`);
-  if(intent.metadata?.application!=='recipe-wallet-demo') return send(400,{error:'Unrecognized payment'});
-  return send(200,{paid:intent.status==='succeeded',amount:intent.amount,currency:intent.currency});
+  try {return send(200,verifyPayment(intent,input));} catch(e){return send(400,{error:e.message});}
  } catch {send(502,{error:'Unable to complete the Stripe test request. Check backend setup and retry.'});}
 });
 server.requestTimeout=100000;

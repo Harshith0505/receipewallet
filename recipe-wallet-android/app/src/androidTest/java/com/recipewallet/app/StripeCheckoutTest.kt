@@ -35,6 +35,28 @@ class StripeCheckoutTest {
   device.waitForIdle()
   activityRule.scenario.onActivity {activity->
    assertTrue(vm.error?.contains("canceled")==true)
+   assertEquals(3,vm.step)
+   assertEquals(779L,vm.current.charge)
+   assertFalse("garlic" in vm.selected)
+   // An uncertain callback must hold the basket and prevent another charge.
+   vm.paymentFailed("Simulated connection interruption")
+   assertTrue(vm.awaitingVerification)
+   vm.switchCard("black");vm.back();vm.walkthrough()
+   vm.pay { _,_->fail("A second checkout opened before verification") }
+   assertEquals("green",vm.cardId);assertEquals(3,vm.step)
+   vm.verify()
+  }
+  // Checkout is scrolled to the top after closing the sheet; the status text is below it.
+  val deadline=android.os.SystemClock.elapsedRealtime()+30000
+  var resolved=false
+  while(!resolved && android.os.SystemClock.elapsedRealtime()<deadline) {
+   activityRule.scenario.onActivity { resolved=!vm.busy && !vm.awaitingVerification }
+   if(!resolved) android.os.SystemClock.sleep(100)
+  }
+  assertTrue("An unpaid intent should unlock checkout after verification",resolved)
+  activityRule.scenario.onActivity {activity->
+   assertFalse(vm.awaitingVerification)
+   assertTrue(vm.error?.contains("No test payment completed.")==true)
    activity.startTestCheckout()
   }
   assertTrue(device.wait(Until.hasObject(By.text("Card information")),40000))
@@ -48,7 +70,13 @@ class StripeCheckoutTest {
   device.waitForIdle()
   device.findObject(By.text("Pay $7.79")).click()
   assertTrue("Verified test receipt did not appear",device.wait(Until.hasObject(By.text("STRIPE TEST PAYMENT VERIFIED")),45000))
-  activityRule.scenario.onActivity {assertTrue(vm.paymentVerified);assertEquals(779L,vm.receipt!!.charge)}
+  activityRule.scenario.onActivity {
+   assertTrue(vm.paymentVerified);assertEquals(779L,vm.receipt!!.charge)
+   assertEquals("Spicy garlic noodles",vm.receiptRecipeName)
+   assertEquals(5,vm.receiptIngredients.size)
+   assertFalse(vm.receiptIngredients.any { it.id=="garlic" })
+   assertTrue(vm.receiptPaymentId!!.startsWith("pi_"))
+  }
   File(directory,"stripe-receipt.png").outputStream().use {instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)}
  }
 }

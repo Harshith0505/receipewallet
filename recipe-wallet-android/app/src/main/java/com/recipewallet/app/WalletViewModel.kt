@@ -58,7 +58,8 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  val planTime get() = agentPlan?.getJSONObject("constraints")?.getInt("maxPrepMinutes") ?: 0
  fun approvePlan() {
   val p=agentPlan ?: return
-  if(!planWithinBudget || aiBusy) return
+  if(!planWithinBudget || aiBusy || !canEditCheckout) return
+  clearPayment()
   recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; step=3
  }
@@ -72,18 +73,33 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  var error by mutableStateOf<String?>(null)
  var receipt by mutableStateOf<Quote?>(null)
  var paymentVerified by mutableStateOf(false)
+ var awaitingVerification by mutableStateOf(false)
+  private set
+ var receiptIngredients by mutableStateOf<List<Ingredient>>(emptyList())
+  private set
+ var receiptRecipeName by mutableStateOf("")
+  private set
+ var receiptPaymentId by mutableStateOf<String?>(null)
+  private set
  private var pending: Quote? = null
+ private var pendingPayload: JSONObject? = null
+ private var pendingIngredients: List<Ingredient> = emptyList()
+ private var pendingRecipeName = ""
+ private var verifying = false
  private var intentId: String? = null
  private var attempt = UUID.randomUUID().toString()
  val recipe get() = catalog.recipes.first { it.id == recipeId }
  val subtotal get() = recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice }
  val rankings get() = ranked(subtotal, catalog.stores, catalog.cards)
  val current get(): Quote { val s = catalog.stores.firstOrNull { it.id == storeId } ?: rankings.first().store; val c = catalog.cards.firstOrNull { it.id == cardId } ?: rankings.first { it.store.id == s.id }.card; return quote(subtotal,s,c) }
- fun choose(id: String) { newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
- fun toggle(id: String) { selected=if(id in selected) selected-id else selected+id; attempt=UUID.randomUUID().toString() }
+ val canEditCheckout get() = !busy && !awaitingVerification
+ private fun clearPayment() { pending=null; pendingPayload=null; intentId=null; error=null; attempt=UUID.randomUUID().toString() }
+ fun choose(id: String) { if(!canEditCheckout) return; clearPayment(); newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; step=1 }
+ fun toggle(id: String) { if(!canEditCheckout) return; clearPayment(); selected=if(id in selected) selected-id else selected+id }
  fun compare() { storeId=rankings.first().store.id; cardId=rankings.first().card.id; step=2 }
- fun checkout(store: String) { storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3; error=null; attempt=UUID.randomUUID().toString() }
- fun switchCard(id: String) { cardId=id; attempt=UUID.randomUUID().toString() }
+ fun checkout(store: String) { if(!canEditCheckout) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }
+ fun switchCard(id: String) { if(!canEditCheckout || id==current.card.id) return; clearPayment(); cardId=id }
+ fun back() { if(canEditCheckout && step in 1..3) { step--; error=null } }
  private suspend fun request(path: String, payload: JSONObject): JSONObject = withContext(Dispatchers.IO) {
   val connection=URL(BuildConfig.BACKEND_URL.trimEnd('/')+path).openConnection() as HttpURLConnection
   try {
@@ -98,10 +114,15 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   } finally { connection.disconnect() }
  }
  fun pay(onReady: (String,String)->Unit) {
+  if(!canEditCheckout || step!=3 || selected.isEmpty()) return
   busy=true; error=null; pending=current
+  pendingIngredients=recipe.ingredients.filter { it.id in selected }.toList()
+  pendingRecipeName=recipe.name
+  val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt)
+  pendingPayload=payload
   viewModelScope.launch {
    try {
-    val result=request("/payment-intent",JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt))
+    val result=request("/payment-intent",payload)
     check(result.getString("publishableKey").startsWith("pk_test_")) { "Only Stripe test keys are allowed" }
     check(result.getLong("amount")==pending!!.charge) { "Price changed. Please review your basket." }
     intentId=result.getString("paymentIntentId")
@@ -110,20 +131,31 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   }
  }
  fun verify() {
-  busy=true
+  val id=intentId ?: return
+  val payload=pendingPayload ?: return
+  if(verifying) return
+  verifying=true; busy=true; awaitingVerification=true; error=null
   viewModelScope.launch {
    try {
-    val result=request("/verify",JSONObject().put("paymentIntentId",intentId))
-    check(result.getBoolean("paid")) { "Payment is not confirmed yet. Tap verify to retry." }
+    val result=request("/verify",JSONObject(payload.toString()).put("paymentIntentId",id))
+    if(!result.getBoolean("paid")) {
+     val status=result.getString("status")
+     awaitingVerification=status !in listOf("requires_payment_method","requires_confirmation","requires_action","canceled")
+     if(status=="canceled") clearPayment()
+     error=if(awaitingVerification) "Your test payment is still processing. Verify its status before trying another payment." else "No test payment completed. Your basket is saved; you can retry checkout."
+     return@launch
+    }
     check(result.getLong("amount")==pending?.charge) { "Payment amount did not match the basket." }
-    receipt=pending; paymentVerified=true; step=4; intentId=null
-   } catch(e: Exception) { error=e.message ?: "Could not verify payment." }
-   busy=false
+    check(result.getString("currency")=="usd" && result.getString("paymentIntentId")==id) { "Payment receipt did not match this checkout." }
+    receipt=pending; receiptIngredients=pendingIngredients; receiptRecipeName=pendingRecipeName; receiptPaymentId=id
+    paymentVerified=true; step=4; intentId=null; awaitingVerification=false
+   } catch(e: Exception) { error="We couldn't verify the test payment. Don't pay again yet. Retry verification. ${e.message ?: "Check the backend connection."}" }
+   finally { busy=false; verifying=false }
   }
  }
  val canVerify get() = intentId != null
  fun paymentCanceled() { busy=false; error="Payment canceled. Your basket is ready when you are." }
- fun paymentFailed(message: String) { busy=false; error=message }
- fun walkthrough() { receipt=current; paymentVerified=false; step=4; error=null }
- fun restart() { newPlan(); step=0; receipt=null; error=null; busy=false; intentId=null; pending=null; attempt=UUID.randomUUID().toString() }
+ fun paymentFailed(message: String) { busy=false; awaitingVerification=intentId!=null; error="$message Verify the payment status before retrying." }
+ fun walkthrough() { if(!canEditCheckout) return; receipt=current; receiptIngredients=recipe.ingredients.filter { it.id in selected }; receiptRecipeName=recipe.name; receiptPaymentId=null; paymentVerified=false; step=4; error=null }
+ fun restart() { if(!canEditCheckout) return; newPlan(); step=0; receipt=null; receiptIngredients=emptyList(); receiptRecipeName=""; receiptPaymentId=null; paymentVerified=false; clearPayment() }
 }

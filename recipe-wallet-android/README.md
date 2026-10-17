@@ -8,7 +8,7 @@ Kotlin + Jetpack Compose, API 26+. A bounded Gemini agent turns a dinner request
 2. Install Node.js 22+. In `backend/`, copy `.env.example` to `.env` and set your own `GEMINI_API_KEY`, `STRIPE_SECRET_KEY` (`sk_test_…`) and `STRIPE_PUBLISHABLE_KEY` (`pk_test_…`). Both Stripe keys must come from the same test environment. Never commit `.env`.
 3. Run `npm start` in `backend/`. The default local server binds to `127.0.0.1:4242`; the Android emulator connects through `http://10.0.2.2:4242`.
 4. Run the app. Enter: “Find me a vegetarian noodle dinner under $12. I already have garlic.” Review the interpreted constraints, purchased ingredients, owned ingredients, store, card and charge. Revise: “I already have soy sauce too.”
-5. Tap **Approve basket and continue**, review the sample card assumptions and use Stripe PaymentSheet with test card `4242 4242 4242 4242`, a future expiry and a valid test CVC. No actual rewards, delivery or grocery order results.
+5. Tap **Approve basket and continue**, review the ingredients, delivery fee, upfront total and sample card assumptions. Tap **Approve & pay** and use Stripe PaymentSheet with test card `4242 4242 4242 4242`, a future expiry and a valid test CVC. No actual rewards, delivery or grocery order results.
 6. For a USB-connected Android device, run `adb reverse tcp:4242 tcp:4242` and build with `sh gradlew :app:assembleDebug -PBACKEND_URL=http://127.0.0.1:4242`.
 
 Gemini defaults to `gemini-3.5-flash-lite` through the Interactions API. Override `GEMINI_MODEL` if needed. An initial check with `gemini-3.8-flash` worked but encountered intermittent project quota limits; the lighter model completed the live three-turn demo in about 2–3 seconds per request. Availability and latency depend on the account and service. The older `gemini-2.5-flash` model was rejected for this account.
@@ -35,15 +35,17 @@ Money uses integer cents. Store multipliers use basis points. Grocery totals and
 
 Ingredient prices estimate portions used, not full retail packages. Tax is excluded. No real inventory, grocery integration, nutrition, portion scaling, or allergy-safety verification is provided. Pantry ownership comes from the interpreted request and is visible for correction. Pasta's Parmesan rennet is unspecified, so the agent excludes that recipe for vegetarian or vegan requests. The small catalog may not satisfy a request.
 
-Tool names, IDs, pantry items, budgets and sequencing are validated. The model has no payment tool. Payment starts only after the user's review and explicit tap. The server recalculates the charge, rejects non-test keys, uses idempotency keys, and verifies Stripe's test status before showing success. Stripe API version is pinned to `2025-06-30.basil` for compatibility with the Android SDK's card-only PaymentSheet integration.
+Tool names, IDs, pantry items, budgets and sequencing are validated. The model has no payment tool. Payment starts only after the user's review and explicit tap. The server recalculates the charge, rejects non-test keys, uses idempotency keys, and verifies Stripe's test status before showing success. Each PaymentIntent is bound to a fingerprint of the approved recipe, ingredients, store, advisory card, calculated amounts and payment attempt. Verification checks this identity, USD currency, the charged amount and the amount received. A canceled sheet keeps the basket ready to retry; changing the basket or card discards the old local payment reference. If a payment result is uncertain, editing and new checkout are held until verification resolves it. Receipts retain a snapshot of the reviewed ingredients and the Stripe test reference; previews explicitly state that no payment occurred. Stripe API version is pinned to `2025-06-30.basil` for compatibility with the Android SDK's card-only PaymentSheet integration.
+
+**Update the Android app and backend together:** `/verify` now requires the original `recipeId`, `ingredientIds`, `storeId`, `cardId` and `attempt` alongside `paymentIntentId`. Older APKs that send only the payment ID cannot verify against this backend.
 
 This backend is for a local hackathon demo: no user authentication, persistent order database or production fulfillment. Debug HTTP is limited to emulator/loopback hosts. Configure HTTPS before hosting a release build. After process death, inspect Stripe's test dashboard before repeating a pending payment.
 
 ## Validation
 
-- `cd backend && npm test`: 17 backend tests cover pricing, tool execution, pantry exclusion, budget enforcement, invalid IDs, provider failures, history forwarding and fixture parity.
+- `cd backend && npm test`: 22 backend tests cover pricing, tool execution, pantry exclusion, budget enforcement, invalid IDs, provider failures, history forwarding, fixture parity and basket-bound payment verification.
 - `sh gradlew :app:testDebugUnitTest :app:assembleDebug`: five Kotlin pricing tests and a debug APK build.
-- `sh gradlew :app:connectedDebugAndroidTest`: deterministic review/approval and over-budget UI tests; the live API test is skipped unless explicitly enabled.
+- `sh gradlew :app:connectedDebugAndroidTest`: deterministic review/approval, unpaid preview and over-budget UI tests; the live API test is skipped unless explicitly enabled.
 - Optional live device test, with the backend and valid test keys running: `sh gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.liveAgent=true`.
 - `curl http://127.0.0.1:4242/health`: reports configuration presence only, not credential validity.
 
@@ -53,6 +55,8 @@ Live backend checks verified a Gemini three-tool plan, pantry revision and impos
 
 The experience addresses discovery, decision-making, personalization, checkout and illustrative rewards. Explain which work is generative AI and which calculations are deterministic. Show the human approval step, visible assumptions, a successful revision, and an impossible budget. Do not claim measured conversion improvements or real grocery savings.
 
-The mentor-provided rubric lists innovation, technical execution, UX, commerce impact and trust/responsibility. Its table gives UX 20% while the prose gives 25%; confirm the official weighting and any mandatory Visa API requirement with organizers.
+The mentor-provided rubric lists innovation, technical execution, UX, commerce impact and trust/responsibility. Its table gives UX 20% while the prose gives 25%; confirm the official weighting with organizers. The team reports that a Visa mentor confirmed a Visa API is not required for this hackathon; checkout continues to use Stripe test mode.
 
 References: [Gemini function calling](https://ai.google.dev/gemini-api/docs/function-calling), [Interactions API](https://ai.google.dev/gemini-api/docs/interactions-overview), [Stripe Android](https://github.com/stripe/stripe-android), [Stripe test cards](https://docs.stripe.com/testing), [Visa brief](https://dh26.dubhacks.co/#tracks).
+
+Checkout verification update: 22 backend tests, five Kotlin pricing tests, and three deterministic emulator tests passed. The live native Stripe test also passed cancellation, an uncertain-result guard that blocks editing/new payment, verification of an unpaid intent to unlock retry, and a successful $7.79 test payment with the matching ingredient snapshot and Stripe reference.

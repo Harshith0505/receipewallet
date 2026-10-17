@@ -52,7 +52,7 @@ class MainActivity: ComponentActivity() {
  }
 }
 @Composable private fun Wallet(vm: WalletViewModel, pay: ()->Unit) {
- BackHandler(enabled=vm.step in 1..3 && !vm.busy) { vm.step--; vm.error=null }
+ BackHandler(enabled=vm.step in 1..3) { vm.back() }
  val scroll = key(vm.step) { rememberScrollState() }
  Scaffold(containerColor=Cream) { padding ->
   Column(Modifier.padding(padding).fillMaxSize().verticalScroll(scroll).padding(22.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -160,14 +160,25 @@ class MainActivity: ComponentActivity() {
      }
     }
     3 -> {
-     Eyebrow("MAKE YOUR CARD WORK HARDER")
-     Title("The finishing touch.")
-     Text("${vm.current.store.name} · ${vm.recipe.name}",color=Muted)
+     Eyebrow("REVIEW & APPROVE")
+     Title("Your basket.\nReady when you are.")
      DemoNote()
+     Panel {
+      Text(vm.current.store.name,color=Ink,fontWeight=FontWeight.Bold,fontSize=20.sp)
+      Text(vm.current.store.address,color=Muted,fontSize=12.sp)
+      Text("Delivery · demo estimate",color=Muted,fontSize=12.sp)
+      Text(vm.recipe.name,color=Ink,fontWeight=FontWeight.Bold)
+      vm.recipe.ingredients.filter { it.id in vm.selected }.forEach { item ->
+       Line(item.name,item.qty)
+      }
+      Text("Quantities and prices represent portions used. Whole-package pricing is not included yet. Tax is excluded.",color=Muted,fontSize=12.sp)
+      TextButton(onClick={vm.back()},enabled=vm.canEditCheckout) { Text("Edit basket or store") }
+     }
+     Eyebrow("CHOOSE A SAMPLE CARD")
      val best=vm.catalog.cards.maxBy { it.rewards(vm.current.groceries) }
      vm.catalog.cards.forEach { card ->
       val selected=card.id==vm.current.card.id
-      Column(Modifier.fillMaxWidth().border(if(selected) 2.dp else 1.dp,if(selected) Ink else Color(0xFFDDDFD5),RoundedCornerShape(18.dp)).background(if(selected) Color(0xFFEEF2E2) else Color.White,RoundedCornerShape(18.dp)).clickable(enabled=!vm.busy) { vm.switchCard(card.id) }.padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+      Column(Modifier.fillMaxWidth().border(if(selected) 2.dp else 1.dp,if(selected) Ink else Color(0xFFDDDFD5),RoundedCornerShape(18.dp)).background(if(selected) Color(0xFFEEF2E2) else Color.White,RoundedCornerShape(18.dp)).clickable(enabled=vm.canEditCheckout) { vm.switchCard(card.id) }.padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("${if(selected) "●" else "○"}  ${card.name}",fontWeight=FontWeight.Bold,color=Ink); Text("VISA",color=Ink,fontWeight=FontWeight.Bold,fontSize=15.sp) }
        if(card.id==best.id) Tag("BEST ESTIMATED REWARDS",Lime)
        Line(card.label,"${money(card.rewards(vm.current.groceries))} est.")
@@ -176,17 +187,19 @@ class MainActivity: ComponentActivity() {
      }
      Panel {
       Line("Grocery estimate",money(vm.current.groceries)); Line("Delivery estimate",money(vm.current.store.deliveryFee))
-      Line("Test payment amount",money(vm.current.charge),true)
-      Line("Estimated future rewards","−${money(vm.current.rewards)}")
+      Line("Total charged today · test",money(vm.current.charge),true)
+      Line("Estimated future rewards",money(vm.current.rewards))
       HorizontalDivider(color=Cream)
       Line("Estimated cost after rewards",money(vm.current.net),true)
       Text("Rewards do not reduce today's charge. Sample card selection is advisory; use a Stripe test card in PaymentSheet. No actual rewards are earned.",color=Muted,fontSize=12.sp)
      }
      vm.error?.let { Text(it,color=Color(0xFF9A3A28),modifier=Modifier.background(Color(0xFFFFECE4),RoundedCornerShape(12.dp)).padding(14.dp)) }
+     if(vm.awaitingVerification) Text("Checking your existing test payment comes first. Your approved basket is held until its status is confirmed.",color=Ink,fontWeight=FontWeight.Medium)
      if(vm.busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-     Primary(if(vm.busy) "Processing…" else "Pay ${money(vm.current.charge)} · Stripe test",enabled=!vm.busy,onClick=pay)
+     Primary(if(vm.busy) "Processing…" else if(vm.awaitingVerification) "Verification required" else "Approve & pay ${money(vm.current.charge)}",enabled=vm.canEditCheckout,onClick=pay)
+     Text("Opens Stripe test checkout. Use test card 4242 4242 4242 4242, a future expiry, any three-digit CVC and a test ZIP code.",color=Muted,fontSize=12.sp)
      if(vm.canVerify) OutlinedButton(onClick={vm.verify()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Verify pending test payment") }
-     TextButton(onClick={vm.walkthrough()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth()) { Text("Preview confirmation without payment") }
+     TextButton(onClick={vm.walkthrough()},enabled=vm.canEditCheckout,modifier=Modifier.fillMaxWidth()) { Text("Preview confirmation without payment") }
     }
     4 -> {
      val receipt=vm.receipt!!
@@ -195,17 +208,23 @@ class MainActivity: ComponentActivity() {
      Title(if(vm.paymentVerified) "Demo complete.\nDinner imagined." else "Here's your\ndemo receipt.")
      Panel {
       Text(receipt.store.name,fontSize=22.sp,color=Ink,fontWeight=FontWeight.Bold)
-      Text(receipt.card.name,color=Muted)
-      Line(if(vm.paymentVerified) "Test amount paid" else "Test amount preview",money(receipt.charge))
-      Line("Illustrative rewards",money(receipt.rewards))
+      Text(vm.receiptRecipeName,color=Ink,fontWeight=FontWeight.Bold)
+      vm.receiptIngredients.forEach { item -> Line(item.name,item.qty) }
+      HorizontalDivider(color=Cream)
+      Line("Grocery estimate",money(receipt.groceries))
+      Line("Delivery estimate",money(receipt.store.deliveryFee))
+      Line(if(vm.paymentVerified) "Test amount paid · USD" else "Test amount preview · USD",money(receipt.charge),true)
+      Text("Sample rewards card: ${receipt.card.name}",color=Muted,fontSize=12.sp)
+      Line("Estimated future rewards",money(receipt.rewards))
       Line("Estimated cost after rewards",money(receipt.net),true)
+      vm.receiptPaymentId?.let { Text("Stripe test reference: $it",color=Muted,fontSize=11.sp) }
      }
      DemoNote()
      Text("No rewards were earned. No delivery is scheduled. This prototype demonstrates the decision and payment flow.",color=Muted,fontSize=13.sp)
      Primary("Cook up another idea  →",onClick={vm.restart()})
     }
    }
-   if(vm.step in 1..3) TextButton(onClick={vm.step--;vm.error=null},enabled=!vm.busy) { Text("← Back") }
+   if(vm.step in 1..3) TextButton(onClick={vm.back()},enabled=vm.canEditCheckout) { Text("← Back") }
    Spacer(Modifier.height(12.dp))
   }
  }
