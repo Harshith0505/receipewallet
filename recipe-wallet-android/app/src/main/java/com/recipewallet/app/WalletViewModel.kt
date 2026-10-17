@@ -17,21 +17,52 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  val catalog = Catalog(app)
  var preference by mutableStateOf("")
  var aiBusy by mutableStateOf(false)
- var aiReason by mutableStateOf<String?>(null)
- var aiRecipeId by mutableStateOf<String?>(null)
+ var agentPlan by mutableStateOf<JSONObject?>(null)
+ var agentReply by mutableStateOf("")
+ var agentTrace by mutableStateOf<List<String>>(emptyList())
  var aiError by mutableStateOf<String?>(null)
+ private var agentSession: String? = null
  fun suggest() {
-  aiBusy=true; aiError=null; aiReason=null; aiRecipeId=null
+  if(aiBusy || preference.isBlank()) return
+  val message=preference
+  aiBusy=true; aiError=null; agentPlan=null; agentReply=""; agentTrace=emptyList()
   viewModelScope.launch {
    try {
-    val result=request("/recommend",JSONObject().put("preference",preference))
-    val id=result.getString("recipeId")
-    check(catalog.recipes.any { it.id==id }) { "Unable to match a recipe." }
-    aiRecipeId=id; aiReason=result.getString("reason")
+    val payload=JSONObject().put("message",message)
+    agentSession?.let { payload.put("sessionId",it) }
+    val result=request("/plan",payload)
+    val plan=result.optJSONObject("plan")
+    if(plan!=null) {
+     val r=catalog.recipes.first { it.id==plan.getString("recipeId") }
+     val ids=plan.getJSONArray("ingredientIds").let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
+     check(ids.isNotEmpty() && ids.all { id -> r.ingredients.any { it.id==id } }) { "The agent returned an invalid basket. Please retry." }
+     val s=catalog.stores.first { it.id==plan.getString("storeId") }
+     val c=catalog.cards.first { it.id==plan.getString("cardId") }
+     val q=quote(r.ingredients.filter { it.id in ids }.sumOf { it.basePrice },s,c)
+     check(q.charge==plan.getLong("amount") && q.rewards==plan.getLong("rewards") && q.net==plan.getLong("net")) { "Prices changed. Please plan your shop again." }
+    }
+    agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
+    val trace=result.getJSONArray("trace")
+    agentTrace=(0 until trace.length()).map { trace.getJSONObject(it).getString("summary") }
+    preference=""
    } catch(e: Exception) { aiError=e.message ?: "AI is unavailable. Choose a recipe below." }
    aiBusy=false
   }
  }
+ val plannedRecipe get() = agentPlan?.let { p -> catalog.recipes.first { it.id==p.getString("recipeId") } }
+ fun planIds(key: String): Set<String> = agentPlan?.getJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet()
+ val plannedQuote get() = agentPlan?.let { p -> quote(plannedRecipe!!.ingredients.filter { it.id in planIds("ingredientIds") }.sumOf { it.basePrice },catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") }) }
+ val planWithinBudget get() = agentPlan?.optBoolean("withinBudget",false)==true
+ val planBudget get() = agentPlan?.getJSONObject("constraints")?.getLong("budgetCents") ?: -1L
+ val planDiet get() = agentPlan?.getJSONObject("constraints")?.getString("diet") ?: "any"
+ val planTime get() = agentPlan?.getJSONObject("constraints")?.getInt("maxPrepMinutes") ?: 0
+ fun approvePlan() {
+  val p=agentPlan ?: return
+  if(!planWithinBudget || aiBusy) return
+  recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
+  attempt=UUID.randomUUID().toString(); error=null; step=3
+ }
+ fun newPlan() { agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
  var step by mutableIntStateOf(0)
  var recipeId by mutableStateOf(catalog.recipes.first().id)
  var selected by mutableStateOf(catalog.recipes.first().ingredients.map { it.id }.toSet())
@@ -48,7 +79,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  val subtotal get() = recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice }
  val rankings get() = ranked(subtotal, catalog.stores, catalog.cards)
  val current get(): Quote { val s = catalog.stores.firstOrNull { it.id == storeId } ?: rankings.first().store; val c = catalog.cards.firstOrNull { it.id == cardId } ?: rankings.first { it.store.id == s.id }.card; return quote(subtotal,s,c) }
- fun choose(id: String) { recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
+ fun choose(id: String) { newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; attempt=UUID.randomUUID().toString(); step=1; error=null }
  fun toggle(id: String) { selected=if(id in selected) selected-id else selected+id; attempt=UUID.randomUUID().toString() }
  fun compare() { storeId=rankings.first().store.id; cardId=rankings.first().card.id; step=2 }
  fun checkout(store: String) { storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3; error=null; attempt=UUID.randomUUID().toString() }
@@ -56,7 +87,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private suspend fun request(path: String, payload: JSONObject): JSONObject = withContext(Dispatchers.IO) {
   val connection=URL(BuildConfig.BACKEND_URL.trimEnd('/')+path).openConnection() as HttpURLConnection
   try {
-   connection.requestMethod="POST"; connection.connectTimeout=10000; connection.readTimeout=20000; connection.doOutput=true
+   connection.requestMethod="POST"; connection.connectTimeout=10000; connection.readTimeout=95000; connection.doOutput=true
    connection.setRequestProperty("Content-Type","application/json")
    connection.outputStream.use { it.write(payload.toString().toByteArray()) }
    val status=connection.responseCode
@@ -94,5 +125,5 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun paymentCanceled() { busy=false; error="Payment canceled. Your basket is ready when you are." }
  fun paymentFailed(message: String) { busy=false; error=message }
  fun walkthrough() { receipt=current; paymentVerified=false; step=4; error=null }
- fun restart() { step=0; receipt=null; error=null; busy=false; intentId=null; pending=null; attempt=UUID.randomUUID().toString() }
+ fun restart() { newPlan(); step=0; receipt=null; error=null; busy=false; intentId=null; pending=null; attempt=UUID.randomUUID().toString() }
 }
