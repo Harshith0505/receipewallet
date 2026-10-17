@@ -52,6 +52,7 @@ class MainActivity: ComponentActivity() {
  }
 }
 @Composable private fun Wallet(vm: WalletViewModel, pay: ()->Unit) {
+ if(vm.step == 0) { HomeScreen(vm); return }
  BackHandler(enabled=vm.step in 1..3 && !vm.busy) { vm.step--; vm.error=null }
  val scroll = key(vm.step) { rememberScrollState() }
  Scaffold(containerColor=Cream) { padding ->
@@ -67,61 +68,6 @@ class MainActivity: ComponentActivity() {
     }
    }
    when(vm.step) {
-    0 -> {
-     Eyebrow("YOUR DINNER, PLANNED TOGETHER")
-     Title("Tell us the craving.\nWe'll plan the shop.")
-     Text("A meal, a budget, and what you already own. Your agent checks recipes, stores and sample Visa rewards.",color=Muted)
-     Panel {
-      Text(if(vm.agentReply.isBlank()) "Plan my shop" else "Revise your plan",color=Ink,fontWeight=FontWeight.Bold,fontSize=18.sp)
-      OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=600) vm.preference=it},label={Text(if(vm.agentReply.isBlank()) "e.g. Vegetarian dinner under $12" else "e.g. I already have garlic too")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=4,enabled=!vm.aiBusy)
-      if(vm.agentReply.isBlank() && !vm.aiBusy) TextButton(onClick={vm.preference="Find me a vegetarian noodle dinner under $12. I already have garlic."}) { Text("Try an example request") }
-      Primary(if(vm.aiBusy) "Agent is planning your shop…" else if(vm.agentReply.isBlank()) "Plan my shop · AI" else "Update my plan · AI",enabled=!vm.aiBusy&&vm.preference.isNotBlank(),onClick={vm.suggest()})
-      if(vm.aiBusy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-      Text("Your request and recent meal preferences are sent to Gemini. No payment details are shared with the AI. Local planning sessions expire after 20 minutes.",color=Muted,fontSize=11.sp)
-      vm.aiError?.let { Text(it,color=Color(0xFF9A3A28),fontSize=13.sp) }
-     }
-     if(vm.agentReply.isNotBlank()) {
-      Panel {
-       Tag("AGENT PLAN · REVIEW BEFORE CHECKOUT",Lime)
-       vm.agentTrace.forEach { Text("✓ $it",color=Muted,fontSize=12.sp) }
-       Text(vm.agentReply,color=Ink)
-       val planned=vm.plannedRecipe
-       val q=vm.plannedQuote
-       if(planned!=null && q!=null) {
-        Text(planned.emoji+"  "+planned.name,color=Ink,fontSize=21.sp,fontWeight=FontWeight.Bold)
-        Text("Interpreted preferences: ${vm.planDiet} · ${if(vm.planBudget>=0) money(vm.planBudget)+" upfront budget" else "no budget set"}${if(vm.planTime>0) " · under ${vm.planTime} minutes" else ""}",color=Muted,fontSize=12.sp)
-        Text("To buy: "+planned.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name },color=Ink,fontSize=13.sp)
-        Text("Already owned: "+planned.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" },color=Muted,fontSize=13.sp)
-        Text("${q.store.name} · ${q.card.name}",color=Ink,fontWeight=FontWeight.Bold)
-        Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi · ${q.store.address}",color=Muted,fontSize=12.sp)
-        Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee))
-        Line("Amount charged before rewards",money(q.charge),true)
-        Line("Estimated future rewards",money(q.rewards))
-        Line("Estimated cost after rewards",money(q.net),true)
-        Text(q.card.label+". "+q.card.notes,color=Muted,fontSize=12.sp)
-        if(!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.",color=Color(0xFF9A3A28),fontWeight=FontWeight.Bold)
-        Text("Correct a preference or pantry item in the revision box above. Estimates price ingredient portions, exclude tax, and do not guarantee dietary or allergy safety.",color=Muted,fontSize=12.sp)
-        Primary("Approve basket and continue  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
-       }
-       TextButton(onClick={vm.newPlan()},enabled=!vm.aiBusy) { Text("Start a new shop") }
-       DemoNote()
-      }
-     }
-     Eyebrow("OR CHOOSE A RECIPE YOURSELF")
-     vm.catalog.recipes.forEach { r ->
-      Panel(Modifier.clickable(enabled=!vm.aiBusy) { vm.choose(r.id) }) {
-       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-        Text(r.emoji,fontSize=48.sp,modifier=Modifier.background(Cream,RoundedCornerShape(16.dp)).padding(12.dp))
-        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-         Text(r.name,color=Ink,fontWeight=FontWeight.Bold,fontSize=19.sp)
-         Text(r.description,color=Muted,fontSize=13.sp)
-         Text("${r.prepTime} min · ${r.ingredients.size} ingredients  →",color=Ink,fontSize=12.sp)
-        }
-       }
-      }
-     }
-     Text("All recipes, stores, cards and prices are illustrative demo data. Ingredient prices estimate the portion used, not full retail packages. Tax is excluded from this demo.",color=Muted,fontSize=12.sp)
-    }
     1 -> {
      Eyebrow("MAKE IT YOURS")
      Title(vm.recipe.name)
@@ -217,3 +163,34 @@ class MainActivity: ComponentActivity() {
 @Composable private fun Line(label: String,value: String,bold: Boolean=false) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) { Text(label,color=if(bold) Ink else Muted,fontSize=13.sp,fontWeight=if(bold) FontWeight.Bold else FontWeight.Normal,modifier=Modifier.weight(1f).padding(end=12.dp)); Text(value,color=Ink,fontSize=if(bold) 19.sp else 14.sp,fontWeight=if(bold) FontWeight.Bold else FontWeight.Normal) } }
 @Composable private fun Primary(text: String,enabled: Boolean=true,onClick: ()->Unit) { Button(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) { Text(text,fontWeight=FontWeight.Bold) } }
 @Composable private fun DemoNote() { Text("SIMULATED CHECKOUT · No real grocery order is placed. Prices, fees and rewards are demo estimates. No actual rewards are earned.",fontSize=12.sp,color=Ink,modifier=Modifier.fillMaxWidth().background(Color(0xFFE9EDDC),RoundedCornerShape(12.dp)).padding(15.dp)) }
+
+@Composable internal fun AgentPlanReview(vm: WalletViewModel) {
+     if(vm.agentReply.isNotBlank()) {
+      Panel {
+       Tag("AGENT PLAN · REVIEW BEFORE CHECKOUT",Lime)
+       vm.agentTrace.forEach { Text("✓ $it",color=Muted,fontSize=12.sp) }
+       Text(vm.agentReply,color=Ink)
+       val planned=vm.plannedRecipe
+       val q=vm.plannedQuote
+       if(planned!=null && q!=null) {
+        Text(planned.emoji+"  "+planned.name,color=Ink,fontSize=21.sp,fontWeight=FontWeight.Bold)
+        Text("Interpreted preferences: ${vm.planDiet} · ${if(vm.planBudget>=0) money(vm.planBudget)+" upfront budget" else "no budget set"}${if(vm.planTime>0) " · under ${vm.planTime} minutes" else ""}",color=Muted,fontSize=12.sp)
+        Text("To buy: "+planned.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name },color=Ink,fontSize=13.sp)
+        Text("Already owned: "+planned.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" },color=Muted,fontSize=13.sp)
+        Text("${q.store.name} · ${q.card.name}",color=Ink,fontWeight=FontWeight.Bold)
+        Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi · ${q.store.address}",color=Muted,fontSize=12.sp)
+        Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee))
+        Line("Amount charged before rewards",money(q.charge),true)
+        Line("Estimated future rewards",money(q.rewards))
+        Line("Estimated cost after rewards",money(q.net),true)
+        Text(q.card.label+". "+q.card.notes,color=Muted,fontSize=12.sp)
+        if(!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.",color=Color(0xFF9A3A28),fontWeight=FontWeight.Bold)
+        Text("Correct a preference or pantry item in the revision box above. Estimates price ingredient portions, exclude tax, and do not guarantee dietary or allergy safety.",color=Muted,fontSize=12.sp)
+        Primary("Approve basket and continue  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
+       }
+       TextButton(onClick={vm.newPlan()},enabled=!vm.aiBusy) { Text("Start a new shop") }
+       DemoNote()
+      }
+     }
+
+}
