@@ -14,6 +14,6 @@ All prices are fictional portion estimates, exclude tax, and do not represent a 
 
 If Gemini is unavailable or rate-limited, show the error honestly and use manual recipe selection. Rehearse the request before judging. The local session lasts 20 minutes; “Start a new shop” clears its reference.
 
-Technical evidence: the live backend completed planning, a pantry revision and an impossible-budget request with Gemini 3.5 Flash-Lite in approximately 2–3 seconds per turn. Stripe's test API created, confirmed and server-verified an idempotent $7.79 payment. Device test results are documented separately from those backend checks.
+Technical evidence: the live backend completed planning, a pantry revision and an impossible-budget request with Gemini 3.5 Flash-Lite in approximately 2–3 seconds per turn. Stripe's test API created, confirmed and server-verified an idempotent $7.79 payment. The Android device tests also verified live AI planning and revision, approval, opening PaymentSheet, canceling it, and completing a test card payment through the server-verified receipt.
 
 Ask the mentor whether a specific Visa API is mandatory and whether UX is weighted 20% or 25% in the conflicting rubric text. Confirm the submission deadline in the participant Hacker Guide or with organizers.

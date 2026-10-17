@@ -40,11 +40,14 @@ class MainActivity: ComponentActivity() {
   } }
   setContent {
    MaterialTheme(colorScheme=lightColorScheme(primary=Ink, background=Cream, surface=Color.White, secondary=Lime)) {
-    Wallet(vm) { vm.pay { key, secret ->
-     PaymentConfiguration.init(this,key)
-     sheet.presentWithPaymentIntent(secret,PaymentSheet.Configuration(merchantDisplayName="Recipe Wallet · TEST", allowsDelayedPaymentMethods=false))
-    } }
+    Wallet(vm) { startTestCheckout() }
    }
+  }
+ }
+ fun startTestCheckout() {
+  vm.pay { key, secret ->
+   PaymentConfiguration.init(this,key)
+   sheet.presentWithPaymentIntent(secret,PaymentSheet.Configuration(merchantDisplayName="Recipe Wallet · TEST", allowsDelayedPaymentMethods=false))
   }
  }
 }

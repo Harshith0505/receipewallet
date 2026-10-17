@@ -47,7 +47,7 @@ This backend is for a local hackathon demo: no user authentication, persistent o
 - Optional live device test, with the backend and valid test keys running: `sh gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.liveAgent=true`.
 - `curl http://127.0.0.1:4242/health`: reports configuration presence only, not credential validity.
 
-Live backend checks verified a Gemini three-tool plan, pantry revision and impossible budget. A Stripe test PaymentIntent was created idempotently, confirmed with Stripe's test Visa payment method, and verified by the server at $7.79. See DEMO.md for the judging sequence and remaining limitations.
+Live backend checks verified a Gemini three-tool plan, pantry revision and impossible budget. A Stripe test PaymentIntent was created idempotently, confirmed with Stripe's test Visa payment method, and verified by the server at $7.79. On the API 35 emulator, deterministic review/approval and over-budget UI tests passed. A live app test verified Gemini planning, a pantry revision and opening PaymentSheet. A separate native UI test verified PaymentSheet cancellation, entered Stripe test card details, completed payment and reached the server-verified receipt. See DEMO.md for the judging sequence and remaining limitations.
 
 ## Judging
 
