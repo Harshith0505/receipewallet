@@ -15,6 +15,7 @@ export function paymentBasket(input) {
    fees:quote.groceryQuote.feesCents,tax:quote.groceryQuote.taxCents,
    items:quote.groceryQuote.items
   } : {}),
+  ...(quote.customItems ? {customItems:quote.customItems,fulfillment:quote.fulfillment,fees:quote.fees,tax:quote.tax} : {}),
   groceries:quote.groceries,amount:quote.amount,rewards:quote.rewards,currency:'usd'
  })).digest('hex');
  return {quote,fingerprint,attempt:input.attempt};

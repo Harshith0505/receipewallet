@@ -2,6 +2,7 @@ package com.recipewallet.app
 
 import android.content.Context
 import org.json.JSONObject
+import org.json.JSONArray
 import kotlin.math.roundToLong
 import java.util.Locale
 
@@ -12,7 +13,7 @@ data class RewardCard(val id: String, val name: String, val rate: Double, val re
  val label: String get() = if(rewardType == "points") "${rate.toInt()} points / $1" else "${rate.toInt()}% cash back"
  fun rewards(grocery: Long): Long = (grocery * if(rewardType == "points") rate * pointsValue else rate / 100).roundToLong()
 }
-data class Quote(val store: Store, val card: RewardCard, val groceries: Long, val rewards: Long,val fees:Long=store.deliveryFee,val tax:Long=0,val items:List<GroceryLine> = emptyList(),val missing:List<String> = emptyList(),val fulfillment:String="delivery") {
+data class Quote(val store: Store, val card: RewardCard, val groceries: Long, val rewards: Long,val fees:Long=store.deliveryFee,val tax:Long=0,val items:List<GroceryLine> = emptyList(),val missing:List<String> = emptyList(),val fulfillment:String="delivery",val customItems:List<CustomGroceryLine> = emptyList()) {
  val complete get()=missing.isEmpty()
  val charge get() = groceries + fees + tax
  val net get() = charge - rewards
@@ -23,7 +24,35 @@ fun quote(subtotal: Long, store: Store, card: RewardCard): Quote {
 }
 fun ranked(subtotal: Long, stores: List<Store>, cards: List<RewardCard>): List<Quote> = stores.map { s -> cards.map { quote(subtotal, s, it) }.minWith(compareBy<Quote> { it.net }.thenBy { it.card.id }) }.sortedWith(compareBy<Quote> { it.net }.thenBy { it.store.id })
 fun money(cents: Long) = String.format(Locale.US, "$%.2f", cents / 100.0)
-class Catalog(context: Context):CatalogData(JSONObject(context.assets.open("demo.json").bufferedReader().use { it.readText() }))
+data class GroceryProduct(val id: String, val name: String, val pack: String, val price: Long, val aliases: List<String>)
+
+fun suggestProduct(line: String, products: List<GroceryProduct>): GroceryProduct? {
+    fun normalized(value: String) = " " + value.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), " ").trim() + " "
+    val text = normalized(line)
+    return products.mapNotNull { product ->
+        val score = product.aliases.filter { text.contains(normalized(it)) }.maxOfOrNull { it.length }
+        score?.let { product to it }
+    }.maxByOrNull { it.second }?.first
+}
+
+data class CustomGroceryLine(val product:GroceryProduct,val packages:Int,val unitPrice:Long) {
+ val cost get()=packages*unitPrice
+}
+fun customQuote(items:List<Pair<GroceryProduct,Int>>,store:Store,card:RewardCard,fulfillment:String):Quote {
+ val lines=items.map { (product,count)->CustomGroceryLine(product,count,(product.price*store.multiplierBps+5000)/10000) }
+ val groceries=lines.sumOf { it.cost }
+ val fees=if(fulfillment=="pickup") store.pickupFee else store.packageDeliveryFee+store.serviceFee
+ val tax=(groceries*store.taxBps+5000)/10000
+ val missing=if(fulfillment=="delivery"&&!store.deliveryEnabled) listOf("Delivery unavailable in this demo") else emptyList()
+ return Quote(store,card,groceries,card.rewards(groceries),fees,tax,fulfillment=fulfillment,missing=missing,customItems=lines)
+}
+class Catalog(context: Context):CatalogData(JSONObject(context.assets.open("demo.json").bufferedReader().use { it.readText() })) {
+ val products:List<GroceryProduct> = JSONArray(context.assets.open("products.json").bufferedReader().use { it.readText() }).let { rows ->
+  List(rows.length()) { index -> val row=rows.getJSONObject(index);val aliases=row.getJSONArray("aliases")
+   GroceryProduct(row.getString("id"),row.getString("name"),row.getString("pack"),row.getLong("price"),List(aliases.length()){aliases.getString(it)})
+  }
+ }
+}
 open class CatalogData(private val data:JSONObject) {
     val recipes: List<Recipe> = data.getJSONArray("recipes").let { rows ->
         List(rows.length()) { index ->

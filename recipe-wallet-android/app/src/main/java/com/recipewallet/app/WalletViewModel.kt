@@ -15,6 +15,40 @@ import java.util.UUID
 
 class WalletViewModel(app: Application): AndroidViewModel(app) {
  val catalog = Catalog(app)
+ var personalRecipe by mutableStateOf<PersonalRecipe?>(null)
+  private set
+ var productMatches by mutableStateOf<Map<String, String>>(emptyMap())
+  private set
+ var packCounts by mutableStateOf<Map<String, Int>>(emptyMap())
+  private set
+ val isPersonal get() = personalRecipe != null
+ fun productFor(lineId: String) = catalog.products.firstOrNull { it.id == productMatches[lineId] }
+ fun choosePersonal(value: PersonalRecipe) {
+  if(!canEditCheckout) return
+  clearPayment(); newPlan(); personalRecipe=value; recipeId="saved:${value.id}"
+  productMatches=value.ingredients.mapIndexedNotNull { index,line -> suggestProduct(line,catalog.products)?.let { "line-$index" to it.id } }.toMap()
+  packCounts=value.ingredients.indices.associate { "line-$it" to 1 }
+  selected=value.ingredients.indices.map { "line-$it" }.toSet()
+  storeId=""; cardId=""; error=null; attempt=UUID.randomUUID().toString(); step=1
+ }
+ fun matchProduct(lineId: String, productId: String) {
+  if(!canEditCheckout || lineId !in recipe.ingredients.map { it.id }) return
+  clearPayment()
+  require(catalog.products.any { it.id==productId })
+  productMatches=productMatches+(lineId to productId); attempt=UUID.randomUUID().toString()
+ }
+ fun setPacks(lineId: String, count: Int) {
+  if(!canEditCheckout || lineId !in recipe.ingredients.map { it.id }) return
+  clearPayment()
+  packCounts=packCounts+(lineId to count.coerceIn(1,20)); attempt=UUID.randomUUID().toString()
+ }
+ val canCompare get() = selected.isNotEmpty() && (!isPersonal || (selected.all { productFor(it)!=null } && selected.groupBy { productMatches[it] }.values.all { ids -> ids.sumOf { packCounts[it] ?: 1 }<=20 }))
+ fun customBasketJson(): JSONObject {
+  check(isPersonal && canCompare) { "Match every included ingredient to a product first." }
+  val quantities=selected.groupBy { productMatches.getValue(it) }.mapValues { (_, ids) -> ids.sumOf { packCounts[it] ?: 1 } }
+  check(quantities.values.all { it in 1..20 }) { "Choose no more than 20 packs of the same product." }
+  return JSONObject().put("items",JSONArray(quantities.map { (id,count) -> JSONObject().put("productId",id).put("quantity",count) }))
+ }
  var preference by mutableStateOf("")
  var aiBusy by mutableStateOf(false)
  var agentPlan by mutableStateOf<JSONObject?>(null)
@@ -61,7 +95,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   if(!planWithinBudget || aiBusy || !canEditCheckout) return
   clearPayment()
   servings=p.optInt("servings",2); fulfillment=p.optString("fulfillment","pickup"); organicOnly=p.optBoolean("organicOnly",false)
-  recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
+  personalRecipe=null; recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; step=2
  }
  fun newPlan() { servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
@@ -89,15 +123,26 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private var verifying = false
  private var intentId: String? = null
  private var attempt = UUID.randomUUID().toString()
- val recipe get() = catalog.recipes.first { it.id == recipeId }
+ val recipe get() = personalRecipe?.let { saved ->
+  Recipe("saved:${saved.id}",saved.name,"","Your saved recipe",saved.prepMinutes ?: 0,
+   saved.ingredients.mapIndexed { index,line ->
+    val id="line-$index"; val product=productFor(id); val packs=packCounts[id] ?: 1
+    Ingredient(id,line,product?.let { "$packs × ${it.pack}" } ?: "Choose a product",(product?.price ?: 0L)*packs)
+   })
+ } ?: catalog.recipes.first { it.id == recipeId }
  var servings by mutableIntStateOf(2)
   private set
  var fulfillment by mutableStateOf("pickup")
   private set
  var organicOnly by mutableStateOf(false)
   private set
- val subtotal get() = rankings.firstOrNull { it.complete }?.groceries ?: 0L
- fun groceryQuote(store:Store,card:RewardCard)=packageQuote(recipe,selected,store,card,catalog.productOffers,servings,fulfillment,organicOnly)
+ val subtotal get() = if(isPersonal) recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice } else rankings.firstOrNull { it.complete }?.groceries ?: 0L
+ fun groceryQuote(store:Store,card:RewardCard):Quote {
+  if(!isPersonal) return packageQuote(recipe,selected,store,card,catalog.productOffers,servings,fulfillment,organicOnly)
+  if(!canCompare) return Quote(store,card,0,0,missing=listOf("Match every included ingredient to a product and choose no more than 20 packs."))
+  val grouped=selected.groupBy { productMatches.getValue(it) }.map { (id,ids)->catalog.products.first { it.id==id } to ids.sumOf { packCounts[it] ?: 1 } }
+  return customQuote(grouped,store,card,fulfillment)
+ }
  val rankings get() = catalog.stores.map { s -> catalog.cards.map { groceryQuote(s,it) }.minWith(compareBy<Quote> { it.net }.thenBy { it.card.id }) }.sortedWith(compareBy<Quote> { !it.complete }.thenBy { it.net }.thenBy { it.store.id })
  val current get(): Quote { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).groceries) };return groceryQuote(s,c) }
  val checkoutWithinBudget get() = agentPlan==null || planBudget<0 || current.charge<=planBudget
@@ -107,9 +152,9 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun changeOrganicOnly(value:Boolean) { if(!canEditCheckout) return; organicOnly=value; settingsChanged() }
  val canEditCheckout get() = !busy && !awaitingVerification
  private fun clearPayment() { pending=null; pendingPayload=null; intentId=null; error=null; attempt=UUID.randomUUID().toString() }
- fun choose(id: String) { if(!canEditCheckout) return; clearPayment(); newPlan(); recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; step=1 }
+ fun choose(id: String) { if(!canEditCheckout) return; clearPayment(); newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; step=1 }
  fun toggle(id: String) { if(!canEditCheckout) return; clearPayment(); selected=if(id in selected) selected-id else selected+id }
- fun compare() { if(!canEditCheckout || selected.isEmpty()) return; val best=rankings.firstOrNull { it.complete } ?: return; storeId=best.store.id; cardId=best.card.id; step=2 }
+ fun compare() { if(!canEditCheckout || !canCompare) return; val best=rankings.firstOrNull { it.complete } ?: return; storeId=best.store.id; cardId=best.card.id; step=2 }
  fun checkout(store: String) { if(!canEditCheckout || selected.isEmpty() || rankings.none { it.store.id==store && it.complete }) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }
  fun switchCard(id: String) { if(!canEditCheckout || id==current.card.id) return; clearPayment(); cardId=id }
  fun back() { if(canEditCheckout && step in 1..3) { step--; error=null } }
@@ -127,12 +172,13 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   } finally { connection.disconnect() }
  }
  fun pay(onReady: (String,String)->Unit) {
-  if(!canEditCheckout || step!=3 || selected.isEmpty()) return
+  if(!canEditCheckout || step!=3 || !canCompare) return
   if(!current.complete || !checkoutWithinBudget) { error="Review the basket: it must be complete and within your approved budget."; return }
   busy=true; error=null; pending=current
   pendingIngredients=recipe.ingredients.filter { it.id in selected }.toList()
   pendingRecipeName=recipe.name
   val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt).put("pricingVersion","packages-v1").put("servings",servings).put("fulfillment",fulfillment).put("organicOnly",organicOnly)
+  if(isPersonal) payload.put("pricingVersion","custom-packages-v1").put("customBasket",customBasketJson())
   pendingPayload=payload
   viewModelScope.launch {
    try {
@@ -171,5 +217,5 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun paymentCanceled() { busy=false; error="Payment canceled. Your basket is ready when you are." }
  fun paymentFailed(message: String) { busy=false; awaitingVerification=intentId!=null; error="$message Verify the payment status before retrying." }
  fun walkthrough() { if(!canEditCheckout || !current.complete || selected.isEmpty()) return; receipt=current; receiptIngredients=recipe.ingredients.filter { it.id in selected }; receiptRecipeName=recipe.name; receiptPaymentId=null; paymentVerified=false; step=4; error=null }
- fun restart() { if(!canEditCheckout) return; newPlan(); step=0; receipt=null; receiptIngredients=emptyList(); receiptRecipeName=""; receiptPaymentId=null; paymentVerified=false; clearPayment() }
+ fun restart() { if(!canEditCheckout) return; newPlan(); personalRecipe=null; step=0; receipt=null; receiptIngredients=emptyList(); receiptRecipeName=""; receiptPaymentId=null; paymentVerified=false; clearPayment() }
 }

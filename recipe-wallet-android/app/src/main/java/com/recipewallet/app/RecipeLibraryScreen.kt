@@ -35,6 +35,7 @@ internal fun RecipeLibraryScreen(
     onAdd: () -> Unit,
     onOpen: (PersonalRecipe) -> Unit,
     onEdit: () -> Unit,
+    onUse: (PersonalRecipe) -> Unit,
     onSave: (PersonalRecipe) -> String?
 ) {
     BackHandler(onBack = onBack)
@@ -59,8 +60,9 @@ internal fun RecipeLibraryScreen(
                             Text("Ingredients", color = LibraryInk, fontSize = 18.sp, fontWeight = FontWeight.Medium)
                             recipe.ingredients.forEach { Text(it, color = LibraryInk, fontSize = 16.sp) }
                         }
-                        LibraryButton("Edit recipe", onClick = onEdit)
-                        Text("Saved on this tablet. Shop and card comparisons are currently available for the demo recipes.",
+                        ShopButton("Use this recipe", onClick = { onUse(recipe) })
+                        ShopButton("Edit recipe", outlined = true, onClick = onEdit)
+                        Text("Match your ingredients to sample products, then compare shops and Visa rewards.",
                             color = LibraryMuted, fontSize = 12.sp, lineHeight = 18.sp)
                     }
                     else -> {
