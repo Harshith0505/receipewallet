@@ -8,7 +8,7 @@ Kotlin + Jetpack Compose. Minimum Android API 26. Built for DubHacks 2026 — Vi
 2. Start an Android emulator (API 26+), then run the app configuration. Recipe selection, customization, store comparisons, card comparisons, and confirmation previews work without a backend.
 3. For Stripe PaymentSheet, install Node.js 22+, open `backend/`, copy `.env.example` to `.env`, and set your own Stripe test secret and publishable keys from the same account. Do not put the secret in the app.
 4. For the generative-AI recipe matcher, also set `GEMINI_API_KEY` in `backend/.env` (optional `GEMINI_MODEL`, default `gemini-2.5-flash`). Your meal preference is sent to Gemini, which returns a known recipe ID and a short explanation. Without a key, the app clearly reports that AI is unavailable; manual selection works. Run `npm start` from `backend/`. It binds to 127.0.0.1:4242. The Android emulator reaches it at `http://10.0.2.2:4242` (the app default).
-5. On a USB-connected physical Android device, use `adb reverse tcp:4242 tcp:4242` and build with `./gradlew :app:assembleDebug -PBACKEND_URL=http://127.0.0.1:4242`. Debug builds allow HTTP only for emulator/loopback hosts. Release builds use HTTPS; configure a hosted backend URL with the same Gradle property.
+5. On a USB-connected physical Android device, use `adb reverse tcp:4242 tcp:4242` and build with `sh gradlew :app:assembleDebug -PBACKEND_URL=http://127.0.0.1:4242`. Debug builds allow HTTP only for emulator/loopback hosts. Release builds use HTTPS; configure a hosted backend URL with the same Gradle property.
 6. Choose a recipe → remove chili flakes → compare stores → continue → switch sample Visa cards → tap Stripe test pay. In PaymentSheet use Stripe's test Visa number `4242 4242 4242 4242`, a future expiration date and any valid CVC. Do not enter real card information.
 
 Without test keys, payment reports a setup error and the separate **Preview confirmation without payment** action demonstrates the final screen. It does not claim payment success.
@@ -31,7 +31,7 @@ The debug APK compiled successfully with JDK 17, SDK 36, AGP 8.13.2, Kotlin 2.3.
 
 
 - Backend: `cd backend && npm test`
-- Android: `./gradlew :app:testDebugUnitTest :app:assembleDebug`
+- Android: `sh gradlew :app:testDebugUnitTest :app:assembleDebug`
 - Backend health: `curl http://127.0.0.1:4242/health`
 
 Fixtures live in `app/src/main/assets/demo.json` and `backend/demo.json`. A test verifies they remain identical.
