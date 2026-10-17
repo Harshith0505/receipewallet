@@ -2,6 +2,11 @@
 
 Kotlin + Jetpack Compose, API 26+. A bounded Gemini agent turns a dinner request, upfront budget and pantry ingredients into a basket for human review. Three fictional stores, three demo recipes and three illustrative Visa cards. Built for DubHacks 2026, Visa: Reimagine Shopping.
 
+Package-based grocery planning is available through the separate `/grocery-quotes`
+endpoint. See [Grocery planner](GROCERY_PLANNER.md) for the request format, pasta
+example, and integration boundaries. The existing Android checkout still uses the
+original pricing flow until the full recipe catalog is migrated.
+
 ## Open and run
 
 1. Open this folder in Android Studio with JDK 17 and Android SDK 36. Allow Gradle sync and select an Android emulator (API 26+).

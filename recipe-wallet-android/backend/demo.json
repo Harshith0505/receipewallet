@@ -178,5 +178,43 @@
       "pointsValue": 0,
       "notes": "Illustrative 2% grocery cash back. Assumes this purchase qualifies. Fees earn no rewards."
     }
+  ],
+  "productOffers": [
+    {
+      "id": "market-pasta-500g",
+      "ingredientId": "pasta",
+      "storeId": "market",
+      "packageQuantity": 500,
+      "unit": "g",
+      "priceCents": 349,
+      "stockPackages": 8,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-pasta-250g",
+      "ingredientId": "pasta",
+      "storeId": "fresh",
+      "packageQuantity": 250,
+      "unit": "g",
+      "priceCents": 209,
+      "stockPackages": 12,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-pasta-1000g",
+      "ingredientId": "pasta",
+      "storeId": "pantry",
+      "packageQuantity": 1000,
+      "unit": "g",
+      "priceCents": 599,
+      "stockPackages": 2,
+      "tags": [
+        "conventional"
+      ]
+    }
   ]
 }
