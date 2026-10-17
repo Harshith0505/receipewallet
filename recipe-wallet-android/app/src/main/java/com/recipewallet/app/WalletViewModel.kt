@@ -53,13 +53,14 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  var aiBusy by mutableStateOf(false)
  var agentPlan by mutableStateOf<JSONObject?>(null)
  var agentReply by mutableStateOf("")
+ var agentChanges by mutableStateOf<List<String>>(emptyList())
  var agentTrace by mutableStateOf<List<String>>(emptyList())
  var aiError by mutableStateOf<String?>(null)
  private var agentSession: String? = null
  fun suggest() {
   if(aiBusy || preference.isBlank()) return
   val message=preference
-  aiBusy=true; aiError=null; agentPlan=null; agentReply=""; agentTrace=emptyList()
+  aiBusy=true; aiError=null; agentPlan=null; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList()
   viewModelScope.launch {
    try {
     val payload=JSONObject().put("message",message)
@@ -76,6 +77,8 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
      check(q.charge==plan.getLong("amount") && q.rewards==plan.getLong("rewards") && q.net==plan.getLong("net")) { "Prices changed. Please plan your shop again." }
     }
     agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
+    val changes=result.optJSONArray("changes")
+    agentChanges=if(changes!=null) (0 until changes.length()).map { changes.getString(it) } else emptyList()
     val trace=result.getJSONArray("trace")
     agentTrace=(0 until trace.length()).map { trace.getJSONObject(it).getString("summary") }
     preference=""
@@ -98,7 +101,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   personalRecipe=null; recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; step=2
  }
- fun newPlan() { servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
+ fun newPlan() { servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList(); aiError=null; preference="" }
  var step by mutableIntStateOf(0)
  var recipeId by mutableStateOf(catalog.recipes.first().id)
  var selected by mutableStateOf(catalog.recipes.first().ingredients.map { it.id }.toSet())

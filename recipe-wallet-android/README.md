@@ -10,7 +10,7 @@ Kotlin + Jetpack Compose, API 26+, JDK 17 and Android SDK 36. This version combi
 4. Try “Find me a vegetarian noodle dinner under $30. I already have garlic.” Review the AI plan, then tap **Review package-priced basket**. Adjust servings, pantry items, organic-only or pickup/delivery before choosing a complete store.
 5. Review the packages and **total charged today**, then tap **Approve & pay**. Use Stripe test card `4242 4242 4242 4242`, a future expiry, a three-digit test CVC and a test ZIP code. The server verifies the payment before showing a paid test receipt.
 
-See [Grocery planner](GROCERY_PLANNER.md) and [Tablet setup](TABLET_SETUP.md) for details. Saved personal recipes stay on the device; priced shopping currently uses the three demo catalog recipes.
+See [Grocery planner](GROCERY_PLANNER.md) and [Tablet setup](TABLET_SETUP.md) for details. Saved personal recipes stay on the device and can be shopped after the user confirms product matches and pack counts.
 
 ## Planning and pricing
 
@@ -38,7 +38,7 @@ Update app and backend together. `/verify` requires the original payment request
 - With configured test keys and backend: enable live tests using `-Pandroid.testInstrumentationRunnerArguments.liveAgent=true`.
 - `curl http://127.0.0.1:4242/health` reports configuration presence, not credential validity.
 
-Merge validation on October 17, 2026: 42 backend tests, seven Kotlin tests and nine deterministic emulator tests passed. The optional live AI UI test was skipped; separate live backend checks verified Gemini planning and pantry revision ($15.80 → $12.15). The native Stripe UI test passed cancellation, verification/retry, locked shopping settings during an uncertain result, and a successful $15.80 package payment with the matching receipt.
+Combined-branch validation on October 17, 2026: 56 backend tests, seven Kotlin tests and 12 deterministic emulator tests passed. The optional live AI UI test was skipped; live backend requests verified Gemini follow-ups, exact change summaries and pantry suggestions. Two native Stripe tests passed cancellation, verification/retry and successful basket-bound receipts: $15.80 for the catalog noodle basket and $5.83 for a saved pasta/cheddar basket. Source archives exclude local credentials and IDE caches.
 
 ## Judging
 
@@ -53,8 +53,14 @@ The native screens share the same typography, restrained green palette, borders,
 
 Save a personal recipe locally, open it from **Saved recipes**, and tap **Use this recipe**. The ingredient screen suggests matches from a separate 26-product demo grocery catalog. Review each product and its package size, choose pack counts, and uncheck anything not being purchased. Every included ingredient must be matched before comparing shops. Matching uses literal aliases, not dietary or quantity inference; quantities must be reviewed manually.
 
-Personal baskets continue through shop comparison, advisory Visa selection, and Stripe test checkout or a clearly labeled receipt preview. Unlike the original three meal templates' portion estimates, the personal-recipe catalog uses sample full-package prices. Both exclude tax and real grocery fulfillment. All prices and card rules remain fictional.
+Personal baskets continue through shop comparison, advisory Visa selection, and basket-bound Stripe test checkout or an unpaid receipt preview. Both meal templates and saved recipes use whole packages and configured 0% demo tax. Saved recipes use manually selected packs from a separate product catalog with illustrative per-store price adjustments. Stock and organic attributes are not verified for that separate catalog; the organic and automatic serving controls apply only to the meal templates. All prices and card rules remain fictional.
 
-Android and the backend share identical `products.json` fixtures. Custom checkout sends product IDs and integer pack counts in `customBasket.items`; the backend derives prices from its own catalog and rejects unknown products, duplicated IDs, and counts outside 1–20 per product. It does not accept a client-supplied payment amount. Existing backend key setup is still required for live AI and Stripe test payments.
+Android and the backend share identical `products.json` fixtures. Custom checkout uses `pricingVersion: "custom-packages-v1"` with product IDs and integer pack counts in `customBasket.items`; the backend derives prices from its own catalog and rejects unknown products, duplicated IDs, and counts outside 1–20 per product. It does not accept a client-supplied payment amount. Existing backend key setup is still required for live AI and Stripe test payments.
 
 `SavedRecipeFlowTest` verifies saved recipe selection through receipt preview, plus blocking unmatched ingredients. Backend tests cover custom basket amounts, quantity limits, and fixture parity. Tests create and remove only their own temporary recipes.
+
+## Pantry suggestions and revisions
+
+`POST /suggest` accepts `{ "pantryIds": ["rice", "avo"] }`, with optional diet and preparation-time filters. Recipe matches and missing ingredients are calculated from the catalog. Gemini can add a short explanation; a plain code-written explanation remains available when Gemini is unavailable. This endpoint does not order or pay.
+
+The home meal composer accepts pantry text through `/plan`. Follow-up responses now include server-computed `changes`; the app displays these under **What changed**. A live check preserved garlic, removed soy sauce and reduced the package total from $15.80 to $12.15. A dedicated pantry-selection screen was not included in the incoming branch; `/suggest` is available for that integration.

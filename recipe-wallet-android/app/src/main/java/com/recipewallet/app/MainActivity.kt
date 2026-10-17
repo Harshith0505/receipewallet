@@ -233,6 +233,10 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
     QuietCard {
         Text("Your meal", color = ShopInk, fontSize = 20.sp, fontWeight = FontWeight.Medium)
         Text(vm.agentReply, color = ShopInk, fontSize = 14.sp)
+        if(vm.agentChanges.isNotEmpty()) {
+            Text("What changed",color=ShopInk,fontWeight=FontWeight.Medium)
+            vm.agentChanges.forEach { SmallNote(it) }
+        }
         val recipe = vm.plannedRecipe
         val quote = vm.plannedQuote
         if (recipe != null && quote != null) {
@@ -241,6 +245,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
             Text("To buy: " + recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name }, color = ShopInk, fontSize = 13.sp)
             SmallNote("Already owned: " + recipe.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" })
             SmallNote("${quote.store.name} · ${quote.card.name}")
+            SmallNote(quote.card.label+". "+quote.card.notes)
             AmountRow("Groceries", money(quote.groceries))
             AmountRow("Fulfillment fees", money(quote.fees))
             AmountRow("Demo tax (0%)",money(quote.tax))

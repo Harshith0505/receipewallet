@@ -15,7 +15,9 @@ import android.graphics.Bitmap
 /** Native UI test: PaymentSheet owns a separate Activity, outside the Compose test clock. */
 class StripeCheckoutTest {
  @get:Rule val activityRule=ActivityScenarioRule(MainActivity::class.java)
- @Test fun liveTestCardPaymentIsServerVerified() {
+ @Test fun liveTestCardPaymentIsServerVerified() { runPayment(false) }
+ @Test fun liveSavedRecipePaymentIsServerVerified() { runPayment(true) }
+ private fun runPayment(saved:Boolean) {
   assumeTrue(InstrumentationRegistry.getArguments().getString("liveAgent")=="true")
   val instrumentation=InstrumentationRegistry.getInstrumentation()
   val fixture=JSONObject(instrumentation.context.assets.open("agent-plan.json").bufferedReader().use {it.readText()})
@@ -24,7 +26,13 @@ class StripeCheckoutTest {
   activityRule.scenario.onActivity {activity->
    directory=activity.getExternalFilesDir(null)!!
    vm=ViewModelProvider(activity)[WalletViewModel::class.java]
-   vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();vm.checkout(vm.storeId);activity.startTestCheckout()
+   if(saved) {
+    vm.choosePersonal(PersonalRecipe(java.util.UUID.randomUUID().toString(),"Saved test pasta",listOf("200 g pasta","100 g cheddar")))
+    vm.compare();vm.checkout(vm.storeId)
+   } else {
+    vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();vm.checkout(vm.storeId)
+   }
+   activity.startTestCheckout()
   }
   val device=UiDevice.getInstance(instrumentation)
   val ready=device.wait(Until.hasObject(By.text("Card information")),40000)
@@ -36,7 +44,7 @@ class StripeCheckoutTest {
   activityRule.scenario.onActivity {activity->
    assertTrue(vm.error?.contains("canceled")==true)
    assertEquals(3,vm.step)
-   assertEquals(1580L,vm.current.charge)
+   assertEquals(if(saved) 583L else 1580L,vm.current.charge)
    assertFalse("garlic" in vm.selected)
    // An uncertain callback must hold the basket and prevent another charge.
    vm.paymentFailed("Simulated connection interruption")
@@ -70,16 +78,16 @@ class StripeCheckoutTest {
   device.waitForIdle()
   device.findObject(By.clazz("android.widget.EditText").hasDescendant(By.text("ZIP Code"))).text="98105"
   device.waitForIdle()
-  device.findObject(By.text("Pay $15.80")).click()
+  device.findObject(By.text("Pay ${if(saved) "$5.83" else "$15.80"}")).click()
   assertTrue("Verified test receipt did not appear",device.wait(Until.hasObject(By.text("STRIPE TEST PAYMENT VERIFIED")),45000))
   activityRule.scenario.onActivity {
-   assertTrue(vm.paymentVerified);assertEquals(1580L,vm.receipt!!.charge)
-   assertEquals("Spicy garlic noodles",vm.receiptRecipeName)
-   assertEquals(5,vm.receiptIngredients.size)
-   assertEquals(5,vm.receipt!!.items.size);assertEquals("pickup",vm.receipt!!.fulfillment)
+   assertTrue(vm.paymentVerified);assertEquals(if(saved) 583L else 1580L,vm.receipt!!.charge)
+   assertEquals(if(saved) "Saved test pasta" else "Spicy garlic noodles",vm.receiptRecipeName)
+   assertEquals(if(saved) 2 else 5,vm.receiptIngredients.size)
+   assertEquals(if(saved) 2 else 5,if(saved) vm.receipt!!.customItems.size else vm.receipt!!.items.size);assertEquals("pickup",vm.receipt!!.fulfillment)
    assertFalse(vm.receiptIngredients.any { it.id=="garlic" })
    assertTrue(vm.receiptPaymentId!!.startsWith("pi_"))
   }
-  File(directory,"stripe-receipt.png").outputStream().use {instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)}
+  File(directory,if(saved) "stripe-saved-receipt.png" else "stripe-receipt.png").outputStream().use {instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)}
  }
 }

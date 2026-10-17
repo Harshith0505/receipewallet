@@ -59,3 +59,9 @@ test('adding grocery quotes preserves health, route, and payment-configuration b
   assert.equal((await request({}, {url: '/payment-intent'})).status, 503);
   assert.equal((await request({}, {url: '/verify'})).status, 503);
 });
+test('pantry suggestions coexist with grocery quotes without Stripe keys',async()=>{
+ const result=await request({pantryIds:['rice','avo']},{url:'/suggest'});
+ assert.equal(result.status,200);
+ assert.equal(result.body.suggestions[0].recipeId,'bowl');
+ assert.equal((await request({pantryIds:['invented']},{url:'/suggest'})).status,400);
+});

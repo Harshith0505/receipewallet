@@ -51,7 +51,7 @@ class AgentReviewTest {
  @Test fun previewReceiptNeverClaimsPaymentAndRetainsReviewedItems() {
   val vm=showPlan()
   compose.runOnIdle {vm.approvePlan();vm.checkout(vm.storeId);vm.walkthrough()}
-  compose.onNodeWithText("WALKTHROUGH · NO PAYMENT MADE").assertExists()
+  compose.onNodeWithText("No payment was made.").assertExists()
   compose.runOnIdle {
    assertFalse(vm.paymentVerified);assertNull(vm.receiptPaymentId)
    assertEquals(5,vm.receiptIngredients.size)

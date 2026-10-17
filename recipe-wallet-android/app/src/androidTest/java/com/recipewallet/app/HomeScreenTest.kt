@@ -64,7 +64,7 @@ class HomeScreenTest {
         compose.onNodeWithText("Total charged today · test").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Approve & pay $15.80").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
-        compose.onNodeWithText("WALKTHROUGH · NO PAYMENT MADE").assertExists()
+        compose.onNodeWithText("No payment was made.").assertExists()
     }
 
     @Test fun failedPlanningOffersAWorkingManualAlternative() {

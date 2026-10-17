@@ -39,3 +39,11 @@ test('package receipt binds servings and fulfillment even when the same packs co
  assert.throws(()=>verifyPayment(intentFor(packageInput),{...packageInput,fulfillment:'delivery'}),/approved basket/);
  assert.equal(verifyPayment(intentFor(packageInput),packageInput).paid,true);
 });
+test('saved recipe receipts bind product identity and counts, not just the recipe label',()=>{
+ const custom={...input,pricingVersion:'custom-packages-v1',recipeId:'saved:6d49022b-3c0b-46ae-8db0-83be1edb6066',ingredientIds:['line-0','line-1'],fulfillment:'pickup',customBasket:{items:[{productId:'pasta',quantity:1},{productId:'cheddar',quantity:1}]}};
+ assert.equal(verifyPayment(intentFor(custom),custom).paid,true);
+ const changed={...custom,customBasket:{items:[{productId:'pasta',quantity:2},{productId:'cheddar',quantity:1}]}};
+ assert.throws(()=>verifyPayment(intentFor(custom),changed),/approved basket/);
+ const reversed={...custom,customBasket:{items:[...custom.customBasket.items].reverse()}};
+ assert.equal(paymentBasket(custom).fingerprint,paymentBasket(reversed).fingerprint);
+});

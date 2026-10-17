@@ -31,7 +31,7 @@ class SavedRecipeFlowTest {
             compose.onNodeWithText("Saved recipes").performClick()
             compose.onNodeWithText(recipe.name).performScrollTo().performClick()
             compose.onNodeWithText("Use this recipe").performScrollTo().performClick()
-            compose.onNodeWithText("Compare stores  →").performScrollTo().assertIsEnabled()
+            compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsEnabled()
             lateinit var vm: WalletViewModel
             compose.runOnIdle {
                 vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
@@ -40,16 +40,16 @@ class SavedRecipeFlowTest {
                 assertEquals(2, vm.customBasketJson().getJSONArray("items").length())
             }
             screenshot("saved-ingredients.png")
-            compose.onNodeWithText("Compare stores  →").performClick()
-            compose.onNodeWithText("Continue with this store  →").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Compare complete baskets →").performClick()
+            compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().assertIsDisplayed()
             screenshot("shopping-comparison.png")
-            compose.onNodeWithText("Continue with this store  →").performClick()
-            compose.onNodeWithText("Pay $8.15 · Stripe test").performScrollTo().assertIsEnabled()
+            compose.onAllNodesWithText("Review checkout →").onFirst().performClick()
+            compose.onNodeWithText("Approve & pay $5.83").performScrollTo().assertIsEnabled()
             screenshot("shopping-checkout.png")
             compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
             compose.onNodeWithText("Receipt preview").assertIsDisplayed()
             compose.onNodeWithText("No payment was made.").assertIsDisplayed()
-            compose.runOnIdle { assertFalse(vm.paymentVerified); assertEquals(815L, vm.receipt!!.charge) }
+            compose.runOnIdle { assertFalse(vm.paymentVerified); assertEquals(583L, vm.receipt!!.charge) }
             screenshot("shopping-receipt.png")
         } finally { store.remove(recipe.id) }
     }
@@ -60,14 +60,14 @@ class SavedRecipeFlowTest {
             ViewModelProvider(compose.activity)[WalletViewModel::class.java].choosePersonal(
                 PersonalRecipe(UUID.randomUUID().toString(), "Unmatched recipe", listOf("mystery ingredient")))
         }
-        compose.onNodeWithText("Compare stores  →").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsNotEnabled()
         compose.runOnIdle {
             val vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]
             vm.compare(); assertEquals(1,vm.step)
             vm.matchProduct("line-0","flour");vm.setPacks("line-0",2)
             assertTrue(vm.canCompare);assertEquals(598L,vm.subtotal)
         }
-        compose.onNodeWithText("Compare stores  →").assertIsEnabled()
+        compose.onNodeWithText("Compare complete baskets →").assertIsEnabled()
     }
     @Test fun aboutMenuOpensAUsableDialog() {
         compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }

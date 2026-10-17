@@ -17,3 +17,5 @@ Cancellation keeps the basket. Uncertain payment results block a new checkout un
 The agent defaults to two servings and pickup; adjust those choices in the store screen. Recipes, package prices, stock, product attributes, fees, ratings and rewards are illustrative. Real store addresses support directions only. No actual grocery order, delivery or rewards result. Saved personal recipes are local notes; shopping comparison uses the demo catalog.
 
 The team reports Visa mentor confirmation that no Visa API is required. Clarify the conflicting UX rubric weights and confirm submission deadlines with organizers. If Gemini is unavailable, show its error honestly and use manual browsing; do not present it as live AI planning.
+
+The updated shopping screens use the same design as the home page. To demonstrate a personal recipe, save pasta and cheddar, select **Use this recipe**, confirm products and packs, compare stores, and review checkout. A one-pack-each pickup basket currently costs $5.83 at the best sample store. The follow-up AI review also shows a computed **What changed** list.
