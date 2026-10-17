@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createToolRunner,planShop} from './agent.mjs';
+import {createToolRunner,planShop,diffPlans} from './agent.mjs';
 
 const constraints={mealPreference:'noodle dinner',diet:'vegetarian',maxPrepMinutes:0,budgetCents:1200,pantryIds:['garlic']};
 test('pantry exclusion, diet filtering and pricing are grounded in catalog tools',()=>{
@@ -72,4 +72,17 @@ test('follow-up context is passed to Gemini, with no hidden default budget',asyn
   return {ok:false,status:503,json:async()=>({})};
  }}));
  assert.deepEqual(captured.previousContext,context);assert.equal(captured.message,'I own soy sauce too.');
+});
+
+test('diffPlans reports pantry, basket, store, card and total changes from code',()=>{
+ const mk=(pantryIds)=>{const r=createToolRunner();r.run('find_recipes',{...constraints,pantryIds});
+  const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
+  return r.run('prepare_basket',{optionId:options[0].optionId,explanation:'x'});};
+ const before=mk(['garlic']),after=mk(['garlic','soy']);
+ const changes=diffPlans(before,after);
+ assert.ok(changes.includes('Marked as already owned: Soy sauce'));
+ assert.ok(changes.includes('Removed from basket: Soy sauce'));
+ assert.ok(changes.some(c=>c.startsWith('Upfront total:')));
+ assert.deepEqual(diffPlans(null,after),[]);
+ assert.deepEqual(diffPlans(after,after),[]);
 });
