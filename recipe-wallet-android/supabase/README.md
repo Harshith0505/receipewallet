@@ -47,6 +47,6 @@ A real account’s email confirmation and signed-in tablet-to-cloud recipe sync 
 
 ## Current tablet check
 
-The configured build is installed on Samsung SM-T225. Both account-page navigation and recipe save/edit checks pass. The first opt-in live connection attempt failed with `UnknownHostException`; the tablet reported no active default network. Connect it to internet and rerun the opt-in check before claiming tablet-to-cloud connectivity.
+The configured build is installed on Samsung SM-T225. Account-page navigation and recipe save/edit checks pass. After the tablet was connected to internet, the opt-in live connection check passed on October 17, 2026: the tablet reached the hosted Auth settings endpoint, confirmed email sign-in and sign-up are enabled, and verified anonymous recipe reads are denied by the database. Real-user sign-in and recipe import remain the final end-to-end check.
 
 For email confirmation, Supabase’s default SMTP service sends only to project organization team addresses and currently limits sending to two emails per hour. Use an organization member’s email for the initial demo account, or configure custom SMTP before inviting other users. Keep email verification enabled. [Supabase SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp).
