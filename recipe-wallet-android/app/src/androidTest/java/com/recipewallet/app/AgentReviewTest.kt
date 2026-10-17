@@ -68,12 +68,12 @@ class AgentReviewTest {
   lateinit var vm: WalletViewModel
   compose.runOnIdle {vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]}
   compose.onNode(hasSetTextAction()).performTextInput("Find me a vegetarian noodle dinner under $12. I already have garlic.")
-  compose.onNodeWithText("Plan my shop · AI").performScrollTo().performClick()
+  compose.onNodeWithText("Build my meal").performScrollTo().performClick()
   compose.waitUntil(95000) { !vm.aiBusy }
   compose.runOnIdle {assertNull(vm.aiError);assertNotNull(vm.agentPlan);assertTrue(vm.planWithinBudget);assertTrue("garlic" in vm.planIds("ownedIngredientIds"))}
   val original=vm.plannedQuote!!.charge
   compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("I already have soy sauce too.")
-  compose.onNodeWithText("Update my plan · AI").performScrollTo().performClick()
+  compose.onNodeWithText("Update my meal").performScrollTo().performClick()
   compose.waitUntil(95000) { !vm.aiBusy }
   compose.runOnIdle {assertNull(vm.aiError);assertTrue(vm.plannedQuote!!.charge<original);assertTrue("soy" in vm.planIds("ownedIngredientIds"))}
   compose.onNodeWithText("Approve basket and continue  →").performScrollTo()
