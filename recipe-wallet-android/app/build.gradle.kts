@@ -1,0 +1,28 @@
+plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
+android {
+ namespace = "com.recipewallet.app"
+ compileSdk = 36
+ defaultConfig {
+  applicationId = "com.recipewallet.app"
+  minSdk = 26
+  targetSdk = 36
+  versionCode = 1
+  versionName = "1.0"
+  buildConfigField("String", "BACKEND_URL", "\"${providers.gradleProperty("BACKEND_URL").getOrElse("http://10.0.2.2:4242")}\"")
+ }
+ buildFeatures { compose = true; buildConfig = true }
+ compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+}
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+dependencies {
+ implementation(platform("androidx.compose:compose-bom:2025.08.00"))
+ implementation("androidx.activity:activity-compose:1.12.4")
+ implementation("androidx.compose.material3:material3")
+ implementation("androidx.compose.ui:ui-tooling-preview")
+ debugImplementation("androidx.compose.ui:ui-tooling")
+ implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+ implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+ implementation("com.stripe:stripe-android:23.23.0")
+ implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+ testImplementation("junit:junit:4.13.2")
+}

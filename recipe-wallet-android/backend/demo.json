@@ -1,0 +1,182 @@
+{
+  "recipes": [
+    {
+      "id": "noodles",
+      "name": "Spicy garlic noodles",
+      "emoji": "\ud83c\udf5c",
+      "description": "Big flavor. A little heat. Dinner sorted.",
+      "prepTime": 20,
+      "ingredients": [
+        {
+          "id": "noodles",
+          "name": "Wheat noodles",
+          "qty": "8 oz",
+          "basePrice": 300
+        },
+        {
+          "id": "garlic",
+          "name": "Garlic",
+          "qty": "1 bulb",
+          "basePrice": 75
+        },
+        {
+          "id": "soy",
+          "name": "Soy sauce",
+          "qty": "2 tbsp",
+          "basePrice": 80
+        },
+        {
+          "id": "sesame",
+          "name": "Sesame oil",
+          "qty": "1 tbsp",
+          "basePrice": 65
+        },
+        {
+          "id": "chili",
+          "name": "Chili flakes",
+          "qty": "1 tsp",
+          "basePrice": 40
+        },
+        {
+          "id": "onion",
+          "name": "Green onions",
+          "qty": "1 bunch",
+          "basePrice": 125
+        }
+      ]
+    },
+    {
+      "id": "bowl",
+      "name": "Green goddess bowl",
+      "emoji": "\ud83e\udd51",
+      "description": "Fresh greens meet a creamy avocado finish.",
+      "prepTime": 15,
+      "ingredients": [
+        {
+          "id": "rice",
+          "name": "Brown rice",
+          "qty": "1 cup",
+          "basePrice": 150
+        },
+        {
+          "id": "avo",
+          "name": "Avocado",
+          "qty": "1 whole",
+          "basePrice": 180
+        },
+        {
+          "id": "chickpeas",
+          "name": "Chickpeas",
+          "qty": "1 can",
+          "basePrice": 140
+        },
+        {
+          "id": "greens",
+          "name": "Mixed greens",
+          "qty": "4 oz",
+          "basePrice": 220
+        },
+        {
+          "id": "lemon",
+          "name": "Lemon",
+          "qty": "1 whole",
+          "basePrice": 65
+        }
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Tomato basil pasta",
+      "emoji": "\ud83c\udf5d",
+      "description": "Your weeknight classic, with a smarter basket.",
+      "prepTime": 25,
+      "ingredients": [
+        {
+          "id": "pasta",
+          "name": "Rigatoni",
+          "qty": "8 oz",
+          "basePrice": 200
+        },
+        {
+          "id": "tomato",
+          "name": "Cherry tomatoes",
+          "qty": "1 pint",
+          "basePrice": 300
+        },
+        {
+          "id": "basil",
+          "name": "Fresh basil",
+          "qty": "1 bunch",
+          "basePrice": 150
+        },
+        {
+          "id": "oil",
+          "name": "Olive oil",
+          "qty": "2 tbsp",
+          "basePrice": 75
+        },
+        {
+          "id": "cheese",
+          "name": "Parmesan",
+          "qty": "1 oz",
+          "basePrice": 110
+        }
+      ]
+    }
+  ],
+  "stores": [
+    {
+      "id": "market",
+      "name": "Neighborhood Market",
+      "rating": 4.7,
+      "distanceMiles": 0.8,
+      "deliveryFee": 199,
+      "multiplierBps": 9500,
+      "address": "100 Market Lane \u00b7 fictional demo location"
+    },
+    {
+      "id": "fresh",
+      "name": "Fresh & Co.",
+      "rating": 4.8,
+      "distanceMiles": 1.2,
+      "deliveryFee": 149,
+      "multiplierBps": 10500,
+      "address": "240 Garden Street \u00b7 fictional demo location"
+    },
+    {
+      "id": "pantry",
+      "name": "The Daily Pantry",
+      "rating": 4.5,
+      "distanceMiles": 2.1,
+      "deliveryFee": 299,
+      "multiplierBps": 9000,
+      "address": "18 Oak Avenue \u00b7 fictional demo location"
+    }
+  ],
+  "cards": [
+    {
+      "id": "green",
+      "name": "Everyday Visa",
+      "rate": 5,
+      "rewardType": "cashback",
+      "pointsValue": 0,
+      "notes": "Illustrative 5% grocery bonus. Assumes eligibility, activation, and available bonus cap. Fees earn no rewards."
+    },
+    {
+      "id": "blue",
+      "name": "Explorer Visa",
+      "rate": 3,
+      "rewardType": "points",
+      "pointsValue": 0.01,
+      "notes": "Illustrative 3 points per $1, redeemed at 1\u00a2 per point. Assumes this purchase qualifies. Fees earn no rewards."
+    },
+    {
+      "id": "black",
+      "name": "Simple Visa",
+      "rate": 2,
+      "rewardType": "cashback",
+      "pointsValue": 0,
+      "notes": "Illustrative 2% grocery cash back. Assumes this purchase qualifies. Fees earn no rewards."
+    }
+  ]
+}
