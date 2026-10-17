@@ -27,10 +27,7 @@ internal class PersonalRecipeStore(context: Context) {
     }.getOrDefault(emptyList())
 
     fun save(recipe: PersonalRecipe): List<PersonalRecipe> {
-        require(recipe.name.isNotBlank() && recipe.name.length <= 80) { "Add a recipe name (up to 80 characters)." }
-        require(recipe.ingredients.isNotEmpty() && recipe.ingredients.size <= 40) { "Add between 1 and 40 ingredients, one per line." }
-        require(recipe.ingredients.all { it.isNotBlank() && it.length <= 200 }) { "Keep each ingredient under 200 characters." }
-        require(recipe.prepMinutes == null || recipe.prepMinutes in 1..999) { "Enter a prep time from 1 to 999 minutes, or leave it blank." }
+        validatePersonalRecipe(recipe)
         val rows = read().toMutableList()
         val index = rows.indexOfFirst { it.id == recipe.id }
         if (index >= 0) rows[index] = recipe else rows.add(0, recipe)
@@ -49,4 +46,11 @@ internal class PersonalRecipeStore(context: Context) {
             "Couldn’t save on this tablet. Please try again."
         }
     }
+}
+
+internal fun validatePersonalRecipe(recipe: PersonalRecipe) {
+        require(recipe.name.isNotBlank() && recipe.name.length <= 80) { "Add a recipe name (up to 80 characters)." }
+        require(recipe.ingredients.isNotEmpty() && recipe.ingredients.size <= 40) { "Add between 1 and 40 ingredients, one per line." }
+        require(recipe.ingredients.all { it.isNotBlank() && it.length <= 200 }) { "Keep each ingredient under 200 characters." }
+        require(recipe.prepMinutes == null || recipe.prepMinutes in 1..999) { "Enter a prep time from 1 to 999 minutes, or leave it blank." }
 }

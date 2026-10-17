@@ -4,3 +4,10 @@
 local.properties
 backend/.env
 *.apk
+
+# Local cloud project configuration
+supabase.properties
+supabase/.temp/
+supabase/.branches/
+
+supabase/tests/node_modules/
