@@ -6,6 +6,8 @@ import android.util.Base64
 import androidx.compose.runtime.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -64,12 +66,12 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  var cartPeople by mutableIntStateOf(saved.getInt("cartPeople",people));private set
  fun prepareWeeklyCart(){if(weeklyIds.isEmpty())return;if(weeklyIds.any{id->!fits(catalog.recipes.first{it.id==id})}){weekError="Your plan contains excluded ingredients. Rebuild it with your current filters.";return};cartIds=weeklyIds.toList();cartPeople=people;saved.edit().putString("cartIds",JSONArray(cartIds).toString()).putInt("cartPeople",cartPeople).apply()}
  fun updateAutoCart(value:Boolean){autoCart=value;saved.edit().putBoolean("autoCart",value).apply();if(value)prepareWeeklyCart()}
- val groceryCart get()=weeklyRecipe(cartIds,cartPeople)
+ val groceryCart by derivedStateOf { weeklyRecipe(cartIds,cartPeople) }
  var weekBusy by mutableStateOf(false);private set
  var weekError by mutableStateOf<String?>(null);private set
  val currentWeek get()=LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toString()
  val weekDue get()=weekStamp!=currentWeek
- val favorite get()=history.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key?.let { id->catalog.recipes.firstOrNull { it.id==id } }
+ val favorite by derivedStateOf { history.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key?.let { id->catalog.recipes.firstOrNull { it.id==id } } }
  fun updateMood(value:Int){mood=(value+mealMoods.size)%mealMoods.size;saved.edit().putInt("mood",mood).apply()}
  fun updateMinutes(value:Float){minutes=value;saved.edit().putFloat("minutes",value).apply()}
  fun updatePeople(value:Int){people=value.coerceIn(1,12);saved.edit().putInt("people",people).apply()}
@@ -85,13 +87,20 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  fun clearPhoto(){photoPath?.let { File(it).delete() };photoPath=null;saved.edit().remove("photo").apply();discardScan()}
  fun scan(bitmap:Bitmap){
   if(scanBusy)return
-  val scale=minOf(1f,1000f/maxOf(bitmap.width,bitmap.height))
-  val image=Bitmap.createScaledBitmap(bitmap,(bitmap.width*scale).toInt().coerceAtLeast(1),(bitmap.height*scale).toInt().coerceAtLeast(1),true)
-  val bytes=ByteArrayOutputStream().apply { image.compress(Bitmap.CompressFormat.JPEG,75,this) }.toByteArray()
-  val file=File(context.filesDir,"pantry-latest.jpg");file.writeBytes(bytes);photoPath=file.absolutePath;saved.edit().putString("photo",photoPath).apply()
   scanBusy=true;scanError=null;scanIds=emptySet();scanSelected=emptySet()
   scope.launch {
-   try {val result=request("/pantry-scan",JSONObject().put("mimeType","image/jpeg").put("image",Base64.encodeToString(bytes,Base64.NO_WRAP)))
+   try {
+    val file=File(context.filesDir,"pantry-latest.jpg")
+    val payload=withContext(Dispatchers.IO){
+     val scale=minOf(1f,1000f/maxOf(bitmap.width,bitmap.height))
+     val image=Bitmap.createScaledBitmap(bitmap,(bitmap.width*scale).toInt().coerceAtLeast(1),(bitmap.height*scale).toInt().coerceAtLeast(1),true)
+     val bytes=ByteArrayOutputStream().apply { image.compress(Bitmap.CompressFormat.JPEG,75,this) }.toByteArray()
+     if(image!==bitmap)image.recycle()
+     file.writeBytes(bytes)
+     JSONObject().put("mimeType","image/jpeg").put("image",Base64.encodeToString(bytes,Base64.NO_WRAP))
+    }
+    photoPath=file.absolutePath;saved.edit().putString("photo",photoPath).apply()
+    val result=request("/pantry-scan",payload)
     val a=result.getJSONArray("ingredientIds");scanIds=List(a.length()){a.getString(it)}.filter { id->ingredients.any { it.id==id } }.toSet();scanSelected=scanIds
     if(scanIds.isEmpty())scanError="No supported ingredients were clear enough. Add items below."
    }catch(e:Exception){scanError=e.message?:"Scan unavailable. Add pantry items manually."}
@@ -113,8 +122,15 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  }
  fun swapDay(index:Int){val options=rankedRecipes();if(index !in weeklyIds.indices||options.isEmpty())return;val next=options[(options.indexOfFirst { it.id==weeklyIds[index] }+1)%options.size];weeklyIds=weeklyIds.toMutableList().apply { set(index,next.id) };saveWeek()}
  private fun saveWeek(){if(autoCart)prepareWeeklyCart();saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
- fun rankedRecipes()=catalog.recipes.filter { (cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(if(r.id==mealMoods[pickedMood].recipeId)4 else if(pickedMood==3)45-r.prepTime else 0) }
- fun estimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
+ private val rankedRecipeCache by derivedStateOf { catalog.recipes.filter { (cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(if(r.id==mealMoods[pickedMood].recipeId)4 else if(pickedMood==3)45-r.prepTime else 0) } }
+ fun rankedRecipes()=rankedRecipeCache
+ private fun calculateEstimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
+ private val recipeEstimates=catalog.recipes.associate { recipe->recipe.id to derivedStateOf { calculateEstimate(recipe) } }
+ fun estimate(recipe:Recipe):Quote? {
+  val cached=recipeEstimates[recipe.id]
+  return if(cached!=null)cached.value else calculateEstimate(recipe)
+ }
+
  fun prompt():String=buildString {
   append("I want ${mealMoods[pickedMood].prompt}, for $people people, under $${budget.toInt()}, at most ${minutes.toInt()} minutes.")
   append(if(novelty>.65f)" I want something different from my recent choices." else " Familiar flavors are welcome.")

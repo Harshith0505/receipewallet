@@ -150,8 +150,8 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   val grouped=selected.groupBy { productMatches.getValue(it) }.map { (id,ids)->catalog.products.first { it.id==id } to ids.sumOf { packCounts[it] ?: 1 } }
   return customQuote(grouped,store,card,fulfillment)
  }
- val rankings get() = catalog.stores.map { s -> catalog.cards.map { groceryQuote(s,it) }.minWith(compareBy<Quote> { it.net }.thenBy { it.card.id }) }.sortedWith(compareBy<Quote> { !it.complete }.thenBy { it.net }.thenBy { it.store.id })
- val current get(): Quote { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).groceries) };return groceryQuote(s,c) }
+ val rankings by derivedStateOf { catalog.stores.map { s -> catalog.cards.map { groceryQuote(s,it) }.minWith(compareBy<Quote> { it.net }.thenBy { it.card.id }) }.sortedWith(compareBy<Quote> { !it.complete }.thenBy { it.net }.thenBy { it.store.id }) }
+ val current:Quote by derivedStateOf { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).groceries) };groceryQuote(s,c) }
  val checkoutWithinBudget get() = agentPlan==null || planBudget<0 || current.charge<=planBudget
  fun settingsChanged() { if(!canEditCheckout) return; clearPayment(); storeId=""; cardId=""; receipt=null }
  fun changeServings(value:Int) { if(!canEditCheckout || value !in 1..12) return; servings=value; settingsChanged() }

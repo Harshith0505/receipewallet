@@ -11,7 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.platform.LocalContext
@@ -41,9 +41,12 @@ import androidx.compose.ui.unit.sp
  }
  LaunchedEffect(vm.studio.currentWeek,vm.studio.autoWeek){if(vm.studio.autoWeek&&vm.studio.weekDue)vm.studio.buildWeek()}
  Scaffold(containerColor=ShopPaper){padding->
-  BoxWithConstraints(Modifier.fillMaxSize().drawBehind {
-   val gap=24.dp.toPx();var y=gap
-   while(y<size.height){var x=gap;while(x<size.width){drawCircle(ShopLine.copy(alpha=.48f),.7.dp.toPx(),androidx.compose.ui.geometry.Offset(x,y));x+=gap};y+=gap}
+  BoxWithConstraints(Modifier.fillMaxSize().drawWithCache {
+   val dots=androidx.compose.ui.graphics.Path()
+   val gap=24.dp.toPx();val radius=.7.dp.toPx();var y=gap
+   while(y<size.height){var x=gap;while(x<size.width){dots.addOval(androidx.compose.ui.geometry.Rect(x-radius,y-radius,x+radius,y+radius));x+=gap};y+=gap}
+   val dotColor=ShopLine.copy(alpha=.48f)
+   onDrawBehind {drawPath(dots,dotColor)}
   }.padding(padding),contentAlignment=Alignment.TopCenter){
    val wide=maxWidth>=840.dp
    Column(Modifier.widthIn(max=1200.dp).fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(if(wide)32.dp else 20.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){

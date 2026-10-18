@@ -56,8 +56,12 @@ import kotlinx.coroutines.withContext
   }
   SmallNote("Choosing a photo sends a resized copy to Gemini for recognition. The latest photo stays in app storage until you remove it. Only supported catalog ingredients can be detected.")
   localError?.let { Text(it,color=Danger) }
-  val photo=remember(state.photoPath,state.scanBusy){state.photoPath?.let{BitmapFactory.decodeFile(it)}}
-  if(photo!=null){Image(photo.asImageBitmap(),contentDescription="Your latest pantry photo",modifier=Modifier.fillMaxWidth().height(210.dp),contentScale=ContentScale.Crop);TextButton(enabled=!state.scanBusy,onClick={state.clearPhoto()}){Text("Remove photo")}}
+  val photo by produceState<android.graphics.Bitmap?>(null,state.photoPath,state.scanBusy){
+   val path=state.photoPath
+   value=if(path==null)null else withContext(Dispatchers.IO){BitmapFactory.decodeFile(path)}
+  }
+  val displayedPhoto=photo
+  if(displayedPhoto!=null){Image(displayedPhoto.asImageBitmap(),contentDescription="Your latest pantry photo",modifier=Modifier.fillMaxWidth().height(210.dp),contentScale=ContentScale.Crop);TextButton(enabled=!state.scanBusy,onClick={state.clearPhoto()}){Text("Remove photo")}}
   if(state.scanBusy){LinearProgressIndicator(Modifier.fillMaxWidth());Text("Looking for familiar ingredients…",color=ShopInk)}
   state.scanError?.let{Text(it,color=Danger,fontSize=13.sp)}
  }
@@ -146,7 +150,7 @@ import kotlinx.coroutines.withContext
     if(item.id in state.owned)Signal("✓ In pantry · check weekly quantity")
    }
    }
-   val quote=vm.catalog.stores.map{s->packageQuote(recipe,recipe.ingredients.map{it.id}.toSet(),s,vm.catalog.cards.first(),vm.catalog.productOffers,state.people,"pickup",false)}.filter{it.complete}.minByOrNull{it.charge}
+   val quote=remember(recipe,state.people){vm.catalog.stores.map{s->packageQuote(recipe,recipe.ingredients.map{it.id}.toSet(),s,vm.catalog.cards.first(),vm.catalog.productOffers,state.people,"pickup",false)}.filter{it.complete}.minByOrNull{it.charge}}
    if(quote!=null){Signal("Combined package estimate · ${quote.store.name}");Text(money(quote.charge),fontSize=32.sp,color=ShopInk);SmallNote("Whole packages, pickup fees and demo tax. Before pantry deductions and future rewards. Shop each dinner above; combined weekly checkout is not available.")}
    else SmallNote("No single demo store can supply the full week. Shop each meal separately.")
   }

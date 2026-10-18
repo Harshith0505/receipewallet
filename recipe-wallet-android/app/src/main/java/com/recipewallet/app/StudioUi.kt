@@ -1,7 +1,7 @@
 package com.recipewallet.app
 
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import kotlin.random.Random
 import androidx.compose.animation.core.animateFloatAsState
@@ -40,11 +40,24 @@ internal val Danger=Color(0xFFA64451)
 
 @Composable internal fun StudioCard(tint:Color=Color(0xFFFFFCF5),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
  Box(modifier.fillMaxWidth().padding(top=8.dp)) {
-  Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawBehind {
+  Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawWithCache {
+   // Preserve the seeded paper grain, but record two paths instead of thousands
+   // of individual draw operations whenever a card is redrawn.
+   val grain=androidx.compose.ui.graphics.Path()
    val random=Random(42)
-   repeat(1800){val x=random.nextFloat()*size.width;val y=random.nextFloat()*size.height;drawLine(ShopInk.copy(alpha=.07f),Offset(x,y),Offset(x+random.nextFloat()*5f,y+1.3f),.6f)}
+   repeat(1800){val x=random.nextFloat()*size.width;val y=random.nextFloat()*size.height;grain.moveTo(x,y);grain.lineTo(x+random.nextFloat()*5f,y+1.3f)}
+   val edges=androidx.compose.ui.graphics.Path()
    val edge=Random(9);var x=0f
-   while(x<size.width){drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,0f));drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,size.height));x+=4.dp.toPx()}
+   while(x<size.width){
+    val top=edge.nextFloat()*2.dp.toPx()+1.dp.toPx()
+    val bottom=edge.nextFloat()*2.dp.toPx()+1.dp.toPx()
+    edges.addOval(androidx.compose.ui.geometry.Rect(x-top,-top,x+top,top))
+    edges.addOval(androidx.compose.ui.geometry.Rect(x-bottom,size.height-bottom,x+bottom,size.height+bottom))
+    x+=4.dp.toPx()
+   }
+   val grainColor=ShopInk.copy(alpha=.07f)
+   val stroke=androidx.compose.ui.graphics.drawscope.Stroke(width=.6f)
+   onDrawBehind {drawPath(grain,grainColor,style=stroke);drawPath(edges,ShopPaper)}
   }.padding(start=30.dp,end=22.dp,top=27.dp,bottom=22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
   WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFF3D58A))
  }

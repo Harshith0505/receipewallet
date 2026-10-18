@@ -3,6 +3,12 @@ package com.recipewallet.app
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -40,8 +46,16 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.min
 
 private object FoodPhotoCache {
- private val images=mutableMapOf<String,androidx.compose.ui.graphics.ImageBitmap>()
- fun load(context:android.content.Context,file:String)=images.getOrPut(file){context.assets.open("$file-photo.jpg").use{BitmapFactory.decodeStream(it)}.asImageBitmap()}
+ private val images=object:android.util.LruCache<String,androidx.compose.ui.graphics.ImageBitmap>(16*1024*1024){
+  override fun sizeOf(key:String,value:androidx.compose.ui.graphics.ImageBitmap)=value.width*value.height*4
+ }
+ private val lock=Mutex()
+ fun cached(file:String)=images.get(file)
+ suspend fun load(context:android.content.Context,file:String)=withContext(Dispatchers.IO){
+  lock.withLock {
+   images.get(file)?:context.assets.open("$file-photo.jpg").use{BitmapFactory.decodeStream(it)}.asImageBitmap().also{images.put(file,it)}
+  }
+ }
 }
 
 // Shared offline photographs keep repeated recipe cards inexpensive on tablet memory.
@@ -57,8 +71,10 @@ private val FoodLeaf = Color(0xFF9AA36A)
 internal fun FoodSticker(kind: String, modifier: Modifier = Modifier) {
     val context=LocalContext.current
     val file=when(kind){"chana","mexican-rice","sesame-noodles","chickpea-salad"->kind;"noodles","bread"->"noodles";"pasta","tomato","berry"->"pasta";else->"bowl"}
-    val photo=remember(file){FoodPhotoCache.load(context,file)}
-    Image(photo,contentDescription="$file recipe inspiration photograph",modifier=modifier,contentScale=ContentScale.Crop)
+    val photo by produceState(initialValue=FoodPhotoCache.cached(file),file,context){value=FoodPhotoCache.load(context.applicationContext,file)}
+    val loaded=photo
+    if(loaded!=null)Image(loaded,contentDescription="$file recipe inspiration photograph",modifier=modifier,contentScale=ContentScale.Crop)
+    else androidx.compose.foundation.layout.Spacer(modifier)
 
 }
 
