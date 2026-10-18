@@ -1,1 +1,13 @@
-{"name":"recipe-wallet-demo-backend","private":true,"type":"module","scripts":{"start":"node --env-file-if-exists=.env server.mjs","test":"node --test *.test.mjs"},"engines":{"node":">=22"}}
+{
+  "name": "recipe-wallet-demo-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test *.test.mjs",
+    "start:audit": "node --env-file=.env --env-file=.env.audit.local audit-server.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

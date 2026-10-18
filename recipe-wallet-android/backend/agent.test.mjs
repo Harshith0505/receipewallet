@@ -63,7 +63,8 @@ test('real orchestration executes model-requested tools and preserves signed ste
 test('provider failures and tool-less text never become an approved plan',async()=>{
  await assert.rejects(()=>planShop('Dinner',{}, {apiKey:''}),/Meal planning is unavailable/);
  await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:false,status:429,json:async()=>({})})}),/rate limit/);
- await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'model_output',content:[{type:'text',text:'Paid!'}]}]})})}),/could not verify/);
+ const result=await planShop('A question',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'model_output',content:[{type:'text',text:'A plain answer.'}]}]})})});
+ assert.equal(result.reply,'A plain answer.');assert.equal(result.plan,null);assert.deepEqual(result.trace,[]);
 });
 test('follow-up context is passed to Gemini, with no hidden default budget',async()=>{
  let captured;

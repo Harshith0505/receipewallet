@@ -1,4 +1,5 @@
 import {catalog} from './pricing.mjs';
+import {interact,createGeminiClient} from './gemini.mjs';
 
 const ingredientIds=new Set(catalog.recipes.flatMap(r=>r.ingredients.map(i=>i.id)));
 const name=id=>catalog.recipes.flatMap(r=>r.ingredients).find(i=>i.id===id)?.name||id;
@@ -33,16 +34,16 @@ export function rankRecipes(pantryIds,{diet='any',maxPrepMinutes=0}={}) {
 const system='You are Recipe Wallet. Given ranked recipe matches computed by the server, write ONE or TWO friendly sentences recommending which to cook and why. Use only the recipes, ingredient names and counts provided. Do not invent ingredients, substitutions, prices or quantities.';
 
 // Optional Gemini sentence. Falls back to a plain code-written sentence if Gemini is missing or fails.
-export async function suggestFromPantry(input,{apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-3.5-flash-lite',fetchImpl=fetch}={}) {
+export async function suggestFromPantry(input,{apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL||'gemini-3.5-flash-lite',fetchImpl}={}) {
  const pantryIds=validatePantry(input?.pantryIds);
  const suggestions=rankRecipes(pantryIds,{diet:input.diet||'any',maxPrepMinutes:input.maxPrepMinutes||0});
  const best=suggestions[0];
  let reply=best?(best.canCookNow?`You can cook ${best.recipeName} right now.`:`${best.recipeName} is your closest match. ${best.summary}`):'No recipes match those filters.';
  if(apiKey&&best) {
   try {
-   const response=await fetchImpl('https://generativelanguage.googleapis.com/v1beta/interactions',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify({model,store:false,system_instruction:system,input:[{type:'user_input',content:[{type:'text',text:JSON.stringify({pantry:pantryIds.map(name),matches:suggestions.map(s=>({recipe:s.recipeName,have:s.haveIds.map(name),missing:s.missingIds.map(name)}))})}]}]}),signal:AbortSignal.timeout(20000)});
-   const data=await response.json();
-   const text=response.ok&&Array.isArray(data.steps)?data.steps.filter(s=>s.type==='model_output').flatMap(s=>s.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('').trim():'';
+   const request=fetchImpl?createGeminiClient({fetchImpl,minIntervalMs:0}):interact;
+   const data=await request({model,store:false,system_instruction:system,input:[{type:'user_input',content:[{type:'text',text:JSON.stringify({pantry:pantryIds.map(name),matches:suggestions.map(s=>({recipe:s.recipeName,have:s.haveIds.map(name),missing:s.missingIds.map(name)}))})}]}]},{apiKey,signal:AbortSignal.timeout(20000)});
+   const text=Array.isArray(data.steps)?data.steps.filter(s=>s.type==='model_output').flatMap(s=>s.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('').trim():'';
    if(text&&text.length<=600) reply=text;
   } catch {/* keep the code-written reply */}
  }
