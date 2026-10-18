@@ -56,3 +56,9 @@ The optional debug-only `TabSwitchTrace` listener records elapsed time from the 
 Single-device, three-sample development measurements; initial rendering and later switches differ. The first manual-tab draw still takes about half a second in this sample. Test runs made while the tablet was locked were excluded.
 
 All 21 JVM tests pass. Five tablet instrumentation tests pass: the timing/navigation test, deferred-content/calendar reachability, both pricing-cache tests, and mood/dietary-filter interaction. The deferred-content test confirms the last recipe remains reachable in both discovery and pantry, and that calendar selection and the weekly grocery summary remain accessible. Hidden tabs do not create duplicate controls in the accessibility tree. Test windows keep the screen awake only while their activity exists.
+
+## Integration with main
+
+PR #6 targets `main`. Its scope includes the scrapbook meal-studio frontend inherited by the performance branch, alongside the rendering and tab optimizations above. Main's Supabase configuration, private recipe library, account screen and email-confirmation callback are retained. Saved-recipe navigation now uses `RecipeCloudViewModel` while the four prepared lazy tab viewports stay in place. The local preview build remains available through `-PpreviewInstall=true`.
+
+After conflict resolution, the preview app and instrumentation APK compile, all 21 JVM tests pass, and all 74 backend tests pass. All five functional emulator checks pass, covering deferred tab content, pricing-cache invalidation, account navigation and saved-recipe editing. Physical-device performance was not remeasured during this merge; the timings above describe the earlier Lenovo build.

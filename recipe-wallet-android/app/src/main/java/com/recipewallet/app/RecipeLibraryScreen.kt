@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 private val LibraryInk = Color(0xFF503542)
 private val LibraryMuted = Color(0xFF78616A)
@@ -31,12 +32,14 @@ internal fun RecipeLibraryScreen(
     page: String,
     recipe: PersonalRecipe?,
     recipes: List<PersonalRecipe>,
+    library: RecipeCloudViewModel,
+    onAccount: () -> Unit,
     onBack: () -> Unit,
     onAdd: () -> Unit,
     onOpen: (PersonalRecipe) -> Unit,
     onEdit: () -> Unit,
     onUse: (PersonalRecipe) -> Unit,
-    onSave: (PersonalRecipe) -> String?
+    onSave: suspend (PersonalRecipe) -> String?
 ) {
     BackHandler(onBack = onBack)
     Scaffold(containerColor = Color(0xFFFFF7E9)) { padding ->
@@ -48,7 +51,7 @@ internal fun RecipeLibraryScreen(
                     Text(if (page == "saved") "← Meal planner" else "← Saved recipes", color = LibraryInk)
                 }
                 when (page) {
-                    "add" -> RecipeEditor(recipe, onSave)
+                    "add" -> RecipeEditor(recipe, library.state.email != null, onSave)
                     "detail" -> if (recipe != null) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             LibraryTitle(recipe.name)
@@ -69,9 +72,21 @@ internal fun RecipeLibraryScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             LibraryTitle("Saved recipes")
                             Text(if (recipes.isEmpty()) "Keep the meals you come back to." else
-                                "${recipes.size} ${if (recipes.size == 1) "recipe" else "recipes"} · Saved on this tablet",
+                                "${recipes.size} ${if (recipes.size == 1) "recipe" else "recipes"} · " +
+                                    if (library.state.email == null) "On this device" else "Private library",
                                 color = LibraryMuted, fontSize = 15.sp)
                         }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(onClick = onAccount) {
+                                Text(if (library.state.email == null) "Back up & sync" else "Account", color = LibraryInk)
+                            }
+                            if (library.state.email != null) TextButton(onClick = library::refresh, enabled = !library.busy) {
+                                Text(if (library.busy) "Syncing…" else "Sync", color = LibraryInk)
+                            }
+                        }
+                        if (library.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = LibraryInk)
+                        library.status?.let { Text(it, color = LibraryMuted, fontSize = 12.sp) }
                         LibraryButton("+ Add a recipe", onClick = onAdd)
                         if (recipes.isEmpty()) {
                             Column(Modifier.fillMaxWidth().border(1.dp, LibraryLine, RoundedCornerShape(14.dp)).padding(24.dp),
@@ -105,7 +120,10 @@ internal fun RecipeLibraryScreen(
 }
 
 @Composable
-private fun RecipeEditor(recipe: PersonalRecipe?, onSave: (PersonalRecipe) -> String?) {
+private fun RecipeEditor(recipe: PersonalRecipe?, cloud: Boolean, onSave: suspend (PersonalRecipe) -> String?) {
+    val scope = rememberCoroutineScope()
+    val draftId = rememberSaveable(recipe?.id) { recipe?.id ?: UUID.randomUUID().toString() }
+    var saving by remember { mutableStateOf(false) }
     var name by rememberSaveable(recipe?.id) { mutableStateOf(recipe?.name ?: "") }
     var ingredients by rememberSaveable(recipe?.id) { mutableStateOf(recipe?.ingredients?.joinToString("\n") ?: "") }
     var minutes by rememberSaveable(recipe?.id) { mutableStateOf(recipe?.prepMinutes?.toString() ?: "") }
@@ -127,12 +145,13 @@ private fun RecipeEditor(recipe: PersonalRecipe?, onSave: (PersonalRecipe) -> St
         supportingText = { Text("One ingredient per line. Include quantities if you know them.") },
         minLines = 5, maxLines = 12, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
     error?.let { Text(it, color = Color(0xFF9A3A28), fontSize = 13.sp) }
-    LibraryButton(if (recipe == null) "Save recipe" else "Save changes", enabled = name.isNotBlank() && ingredients.isNotBlank()) {
+    LibraryButton(if (saving) "Saving…" else if (recipe == null) "Save recipe" else "Save changes", enabled = !saving && name.isNotBlank() && ingredients.isNotBlank()) {
         val lines = ingredients.lineSequence().map(String::trim).filter(String::isNotEmpty).toList()
-        error = onSave(PersonalRecipe(recipe?.id ?: UUID.randomUUID().toString(), name.trim(), lines,
-            minutes.toIntOrNull()))
+        val value = PersonalRecipe(draftId, name.trim(), lines, minutes.toIntOrNull())
+        saving = true
+        scope.launch { try { error = onSave(value) } finally { saving = false } }
     }
-    Text("Saved only on this tablet. You can edit it later in Saved recipes.", color = LibraryMuted, fontSize = 12.sp)
+    Text(if (cloud) "Saved on this device first, then synced to your private library." else "Saved on this device. You can enable cloud sync from Saved recipes.", color = LibraryMuted, fontSize = 12.sp)
 }
 
 @Composable

@@ -21,6 +21,9 @@ import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -37,16 +40,27 @@ internal data class HomeSection(val key:String,val spacingAfter:androidx.compose
  var libraryPage by rememberSaveable { mutableStateOf(if(vm.isPersonal)"saved" else "home") }
  LaunchedEffect(mode){if(mode !in 0..3)mode=0}
  var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
- val context=LocalContext.current;val saved=remember{PersonalRecipeStore(context)}
- var recipes by remember{mutableStateOf(saved.read())}
+ val library:RecipeCloudViewModel=viewModel()
+ val recipes=library.state.recipes
+ LaunchedEffect(library.confirmationRequests){
+  if(library.confirmationRequests>0){libraryPage="account";library.consumeConfirmationRequest()}
+ }
  androidx.activity.compose.BackHandler(enabled=libraryPage!="home"||mode!=0) { if(libraryPage!="home")libraryPage=if(libraryPage=="saved")"home" else "saved" else mode=0 }
  val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
  val dismiss:()->Unit={focus.clearFocus();keyboard?.hide()}
+ if(libraryPage=="account"){
+  CloudAccountScreen(library,onBack={libraryPage="saved"})
+  return
+ }
  if(libraryPage!="home"){
-  RecipeLibraryScreen(page=libraryPage,recipe=recipes.firstOrNull{it.id==selectedId},recipes=recipes,
+  RecipeLibraryScreen(page=libraryPage,recipe=recipes.firstOrNull{it.id==selectedId},recipes=recipes,library=library,onAccount={libraryPage="account"},
    onBack={dismiss();libraryPage=if(libraryPage=="saved")"home" else "saved"},onAdd={selectedId=null;libraryPage="add"},
    onOpen={selectedId=it.id;libraryPage="detail"},onEdit={libraryPage="add"},onUse={dismiss();vm.choosePersonal(it)},
-   onSave={r->runCatching{recipes=saved.save(r);dismiss();libraryPage="saved"}.exceptionOrNull()?.message})
+   onSave={r->
+    val error=library.save(r)
+    if(error==null)withContext(Dispatchers.Main.immediate){dismiss();libraryPage="saved"}
+    error
+   })
   return
  }
  LaunchedEffect(vm.studio.currentWeek,vm.studio.autoWeek){if(vm.studio.autoWeek&&vm.studio.weekDue)vm.studio.buildWeek()}
@@ -71,7 +85,7 @@ internal data class HomeSection(val key:String,val spacingAfter:androidx.compose
     Layout(modifier=Modifier.widthIn(max=1200.dp).fillMaxSize().then(visibility),measurePolicy=policy,content={
      HomeTabPage(vm,page,maxWidth,dismiss,
       onSelect={TabSwitchTrace.selected(it);dismiss();mode=it},
-      onSaved={dismiss();recipes=saved.read();libraryPage="saved"},
+      onSaved={dismiss();library.refresh();libraryPage="saved"},
       onAdd={dismiss();selectedId=null;libraryPage="add"})
     })
    }
@@ -123,7 +137,7 @@ internal data class HomeSection(val key:String,val spacingAfter:androidx.compose
      Column(Modifier.fillMaxWidth().padding(bottom=section.spacingAfter),verticalArrangement=Arrangement.spacedBy(22.dp)){section.content()}
     }
     item(key="demo"){Column(Modifier.padding(bottom=22.dp)){SmallNote("Demo prices & rewards · No real grocery order")}}
-    item(key="privacy"){InfoDisclosure("About this demo & privacy"){SmallNote("Preferences and pantry stay on this device. AI requests send the details you submit; photos are sent only when you choose to scan.")}}
+    item(key="privacy"){InfoDisclosure("About this demo & privacy"){SmallNote("Preferences and pantry stay on this device. AI requests send the details you submit; photos are sent only when you choose to scan. Saved recipes sync to your private account when signed in.")}}
    }
 }
 
