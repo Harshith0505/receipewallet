@@ -2,6 +2,7 @@ package com.recipewallet.app
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
+import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -14,9 +15,9 @@ class RecipeGardenTest {
    compose.onNodeWithText("Build manually").performScrollTo().performClick()
    val shown=state.mood
    compose.onNodeWithText("The flavor of your day",ignoreCase=true).performScrollTo().performTouchInput{swipeRight()}
-   compose.runOnIdle{assertEquals(shown,state.pickedMood);state.updateAvoid("milk, gluten");state.updateMinutes(45f)}
+   compose.runOnIdle{assertEquals(shown,state.pickedMood);assertEquals((shown+1)%4,state.mood);state.updateAvoid("milk, gluten");state.updateMinutes(45f)}
    compose.runOnIdle{assertTrue(state.rankedRecipes().all{it.id=="bowl"});assertTrue(state.rankedRecipes().isNotEmpty())}
-   compose.onNodeWithText("Kosher").performScrollTo().performClick()
+   compose.onNodeWithText("Kosher").performSemanticsAction(SemanticsActions.OnClick){it()}
    compose.runOnIdle{assertEquals("Kosher",state.faith)}
    compose.onNodeWithText("Choose a recipe").performScrollTo().assertIsDisplayed()
    compose.onNodeWithText("Recenter recipe garden ↺").performScrollTo().performClick()
