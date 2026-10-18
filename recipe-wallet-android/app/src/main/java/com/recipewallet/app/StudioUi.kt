@@ -29,7 +29,7 @@ internal val Warn=Color(0xFF865200)
 internal val Danger=Color(0xFF9E3737)
 
 @Composable internal fun StudioCard(tint:Color=Color.White,modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
- Column(modifier.fillMaxWidth().background(tint,RoundedCornerShape(24.dp)).border(1.dp,ShopLine,RoundedCornerShape(24.dp)).padding(22.dp).animateContentSize(),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
+ Column(modifier.fillMaxWidth().background(tint,RoundedCornerShape(24.dp)).border(1.dp,ShopLine,RoundedCornerShape(24.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
 }
 @Composable internal fun Eyebrow(text:String){Text(text.uppercase(),fontSize=11.sp,letterSpacing=1.5.sp,color=ShopMuted,fontWeight=FontWeight.Bold)}
 @Composable internal fun StudioTitle(text:String){Text(text,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.SemiBold,color=ShopInk,modifier=Modifier.semantics { heading() })}
@@ -85,6 +85,8 @@ internal val Danger=Color(0xFF9E3737)
   }
   if(have>0)Signal(if(have==recipe.ingredients.size)"✓ Pantry covers every ingredient" else "✓ You have $have of ${recipe.ingredients.size} ingredients")
   else SmallNote(recipe.description)
+  val estimate=studio.estimate(recipe)
+  if(estimate!=null&&have<recipe.ingredients.size)Signal("${money(estimate.charge)} pickup estimate · ${studio.people} people"+if(estimate.charge>studio.budget.toLong()*100)" · above target"else " · within target",if(estimate.charge>studio.budget.toLong()*100)Danger else Good)
  }
 }
 @Composable internal fun PriceTicket(quote:Quote,best:Long?=null,budget:Long?=null){
