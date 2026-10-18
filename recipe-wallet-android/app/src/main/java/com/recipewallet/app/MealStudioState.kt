@@ -45,6 +45,12 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  var weekStamp by mutableStateOf(saved.getString("weekStamp","")?:"");private set
  var autoWeek by mutableStateOf(saved.getBoolean("autoWeek",false));private set
  fun updateAutoWeek(value:Boolean){autoWeek=value;saved.edit().putBoolean("autoWeek",value).apply()}
+ var autoCart by mutableStateOf(saved.getBoolean("autoCart",false));private set
+ var cartIds by mutableStateOf(ids("cartIds").filter{id->catalog.recipes.any{it.id==id}});private set
+ var cartPeople by mutableIntStateOf(saved.getInt("cartPeople",people));private set
+ fun prepareWeeklyCart(){if(weeklyIds.isEmpty())return;cartIds=weeklyIds.toList();cartPeople=people;saved.edit().putString("cartIds",JSONArray(cartIds).toString()).putInt("cartPeople",cartPeople).apply()}
+ fun updateAutoCart(value:Boolean){autoCart=value;saved.edit().putBoolean("autoCart",value).apply();if(value)prepareWeeklyCart()}
+ val groceryCart get()=weeklyRecipe(cartIds,cartPeople)
  var weekBusy by mutableStateOf(false);private set
  var weekError by mutableStateOf<String?>(null);private set
  val currentWeek get()=LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toString()
@@ -92,7 +98,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
   weeklyIds=List(5){recipes[it%recipes.size].id};weekSource="local";weekStamp=currentWeek;weekError=null;saveWeek()
  }
  fun swapDay(index:Int){val options=rankedRecipes();if(index !in weeklyIds.indices||options.isEmpty())return;val next=options[(options.indexOfFirst { it.id==weeklyIds[index] }+1)%options.size];weeklyIds=weeklyIds.toMutableList().apply { set(index,next.id) };saveWeek()}
- private fun saveWeek(){saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
+ private fun saveWeek(){if(autoCart)prepareWeeklyCart();saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
  fun rankedRecipes()=catalog.recipes.filter { (!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(when(mood){0->if(r.id=="pasta")4 else 0;1->if(r.id=="bowl")4 else 0;2->if(r.id=="noodles")4 else 0;else->45-r.prepTime}) }
  fun estimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
  fun prompt():String=buildString {
@@ -102,9 +108,9 @@ internal class MealStudioState(private val context:Context,private val catalog:C
   if(owned.isNotEmpty())append(" I already have "+ingredients.filter { it.id in owned }.joinToString { it.name }+".")
   favorite?.let { append(" I often choose ${it.name}; suggest something that fits those tastes.") }
  }
- fun weeklyRecipe():Recipe? {
-  if(weeklyIds.isEmpty())return null
-  val entries=weeklyIds.flatMap { id->catalog.recipes.first { it.id==id }.let { r->r.ingredients.map { i->i.copy(quantity=kotlin.math.ceil(i.quantity.toDouble()*people/r.baseServings).toLong()) } } }.groupBy { it.id }.map { (_,items)->items.first().copy(quantity=items.sumOf { it.quantity }) }
-  return Recipe("week","Your week","🗓️","Five dinners",0,entries,people)
+ fun weeklyRecipe(planIds:List<String> = weeklyIds,planPeople:Int = people):Recipe? {
+  if(planIds.isEmpty())return null
+  val entries=planIds.flatMap { id->catalog.recipes.first { it.id==id }.let { r->r.ingredients.map { i->i.copy(quantity=kotlin.math.ceil(i.quantity.toDouble()*planPeople/r.baseServings).toLong()) } } }.groupBy { it.id }.map { (_,items)->items.first().copy(quantity=items.sumOf { it.quantity }) }
+  return Recipe("week","Your week","🗓️","Five dinners",0,entries,planPeople)
  }
 }

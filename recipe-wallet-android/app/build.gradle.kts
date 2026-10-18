@@ -3,7 +3,8 @@ android {
  namespace = "com.recipewallet.app"
  compileSdk = 36
  defaultConfig {
-  applicationId = "com.recipewallet.app"
+  applicationId = if(providers.gradleProperty("previewInstall").orNull=="true") "com.recipewallet.app.preview" else "com.recipewallet.app"
+  manifestPlaceholders["appLabel"] = if(providers.gradleProperty("previewInstall").orNull=="true") "Recipe Wallet Preview" else "Recipe Wallet"
   minSdk = 26
   targetSdk = 36
   versionCode = 4

@@ -90,8 +90,17 @@ import kotlinx.coroutines.withContext
   state.weekError?.let{Text(it,color=Danger,fontSize=13.sp)}
   TextButton(enabled=!state.weekBusy,onClick={state.buildLocalWeek()}){Text("Build a local catalog plan instead")}
   Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Switch(checked=state.autoWeek,onCheckedChange={state.updateAutoWeek(it)});Text("Auto-plan on my first visit each week",modifier=Modifier.weight(1f).padding(start=10.dp),color=ShopInk,fontSize=13.sp)}
+  Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Switch(checked=state.autoCart,onCheckedChange={state.updateAutoCart(it)});Text("Automatically prepare my weekly grocery cart",modifier=Modifier.weight(1f).padding(start=10.dp),color=ShopInk,fontSize=13.sp)}
+  SmallNote("Builds a saved cart draft when your weekly plan is generated or edited. Review quantities and pantry stock before shopping; no automatic payment.")
   SmallNote("When enabled, your first visit each week sends your taste profile, recent recipe choices and pantry IDs to the backend. No background purchases or notifications.")
  }
+ if(state.weeklyIds.isNotEmpty())ShopButton("Prepare weekly grocery cart",onClick={state.prepareWeeklyCart()})
+ state.groceryCart?.let{cart->StudioCard(tint=Peach){
+  Eyebrow("Saved shopping cart · ${state.cartPeople} people")
+  StudioTitle("Groceries, planned ahead")
+  cart.ingredients.forEach{item->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(item.name,color=ShopInk,modifier=Modifier.weight(1f));Text("${item.quantity} ${item.unit}",color=ShopInk)}}
+  SmallNote("Includes pantry items until you confirm enough stock for the whole week. This draft is saved on this tablet. Shop individual dinners below.")
+ }}
  if(state.weeklyIds.isNotEmpty()){
   Signal(if(state.weekSource=="gemini")"✨ AI arranged · edited by you"else "Local catalog plan · no AI used",if(state.weekSource=="gemini")Good else Warn)
   state.weeklyIds.forEachIndexed{index,id->

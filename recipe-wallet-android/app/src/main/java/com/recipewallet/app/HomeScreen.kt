@@ -50,15 +50,6 @@ import androidx.compose.ui.unit.sp
      Column{Text("recipe wallet",fontSize=28.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.Bold,color=ShopInk,letterSpacing=(-1).sp);Eyebrow("a little kitchen journal")}
      TextButton(enabled=!vm.aiBusy,onClick={dismiss();recipes=saved.read();libraryPage="saved"}){Text("Saved recipes ↗")}
     }
-    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp)){
-      Eyebrow(when(mode){2->"the pantry pages";3->"a week worth keeping";4->"the good food rewind";else->"little cravings, big possibilities"})
-      Text(when(mode){2->"a little less waste,\na little more wonder.";3->"five dinners.\none happy week.";4->"your week,\nbeautifully served.";else->"a little hungry,\na little inspired."},fontSize=if(wide)49.sp else 32.sp,lineHeight=if(wide)55.sp else 39.sp,fontFamily=FontFamily.Serif,fontStyle=FontStyle.Italic,fontWeight=FontWeight.Medium,color=ShopInk,letterSpacing=(-1).sp)
-      Text("Collect the recipes. Follow the cravings. Make it yours.",fontSize=14.sp,color=ShopMuted)
-     }
-     if(wide)FoodCollage(Modifier.width(340.dp).height(230.dp))
-     else FoodSticker(when(mode){2->"avo";3->"tomato";4->"berry";else->"lemon"},Modifier.size(112.dp))
-    }
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup().background(Color(0xFFF3E3D9),RoundedCornerShape(16.dp)).padding(5.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
      listOf("Build with AI","Build manually","My pantry","My week","My wrap-up").forEachIndexed{i,label->
       Box(Modifier.defaultMinSize(minWidth=130.dp,minHeight=48.dp).background(if(mode==i)ShopInk else listOf(Peach,Citrus,Mint,Lilac,Peach)[i].copy(alpha=.45f),RoundedCornerShape(9.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(horizontal=14.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,color=if(mode==i)Color.White else ShopInk,fontWeight=FontWeight.SemiBold)}

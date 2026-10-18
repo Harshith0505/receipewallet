@@ -1,6 +1,7 @@
 package com.recipewallet.app
 
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.*
@@ -32,7 +33,11 @@ internal val Danger=Color(0xFFA64451)
 
 @Composable internal fun StudioCard(tint:Color=Color(0xFFFFFCF5),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
  Box(modifier.fillMaxWidth().padding(top=8.dp)) {
-  Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
+  Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawBehind {
+   val margin=17.dp.toPx()
+   drawLine(Color(0xFFC7838C).copy(alpha=.35f),androidx.compose.ui.geometry.Offset(margin,0f),androidx.compose.ui.geometry.Offset(margin,size.height),1.dp.toPx())
+   var y=42.dp.toPx();while(y<size.height){drawLine(ShopInk.copy(alpha=.055f),androidx.compose.ui.geometry.Offset(margin,y),androidx.compose.ui.geometry.Offset(size.width,y),.6.dp.toPx());y+=28.dp.toPx()}
+  }.padding(start=30.dp,end=22.dp,top=27.dp,bottom=22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
   WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Citrus)
  }
 }
