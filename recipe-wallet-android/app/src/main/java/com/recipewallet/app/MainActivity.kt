@@ -29,6 +29,7 @@ import com.stripe.android.paymentsheet.PaymentSheetResult
 
 class MainActivity : ComponentActivity() {
     private val vm: WalletViewModel by viewModels()
+    private val library: RecipeCloudViewModel by viewModels()
     private lateinit var sheet: PaymentSheet
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
             is PaymentSheetResult.Canceled -> vm.paymentCanceled()
             is PaymentSheetResult.Failed -> vm.paymentFailed(result.error.localizedMessage ?: "Payment failed. Try again.")
         } }
+        receiveConfirmation(intent)
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(primary = ShopInk, background = ShopPaper,
                 surface = androidx.compose.ui.graphics.Color.White, secondary = ShopInk,
@@ -49,6 +51,18 @@ class MainActivity : ComponentActivity() {
                 Wallet(vm) { startTestCheckout() }
             }
         }
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        receiveConfirmation(intent)
+    }
+    private fun receiveConfirmation(incoming: Intent?) {
+        val callback = incoming?.data?.toString() ?: return
+        if (!isSignupCallback(callback)) return
+        // The callback is handled in memory; never retain authorization codes in the activity intent.
+        setIntent(Intent(incoming).apply { data = null })
+        if(vm.canEditCheckout) vm.step = 0
+        library.confirmFromLink(callback)
     }
     fun startTestCheckout() {
         vm.pay { key, secret ->

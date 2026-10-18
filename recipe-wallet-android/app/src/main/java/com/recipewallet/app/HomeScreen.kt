@@ -16,7 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val HomeInk = Color(0xFF263A2E)
 private val HomeMuted = Color(0xFF656B63)
@@ -37,37 +39,43 @@ internal fun HomeScreen(vm: WalletViewModel) {
     var manual by rememberSaveable { mutableStateOf(false) }
     var libraryPage by rememberSaveable { mutableStateOf(if (vm.isPersonal) "saved" else "home") }
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-    val recipeStore = remember { PersonalRecipeStore(context) }
-    var personalRecipes by remember { mutableStateOf(recipeStore.read()) }
+    val library: RecipeCloudViewModel = viewModel()
+    val personalRecipes = library.state.recipes
     var about by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val dismissKeyboard: () -> Unit = { focusManager.clearFocus(force = true); keyboard?.hide() }
 
+    LaunchedEffect(library.confirmationRequests) {
+        if (library.confirmationRequests > 0) { libraryPage = "account"; library.consumeConfirmationRequest() }
+    }
     LaunchedEffect(manual, libraryPage) {
         if (manual || libraryPage != "home") {
             focusManager.clearFocus(force = true)
             keyboard?.hide()
         }
     }
+    if (libraryPage == "account") {
+        CloudAccountScreen(library, onBack = { libraryPage = "saved" })
+        return
+    }
     if (libraryPage != "home") {
         RecipeLibraryScreen(
             page = libraryPage,
             recipe = personalRecipes.firstOrNull { it.id == selectedRecipeId },
             recipes = personalRecipes,
+            library = library,
+            onAccount = { libraryPage = "account" },
             onBack = { dismissKeyboard(); libraryPage = if (libraryPage == "saved") "home" else "saved" },
             onAdd = { selectedRecipeId = null; libraryPage = "add" },
             onOpen = { selectedRecipeId = it.id; libraryPage = "detail" },
             onEdit = { libraryPage = "add" },
             onUse = { dismissKeyboard(); vm.choosePersonal(it) },
             onSave = { recipe ->
-                runCatching {
-                    personalRecipes = recipeStore.save(recipe)
-                    dismissKeyboard()
-                    libraryPage = "saved"
-                }.exceptionOrNull()?.message
+                val error = library.save(recipe)
+                if (error == null) withContext(Dispatchers.Main.immediate) { dismissKeyboard(); libraryPage = "saved" }
+                error
             }
         )
         return
@@ -85,7 +93,7 @@ internal fun HomeScreen(vm: WalletViewModel) {
                     Text("recipe wallet", color = HomeInk, fontSize = 22.sp,
                         letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { dismissKeyboard(); personalRecipes = recipeStore.read(); libraryPage = "saved" }, enabled = !vm.aiBusy) {
+                        TextButton(onClick = { dismissKeyboard(); library.refresh(); libraryPage = "saved" }, enabled = !vm.aiBusy) {
                             Text("Saved recipes", color = HomeInk, fontSize = 13.sp)
                         }
                         Box {

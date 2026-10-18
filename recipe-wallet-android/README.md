@@ -64,3 +64,13 @@ Android and the backend share identical `products.json` fixtures. Custom checkou
 `POST /suggest` accepts `{ "pantryIds": ["rice", "avo"] }`, with optional diet and preparation-time filters. Recipe matches and missing ingredients are calculated from the catalog. Gemini can add a short explanation; a plain code-written explanation remains available when Gemini is unavailable. This endpoint does not order or pay.
 
 The home meal composer accepts pantry text through `/plan`. Follow-up responses now include server-computed `changes`; the app displays these under **What changed**. A live check preserved garlic, removed soy sauce and reduced the package total from $15.80 to $12.15. A dedicated pantry-selection screen was not included in the incoming branch; `/suggest` is available for that integration.
+
+## Supabase recipe-library integration
+
+The `integration/supabase-recipes` branch combines main with private recipe sync, email/password sign-in, encrypted session storage, PKCE email-confirmation return and offline account caches. Saved recipes remain usable in the existing product-matching and checkout flow. An auth callback does not leave checkout while payment is busy or awaiting verification.
+
+Copy `supabase.properties.example` to the ignored `supabase.properties`, then supply `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to enable cloud sign-in. This integration checkout was built without those local settings; mock cloud tests and local database migration tests do not establish live account sync. See [Supabase setup](supabase/README.md). Do not reapply the migration to the already configured hosted project.
+
+This feature stores personal recipes. AI sessions, basket quotes and payment attempts have not been migrated to Supabase by this branch.
+
+Integration verification: 56 backend tests, seven Kotlin tests, 24 offline Android checks and the local PostgreSQL migration/isolation suite passed. A live native Stripe test also completed the $15.80 catalog payment through server verification. The live Supabase account/sync check was not run because local project settings are absent.
