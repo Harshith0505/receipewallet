@@ -26,4 +26,12 @@ class RetailerMatchingTest {
   assertEquals(right,rankRetailerMatches(need,listOf(wrong,right)).first())
   assertTrue(isConfidentRetailerMatch(need,right));assertFalse(isConfidentRetailerMatch(need,wrong))
  }
+ @Test fun storeMapRequiresACompleteValidCoordinatePair(){
+  assertTrue(RetailerStore("1","QFC","Seattle",47.66,-122.29).hasCoordinates)
+  assertFalse(RetailerStore("1","QFC","Seattle").hasCoordinates)
+  assertFalse(RetailerStore("1","QFC","Seattle",47.66,null).hasCoordinates)
+  assertFalse(RetailerStore("1","QFC","Seattle",91.0,-122.29).hasCoordinates)
+  assertFalse(RetailerStore("1","QFC","Seattle",Double.NaN,-122.29).hasCoordinates)
+ }
+
 }

@@ -44,6 +44,9 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
       }
      }
     }
+    if(vm.stores.isNotEmpty())RetailerMap(vm.stores,vm.selectedStore?.id.orEmpty(),!vm.editingBlocked){id->
+     vm.stores.firstOrNull{it.id==id&&it.id!=vm.selectedStore?.id}?.let{vm.loadShopping(it)}
+    }
     if(vm.selections.values.groupBy{it.product.key}.any{it.value.size>1})SmallNote("Some ingredients use the same product. Their package counts are combined; check for duplicates before continuing.")
     if(vm.selections.isNotEmpty()) AmountRow("Selected item estimate",money(vm.selections.values.sumOf{it.product.price!!*it.quantity}),prominent=true)
     SmallNote("Pantry items are excluded. Suggested products are not approved yet: select alternatives below and check package quantities. Your ZIP and ingredient searches are sent to Kroger.")

@@ -9,7 +9,7 @@ function fixture() {
   const client = createRetailer({...credentials, fetcher: async (url, options) => {
     calls.push({url, options});
     if (url.includes('/token')) return response({access_token: 'private-token', expires_in: 1800});
-    if (url.includes('/locations?')) return response({data: [{locationId: '70500123', name: 'QFC', address: {addressLine1: '123 Test St', city: 'Seattle', state: 'WA', zipCode: '98105'}}]});
+    if (url.includes('/locations?')) return response({data: [{locationId: '70500123', name: 'QFC', geolocation: {latitude:47.6622899,longitude:-122.2964227}, address: {addressLine1: '123 Test St', city: 'Seattle', state: 'WA', zipCode: '98105'}}]});
     return response({data: [{productId: '0001', description: 'Pasta', items: [{itemId: '1', size: '16 oz', price: {regular: 2.49, promo: 1.99}}]}]});
   }});
   return {client, calls};
@@ -34,6 +34,7 @@ test('searches stores by ZIP and products by the selected location; shares OAuth
   assert.equal(stores.demo, false);
   assert.equal(stores.stores[0].address, '123 Test St, Seattle, WA, 98105');
   assert.equal(stores.stores[0].rating, undefined);
+  assert.equal(stores.stores[0].latitude,47.6622899);assert.equal(stores.stores[0].longitude,-122.2964227);
   const productCall = calls.find(c => c.url.includes('/products?'));
   assert.equal(new URL(productCall.url).searchParams.get('filter.locationId'), '70500123');
   assert.equal(new URL(productCall.url).searchParams.get('filter.term'), 'pasta & rice');
@@ -173,4 +174,12 @@ test('basket does not accept the wrong provider product or an unsafe monetary to
   await assert.rejects(wrong.client.basket(selection), e => e.status === 502);
   const overflow = basketFixture(packageProduct({price:{regular:Number.MAX_SAFE_INTEGER/100}}));
   await assert.rejects(overflow.client.basket(selection), e => e.status === 502);
+});
+
+test('missing or invalid location coordinates stay unknown rather than using sample pins',async()=>{
+ for(const geolocation of [undefined,{latitude:91,longitude:-122},{latitude:47,longitude:'-122'},{latitude:47}]){
+  const client=createRetailer({...credentials,fetcher:async(url)=>url.includes('/token')?response({access_token:'token',expires_in:1800}):response({data:[{locationId:'123',name:'QFC',geolocation,address:{city:'Seattle'}}]})});
+  const result=await client.stores({postalCode:'98105'});
+  assert.equal(result.stores[0].latitude,null);assert.equal(result.stores[0].longitude,null);assert.equal(result.stores[0].address,'Seattle');
+ }
 });

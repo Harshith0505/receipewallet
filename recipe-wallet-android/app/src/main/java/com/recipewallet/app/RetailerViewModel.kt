@@ -17,7 +17,15 @@ import java.net.URL
 import java.net.URI
 import java.util.UUID
 
-internal data class RetailerStore(val id: String, val name: String, val address: String)
+internal data class RetailerStore(val id: String, val name: String, val address: String, val latitude:Double?=null,val longitude:Double?=null) {
+    val hasCoordinates get()=latitude!=null&&longitude!=null&&latitude.isFinite()&&longitude.isFinite()&&latitude in -90.0..90.0&&longitude in -180.0..180.0
+}
+private fun parseRetailerStore(row:JSONObject):RetailerStore {
+    val latitude=row.optDouble("latitude",Double.NaN)
+    val longitude=row.optDouble("longitude",Double.NaN)
+    val valid=latitude.isFinite()&&longitude.isFinite()&&latitude in -90.0..90.0&&longitude in -180.0..180.0
+    return RetailerStore(row.getString("id"),row.getString("name"),row.getString("address"),if(valid)latitude else null,if(valid)longitude else null)
+}
 internal data class RetailerNeed(val id: String, val name: String, val amount: String, val quantity:Double?=null, val unit:String?=null)
 internal data class RetailerProduct(val name: String, val size: String?, val price: Long?,
     val promo: Long?, val stock: String?, val soldBy: String?, val productId: String, val itemId: String) {
@@ -129,7 +137,7 @@ internal class RetailerViewModel(
                     val result=request("/retailers/stores",JSONObject().put("postalCode",zip))
                     if(id!=requestId)return@launch
                     val rows=result.getJSONArray("stores")
-                    stores=List(rows.length()){i->rows.getJSONObject(i).let{RetailerStore(it.getString("id"),it.getString("name"),it.getString("address"))}}
+                    stores=List(rows.length()){i->parseRetailerStore(rows.getJSONObject(i))}
                     searchedZip=zip;chosen=stores.firstOrNull()
                 }
                 selectedStore=chosen
@@ -184,9 +192,7 @@ internal class RetailerViewModel(
         selections = emptyMap(); basket = null; reviewing = false; activeNeed = null
         perform("/retailers/stores", JSONObject().put("postalCode", zip)) { result ->
             val rows = result.getJSONArray("stores")
-            stores = List(rows.length()) { i -> rows.getJSONObject(i).let {
-                RetailerStore(it.getString("id"), it.getString("name"), it.getString("address"))
-            } }
+            stores = List(rows.length()) { i -> parseRetailerStore(rows.getJSONObject(i)) }
             searchedZip = zip
         }
     }

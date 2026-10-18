@@ -105,7 +105,9 @@ export function createRetailer({clientId = process.env.KROGER_CLIENT_ID || '',
       const rows = await get('locations', {'filter.zipCode.near': postalCode, 'filter.radiusInMiles': '10', 'filter.limit': '5'});
       return {provider: 'kroger', demo: false, fetchedAt: new Date(now()).toISOString(), stores: rows
         .filter(row => row?.locationId && row.name).map(row => ({id: String(row.locationId), name: row.name,
-          address: [row.address?.addressLine1, row.address?.city, row.address?.state, row.address?.zipCode].filter(Boolean).join(', ')
+          address: [row.address?.addressLine1, row.address?.city, row.address?.state, row.address?.zipCode].filter(Boolean).join(', '),
+          ...(Number.isFinite(row.geolocation?.latitude)&&Number.isFinite(row.geolocation?.longitude)&&Math.abs(row.geolocation.latitude)<=90&&Math.abs(row.geolocation.longitude)<=180
+            ? {latitude:row.geolocation.latitude,longitude:row.geolocation.longitude}: {latitude:null,longitude:null})
         }))};
     },
     async products(input) {
