@@ -80,3 +80,9 @@ Copy `supabase.properties.example` to the ignored `supabase.properties`, then su
 This feature stores personal recipes. AI sessions, basket quotes and payment attempts have not been migrated to Supabase by this branch.
 
 Integration verification: 56 backend tests, seven Kotlin tests, 24 offline Android checks and the local PostgreSQL migration/isolation suite passed. A live native Stripe test also completed the $15.80 catalog payment through server verification. The live Supabase account/sync check was not run because local project settings are absent.
+
+### Meals beyond the sample catalog
+
+Gemini can draft named meals such as homemade pizza using `draft_recipe`. Drafts include servings, ingredient quantities, explicit pantry ownership, preparation time and cooking steps. They are **unpriced**, with no invented stores, availability or savings. Follow-ups revise the previous generated recipe rather than retaining an unrelated sample meal.
+
+On Android choose **Review ingredients →**, adjust pantry exclusions, then **Look up retailer prices** to match actual Kroger products. The existing personal-recipe sample checkout remains separately labeled; products missing from its small sample catalog must be matched through live retailer lookup. Draft quantities and dietary suitability require user review. The requested budget is retained for the sample checkout guard, while live retailer totals must be reviewed before any cart transfer.

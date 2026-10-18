@@ -86,3 +86,35 @@ test('diffPlans reports pantry, basket, store, card and total changes from code'
  assert.deepEqual(diffPlans(null,after),[]);
  assert.deepEqual(diffPlans(after,after),[]);
 });
+
+const pizzaDraft={name:'Homemade pizza',servings:4,prepMinutes:40,diet:'vegetarian',budgetCents:3000,maxPrepMinutes:0,ingredients:[{name:'All-purpose flour',amount:'300 g',owned:true},{name:'Mozzarella',amount:'200 g',owned:false},{name:'Tomato sauce',amount:'150 ml',owned:false},{name:'Water',amount:'180 ml',owned:false}],steps:['Prepare the dough, add toppings, and bake until fully cooked.'],explanation:'A homemade pizza draft for four. Review the ingredient quantities before shopping.'};
+test('a generated pizza is unpriced and never replaced by a priced catalog meal',async()=>{
+ const result=await planShop('Homemade pizza for four; I have flour.',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'function_call',id:'draft-1',name:'draft_recipe',arguments:{...pizzaDraft,amount:1,priceCents:100}}]})})});
+ assert.equal(result.plan,null);
+ assert.equal(result.generatedRecipe.name,'Homemade pizza');
+ assert.equal(result.generatedRecipe.pricingStatus,'unpriced');
+ assert.equal(result.generatedRecipe.ingredients[0].owned,true);
+ assert.equal('priceCents' in result.generatedRecipe,false);
+ assert.equal(result.trace.at(-1).tool,'draft_recipe');
+});
+test('generated recipe validation rejects invalid quantities, duplicate items and excessive time',()=>{
+ for(const change of [{servings:0},{ingredients:[{name:'Flour',amount:'',owned:false}]},{ingredients:[pizzaDraft.ingredients[0],pizzaDraft.ingredients[0]]},{maxPrepMinutes:10}]) {
+  const runner=createToolRunner();
+  assert.throws(()=>runner.run('draft_recipe',{...pizzaDraft,...change}));
+  assert.equal(runner.generatedRecipe,null);
+ }
+});
+test('generated follow-ups receive the actual previous recipe and replace stale catalog context',async()=>{
+ const {sessionPlan}=await import('./agent.mjs');
+ let previous;
+ const options={apiKey:'test',fetchImpl:async(url,init)=>{
+  previous=JSON.parse(JSON.parse(init.body).input[0].content[0].text).previousContext;
+  return {ok:true,json:async()=>({steps:[{type:'function_call',id:'draft-2',name:'draft_recipe',arguments:pizzaDraft}]})};
+ }};
+ const first=await sessionPlan({message:'Homemade pizza for four'},options);
+ const second=await sessionPlan({message:'I already have flour',sessionId:first.sessionId},options);
+ assert.equal(previous.previousGeneratedRecipe.name,'Homemade pizza');
+ assert.equal(previous.previousGeneratedRecipe.servings,4);
+ assert.equal(second.generatedRecipe.constraints.budgetCents,3000);
+ assert.equal(previous.previousPlan,undefined);
+});

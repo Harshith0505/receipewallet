@@ -38,6 +38,7 @@ private val HomeLine = Color(0xFFE1E3DC)
 internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) {
     var manual by rememberSaveable { mutableStateOf(false) }
     var libraryPage by rememberSaveable { mutableStateOf(if (vm.isPersonal) "saved" else "home") }
+    var accountReturnPage by rememberSaveable { mutableStateOf("saved") }
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
     val library: RecipeCloudViewModel = viewModel()
     val personalRecipes = library.state.recipes
@@ -57,7 +58,8 @@ internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) 
         }
     }
     if (libraryPage == "account") {
-        CloudAccountScreen(library, onBack = { libraryPage = "saved" })
+        CloudAccountScreen(library, onBack = { libraryPage = accountReturnPage },
+            backLabel = if (accountReturnPage == "home") "← Home" else "← Saved recipes")
         return
     }
     if (libraryPage != "home") {
@@ -66,7 +68,7 @@ internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) 
             recipe = personalRecipes.firstOrNull { it.id == selectedRecipeId },
             recipes = personalRecipes,
             library = library,
-            onAccount = { libraryPage = "account" },
+            onAccount = { accountReturnPage = "saved"; libraryPage = "account" },
             onBack = { dismissKeyboard(); libraryPage = if (libraryPage == "saved") "home" else "saved" },
             onAdd = { selectedRecipeId = null; libraryPage = "add" },
             onOpen = { selectedRecipeId = it.id; libraryPage = "detail" },
@@ -88,13 +90,18 @@ internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) 
                     .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(22.dp)
             ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
+                FlowRow(Modifier.fillMaxWidth(), itemVerticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("recipe wallet", color = HomeInk, fontSize = 22.sp,
                         letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { dismissKeyboard(); library.refresh(); libraryPage = "saved" }, enabled = !vm.aiBusy) {
                             Text("Saved recipes", color = HomeInk, fontSize = 13.sp)
+                        }
+                        OutlinedButton(onClick = {
+                            dismissKeyboard(); accountReturnPage = "home"; libraryPage = "account"
+                        }, enabled = !vm.aiBusy, shape = RoundedCornerShape(12.dp)) {
+                            Text(if (library.state.email == null) "Login" else "Account", color = HomeInk, fontSize = 13.sp)
                         }
                         Box {
                             IconButton(onClick = { dismissKeyboard(); menuOpen = true },
@@ -252,6 +259,7 @@ private fun MealComposer(vm: WalletViewModel, onManual: () -> Unit, onSubmit: ()
                 Text("Couldn’t build your meal", color = Color(0xFF7B3A29), fontWeight = FontWeight.Medium)
                 Text(error, color = Color(0xFF7B3A29), fontSize = 13.sp)
                 TextButton(onClick = onManual, contentPadding = PaddingValues(0.dp)) { Text("Choose a recipe instead") }
+                TextButton(onClick = { vm.newPlan() }, contentPadding = PaddingValues(0.dp)) { Text("Start a new shop") }
             }
         }
         Text("Meal requests are processed by Gemini. You review the basket before checkout.",

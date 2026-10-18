@@ -268,6 +268,21 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
             Text("What changed",color=ShopInk,fontWeight=FontWeight.Medium)
             vm.agentChanges.forEach { SmallNote(it) }
         }
+        vm.generatedRecipe?.let { draft ->
+            Text(draft.getString("name"), color = ShopInk, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+            SmallNote("${draft.getInt("servings")} servings · ${draft.getInt("prepMinutes")} min estimated")
+            val budget = draft.getJSONObject("constraints").getLong("budgetCents")
+            if (budget >= 0) SmallNote("Requested budget: ${money(budget)} · not yet priced")
+            val ingredients = draft.getJSONArray("ingredients")
+            for (index in 0 until ingredients.length()) {
+                val item = ingredients.getJSONObject(index)
+                Text("${item.getString("amount")} ${item.getString("name")}" + if (item.getBoolean("owned")) " · already owned" else "", color = ShopInk, fontSize = 13.sp)
+            }
+            val instructions = draft.getJSONArray("steps")
+            for (index in 0 until instructions.length()) SmallNote("${index + 1}. ${instructions.getString(index)}")
+            SmallNote("AI recipe draft. Review quantities and dietary requirements. Prices and availability are checked when you choose products; this draft has no quoted total.")
+            ShopButton("Review ingredients →", enabled = !vm.aiBusy, onClick = { vm.approveGeneratedRecipe() })
+        }
         val recipe = vm.plannedRecipe
         val quote = vm.plannedQuote
         if (recipe != null && quote != null) {
@@ -291,7 +306,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
         TextButton(onClick = { details = !details }) { Text(if (details) "Hide comparison details" else "How this was chosen") }
         if (details) vm.agentTrace.forEach { SmallNote(it) }
         TextButton(onClick = { vm.newPlan() }, enabled = !vm.aiBusy) { Text("Start a new shop") }
-        SmallNote("Two-serving pickup plan with whole packages and configured 0% demo tax. Adjust shopping preferences on the next screen. Review dietary requirements yourself.")
+        if (vm.generatedRecipe == null) SmallNote("Two-serving pickup plan with whole packages and configured 0% demo tax. Adjust shopping preferences on the next screen. Review dietary requirements yourself.")
     }
 }
 

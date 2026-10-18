@@ -3,6 +3,9 @@
 **/build/
 local.properties
 backend/.env
+backend/memory.db
+backend/memory.db-wal
+backend/memory.db-shm
 *.apk
 
 # Local cloud project configuration

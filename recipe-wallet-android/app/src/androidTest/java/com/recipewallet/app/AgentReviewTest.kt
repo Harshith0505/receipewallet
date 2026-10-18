@@ -10,7 +10,6 @@ import org.junit.Test
 import org.junit.Assert.*
 import java.io.File
 import android.graphics.Bitmap
-import androidx.test.uiautomator.UiDevice
 import org.junit.Assume.assumeTrue
 
 class AgentReviewTest {
@@ -75,7 +74,7 @@ class AgentReviewTest {
   }
   compose.onNodeWithText("Approve & pay ${money(vm.current.charge)}").performScrollTo().assertIsNotEnabled()
  }
- @Test fun liveAgentRevisesAndOpensStripeTestCheckout() {
+ @Test fun liveAgentRevisesAndReviewsCheckout() {
   assumeTrue(InstrumentationRegistry.getArguments().getString("liveAgent")=="true")
   lateinit var vm: WalletViewModel
   compose.runOnIdle {vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]}
@@ -93,13 +92,8 @@ class AgentReviewTest {
   File(compose.activity.getExternalFilesDir(null),"agent-live-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
   compose.onNodeWithText("Review package-priced basket  →").performClick()
   compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().performClick()
-  compose.onNodeWithText("Approve & pay ${money(vm.current.charge)}").performScrollTo().performClick()
-  compose.waitUntil(35000) { vm.canVerify || vm.error!=null }
-  compose.runOnIdle {assertNull(vm.error);assertTrue(vm.canVerify)}
-  val device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-  device.waitForIdle()
-  File(compose.activity.getExternalFilesDir(null),"stripe-checkout.xml").outputStream().use { device.dumpWindowHierarchy(it) }
-  val sheetImage=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-  File(compose.activity.getExternalFilesDir(null),"stripe-checkout.png").outputStream().use { sheetImage.compress(Bitmap.CompressFormat.PNG,100,it) }
+  // Native PaymentSheet is exercised by StripeCheckoutTest without a Compose test clock.
+  compose.onNodeWithText("Approve & pay ${money(vm.current.charge)}").performScrollTo().assertIsEnabled()
+  compose.runOnIdle { assertNull(vm.error); assertTrue(vm.checkoutWithinBudget) }
  }
 }

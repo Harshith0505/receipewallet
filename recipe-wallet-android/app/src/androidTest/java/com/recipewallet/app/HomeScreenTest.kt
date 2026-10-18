@@ -19,6 +19,15 @@ import org.junit.Test
 class HomeScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
+    @Test fun homeLoginOpensAccountAndReturnsToTheMealDraft() {
+        compose.onNodeWithText("Try: vegetarian noodles under $30").performClick()
+        compose.onNodeWithText("Login").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Your recipe library").assertIsDisplayed()
+        compose.onNodeWithText("← Home").performClick()
+        compose.onNodeWithText("Login").assertIsDisplayed()
+        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $30. I already have garlic.")
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         val image = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
@@ -90,4 +99,40 @@ class HomeScreenTest {
         }
         compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsEnabled()
     }
+
+    @Test fun expiredPlanningCanBeResetFromTheError() {
+        lateinit var vm: WalletViewModel
+        compose.runOnIdle {
+            vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            vm.preference = "Make it cheaper"
+            vm.aiError = "Your planning session expired. Start a new shop."
+        }
+        compose.onNodeWithText("Start a new shop").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(null, vm.aiError)
+            assertEquals("", vm.preference)
+            assertEquals(null, vm.agentPlan)
+        }
+        compose.onNodeWithText("Try: vegetarian noodles under $30").performScrollTo().performClick()
+        compose.onNodeWithText("Build my meal").performScrollTo().assertIsEnabled()
+    }
+    @Test fun generatedPizzaOpensItsOwnIngredientsAndExcludesOwnedFlour() {
+        lateinit var vm: WalletViewModel
+        compose.runOnIdle {
+            vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            vm.generatedRecipe = org.json.JSONObject("""{"id":"pizza-test","name":"Homemade pizza","servings":4,"prepMinutes":40,"constraints":{"budgetCents":3000},"ingredients":[{"name":"Flour","amount":"300 g","owned":true},{"name":"Mozzarella","amount":"200 g","owned":false}],"steps":["Prepare dough and bake the pizza."]}""")
+            vm.agentReply = "A pizza draft for four."
+        }
+        compose.onNodeWithText("Homemade pizza").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Review ingredients →").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals("Homemade pizza", vm.recipe.name)
+            assertEquals(setOf("line-1"), vm.selected)
+            assertEquals(3000L, vm.planBudget)
+            assertEquals(1, vm.step)
+        }
+        compose.onNodeWithText("Look up retailer prices").performScrollTo().performClick()
+        compose.onNodeWithText("US ZIP code").assertExists()
+    }
+
 }

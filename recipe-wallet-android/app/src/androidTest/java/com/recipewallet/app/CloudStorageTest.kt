@@ -137,6 +137,39 @@ class CloudStorageTest {
         returning.completeSignup(SignupCallback + "?code=fixture-code")
         assertEquals(owner, returning.session!!.userId); assertNull(vault.signup); assertEquals(2, calls)
     }
+    @Test fun failedConfirmationCanBeRetriedAndSuccessfulCodeCannotBeReplayed() {
+        val pending = PendingSignup("fixture@example.invalid", "synthetic-verifier")
+        val vault = MemoryVault().apply { signup = pending }
+        var calls = 0
+        val client = SupabaseClient(vault, SupabaseTransport { _, _, _, _ ->
+            calls++
+            if (calls == 1) throw java.io.IOException("Offline")
+            response()
+        })
+        val callback = SignupCallback + "?code=retry-code"
+        assertThrows(java.io.IOException::class.java) { client.completeSignup(callback) }
+        assertEquals(pending, vault.signup)
+        assertNull(vault.value); assertNull(client.session)
+        client.completeSignup(callback)
+        val confirmed = client.session
+        assertNotNull(confirmed); assertNull(vault.signup)
+        assertThrows(IllegalStateException::class.java) { client.completeSignup(callback) }
+        assertEquals(2, calls)
+        assertEquals(confirmed, client.session); assertEquals(confirmed, vault.value)
+    }
+    @Test fun failedSignupPreservesThePreviousConfirmationVerifier() {
+        val pending = PendingSignup("fixture@example.invalid", "original-verifier")
+        val vault = MemoryVault().apply { signup = pending }
+        val client = SupabaseClient(vault, SupabaseTransport { _, _, _, _ ->
+            throw CloudFailure(429, "over_email_send_rate_limit", "Too many attempts.")
+        })
+        assertThrows(CloudFailure::class.java) { client.signUp("another@example.invalid", "synthetic-password") }
+        assertEquals(pending, vault.signup)
+        assertNull(vault.value)
+        vault.clearSignup()
+        assertThrows(CloudFailure::class.java) { client.signUp("another@example.invalid", "synthetic-password") }
+        assertNull(vault.signup)
+    }
     @Test fun confirmationRejectsForeignUrlsImplicitTokensAndWrongAccounts() {
         val vault = MemoryVault().apply { signup = PendingSignup("fixture@example.invalid", "synthetic-verifier") }
         var calls = 0
