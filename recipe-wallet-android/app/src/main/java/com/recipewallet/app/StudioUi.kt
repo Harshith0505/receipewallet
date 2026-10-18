@@ -55,7 +55,7 @@ internal val Danger=Color(0xFFA64451)
  Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){
   TextButton(onClick={open=!open},modifier=Modifier.fillMaxWidth().semantics{stateDescription=if(open)"Expanded"else "Collapsed"}){
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
-    Text(title,color=ShopInk,fontWeight=FontWeight.SemiBold)
+    Text(title,color=ShopInk,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.semantics{heading()})
     if(summary.isNotBlank())Text(summary,color=ShopMuted,fontSize=12.sp)
    }
    Text(if(open)"−"else "+",color=ShopInk,fontSize=22.sp)
@@ -89,13 +89,6 @@ internal val Danger=Color(0xFFA64451)
   Text("Swipe left to pass · Swipe right to choose · Chosen: ${mealMoods[state.pickedMood].name}",fontSize=11.sp,color=ShopMuted)
  }
 }
-@Composable private fun PreferenceSlider(title:String,display:String,value:Float,range:ClosedFloatingPointRange<Float>,steps:Int,enabled:Boolean,start:String,end:String,description:String,onChange:(Float)->Unit){
- Column(Modifier.fillMaxWidth().background(Lilac.copy(alpha=.55f),RoundedCornerShape(16.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(title,color=ShopInk,fontWeight=FontWeight.SemiBold);Signal(display,ShopInk)}
-  Slider(value=value,onValueChange=onChange,valueRange=range,steps=steps,enabled=enabled,modifier=Modifier.semantics{contentDescription=description},colors=SliderDefaults.colors(thumbColor=ShopInk,activeTrackColor=Color(0xFFAC667F),inactiveTrackColor=Peach,activeTickColor=Citrus,inactiveTickColor=Color(0xFFBB9DAB)))
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(start,color=ShopMuted,fontSize=11.sp);Text(end,color=ShopMuted,fontSize=11.sp)}
- }
-}
 @Composable internal fun TasteControls(state:MealStudioState,enabled:Boolean=true){
  StudioCard {
   Eyebrow("Make it yours")
@@ -103,9 +96,14 @@ internal val Danger=Color(0xFFA64451)
    Text("At the table",fontWeight=FontWeight.SemiBold,color=ShopInk)
    Row(verticalAlignment=Alignment.CenterVertically){IconButton(modifier=Modifier.semantics { contentDescription="Fewer people" },enabled=enabled&&state.people>1,onClick={state.updatePeople(state.people-1)}){Text("−",fontSize=24.sp)};Text("${state.people}",fontWeight=FontWeight.Bold);IconButton(modifier=Modifier.semantics { contentDescription="More people" },enabled=enabled&&state.people<12,onClick={state.updatePeople(state.people+1)}){Text("+",fontSize=24.sp)}}
   }
-  PreferenceSlider("Cooking time","${state.minutes.toInt()} min",state.minutes,15f..45f,5,enabled,"15 min · Quick","45 min · Unhurried","Maximum cooking time"){state.updateMinutes(it)}
-  PreferenceSlider("Try something new",if(state.novelty>.65f)"Adventurous"else "Familiar",state.novelty,0f..1f,0,enabled,"Familiar","Explore","Familiar favorites to something new"){state.updateNovelty(it)}
-  PreferenceSlider("Meal budget","$${state.budget.toInt()}",state.budget,10f..80f,13,enabled,"$10","$80","Meal budget in dollars"){state.updateBudget(it)}
+  Text("Your pace · ${state.minutes.toInt()} min",fontWeight=FontWeight.Medium,color=ShopInk)
+  Slider(modifier=Modifier.semantics { contentDescription="Maximum cooking time" },value=state.minutes,onValueChange={state.updateMinutes(it)},valueRange=15f..45f,steps=5,enabled=enabled)
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){SmallNote("Quick & easy");SmallNote("Time to create")}
+  Text("Your comfort zone",fontWeight=FontWeight.Medium,color=ShopInk)
+  Slider(modifier=Modifier.semantics { contentDescription="Familiar favorites to something new" },value=state.novelty,onValueChange={state.updateNovelty(it)},valueRange=0f..1f,enabled=enabled)
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){SmallNote("Familiar favorites");SmallNote("Something new")}
+  Text("Meal budget · $${state.budget.toInt()}",fontWeight=FontWeight.Medium,color=ShopInk)
+  Slider(modifier=Modifier.semantics { contentDescription="Meal budget in dollars" },value=state.budget,onValueChange={state.updateBudget(it)},valueRange=10f..80f,steps=13,enabled=enabled)
   CuisinePicker(state)
   Text("Dietary preferences",fontWeight=FontWeight.Bold,color=ShopInk)
   OutlinedTextField(value=state.avoid,onValueChange={state.updateAvoid(it)},enabled=enabled,label={Text("Allergens / ingredients to avoid")},placeholder={Text("milk, wheat, sesame, peanuts")},supportingText={Text("Comma-separated. Matches named ingredients; labels and cross-contact still need review.")},modifier=Modifier.fillMaxWidth())

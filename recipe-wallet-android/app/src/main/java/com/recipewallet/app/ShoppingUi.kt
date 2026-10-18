@@ -1,5 +1,6 @@
 package com.recipewallet.app
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -17,7 +18,7 @@ import androidx.compose.ui.unit.sp
 
 internal val ShopInk = Color(0xFF503542)
 internal val ShopMuted = Color(0xFF78616A)
-internal val ShopPaper = Color(0xFFFFF7E9)
+internal val ShopPaper = Color(0xFFE5C9B9)
 internal val ShopLine = Color(0xFFE6D2C4)
 internal val ShopTint = Color(0xFFF5E1E5)
 
@@ -30,8 +31,7 @@ internal fun ShoppingPage(step: Int, onBack: () -> Unit, backEnabled: Boolean = 
                 verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("recipe wallet", color = ShopInk, fontSize = 22.sp,
-                        letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
+                    BrandWordmark(Modifier.weight(1f))
                     TextButton(onClick = onBack, enabled = backEnabled) { Text("← Back", color = ShopInk) }
                 }
                 if(step in 1..3)JourneySteps(step)
@@ -83,15 +83,34 @@ internal fun ShopButton(text: String, enabled: Boolean = true, outlined: Boolean
 internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 13.sp, lineHeight = 19.sp) }
 
 @Composable internal fun JourneySteps(current:Int){
- Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+ Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+  Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically){
    listOf("Meal","Basket","Store","Checkout").forEachIndexed{i,label->
-    Column(Modifier.weight(1f).background(if(i==current)ShopInk else if(i<current)Color(0xFFE6D2A9)else ShopTint,RoundedCornerShape(10.dp)).padding(horizontal=6.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-     Text(if(i<current)"✓ Done"else if(i==current)"● Now"else if(i==current+1)"${i+1} Next"else "${i+1} Later",color=if(i==current)ShopPaper else ShopMuted,fontSize=10.sp)
-     Text(label,color=if(i==current)ShopPaper else ShopInk,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+    Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+     Text((if(i<current)"✓ "else "")+label,color=if(i<=current)ShopInk else ShopMuted,fontSize=16.sp,fontWeight=if(i==current)FontWeight.Bold else FontWeight.Normal)
+     Box(Modifier.width(76.dp).height(if(i==current)3.dp else 1.dp).background(if(i==current)ShopInk else ShopLine))
     }
    }
   }
-  Text(when(current){0->"Choose a meal to get started";1->"Next: compare stores for your basket";2->"Next: review your card and checkout";else->"Review the total before confirming"},color=ShopMuted,fontSize=12.sp)
+ }
+}
+
+@Composable internal fun JournalNavigation(labels:List<String>,selected:Int,enabled:Boolean,onSelect:(Int)->Unit){
+ ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=ShopTint,contentColor=ShopInk){
+  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,text={Text(label,fontSize=17.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
+ }
+}
+
+@Composable internal fun BrandWordmark(modifier:Modifier=Modifier){
+ Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
+  androidx.compose.foundation.Canvas(Modifier.size(40.dp)){
+   val w=size.width;val h=size.height
+   drawRoundRect(ShopInk,topLeft=androidx.compose.ui.geometry.Offset(w*.08f,h*.32f),size=androidx.compose.ui.geometry.Size(w*.84f,h*.59f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.12f))
+   drawRoundRect(Color(0xFFF0BAA9),topLeft=androidx.compose.ui.geometry.Offset(w*.58f,h*.5f),size=androidx.compose.ui.geometry.Size(w*.37f,h*.23f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.06f))
+   drawCircle(ShopInk,w*.035f,androidx.compose.ui.geometry.Offset(w*.72f,h*.615f))
+   drawOval(Color(0xFF71805B),topLeft=androidx.compose.ui.geometry.Offset(w*.19f,0f),size=androidx.compose.ui.geometry.Size(w*.33f,h*.26f))
+   drawOval(Color(0xFF879461),topLeft=androidx.compose.ui.geometry.Offset(w*.49f,h*.05f),size=androidx.compose.ui.geometry.Size(w*.28f,h*.22f))
+  }
+  Text("Recipe Wallet",color=ShopInk,fontFamily=androidx.compose.ui.text.font.FontFamily.SansSerif,fontWeight=FontWeight.ExtraBold,fontSize=26.sp,letterSpacing=(-1).sp,lineHeight=29.sp)
  }
 }

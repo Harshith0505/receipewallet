@@ -48,22 +48,10 @@ import androidx.compose.ui.unit.sp
    val wide=maxWidth>=840.dp
    Column(Modifier.widthIn(max=1200.dp).fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(if(wide)32.dp else 20.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-     Column{Text("recipe wallet",fontSize=28.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.Bold,color=ShopInk,letterSpacing=(-1).sp);Eyebrow("a little kitchen journal")}
+     BrandWordmark(Modifier.weight(1f))
      TextButton(enabled=!vm.aiBusy,onClick={dismiss();recipes=saved.read();libraryPage="saved"}){Text("Saved recipes ↗")}
     }
-    val sections=listOf("Build with AI","Build manually","My pantry","My week")
-    val columns=if(wide)4 else 2
-    Column(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.selectableGroup()){
-     sections.chunked(columns).forEachIndexed{row,labels->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-      labels.forEachIndexed{col,label->val i=row*columns+col
-       val tint=listOf(Peach,Lilac,Mint,Citrus)[i]
-       Column(Modifier.weight(1f).background(if(mode==i)ShopInk else tint,RoundedCornerShape(16.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-        Text(listOf("✦ CREATE","▦ DISCOVER","✓ PANTRY","▤ PLAN")[i],color=if(mode==i)Citrus else ShopMuted,fontSize=11.sp,fontWeight=FontWeight.Bold)
-        Text((if(mode==i)"● "else "")+label,color=if(mode==i)Color(0xFFFFF0DC)else ShopInk,fontSize=14.sp,fontWeight=FontWeight.SemiBold)
-       }
-      }
-     }}
-    }
+    JournalNavigation(listOf("Build with AI","Build manually","My pantry","My week"),mode,!vm.aiBusy){dismiss();mode=it}
     if(mode in 0..1)JourneySteps(0)
     if(vm.studio.avoid.isNotBlank())Signal("Avoiding: ${vm.studio.avoid}",Warn)
     if(vm.studio.faith!="None")Signal("${vm.studio.faith} · verify product certification",Warn)
