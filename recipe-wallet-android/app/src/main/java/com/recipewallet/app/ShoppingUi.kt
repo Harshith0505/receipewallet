@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.sp
 
 internal val ShopInk = Color(0xFF503542)
 internal val ShopMuted = Color(0xFF78616A)
-internal val ShopPaper = Color(0xFFF0DAD0)
-internal val ShopLine = Color(0xFFB98D9B)
+internal val ShopPaper = Color(0xFFE5C9B9)
+internal val ShopLine = Color(0xFFE6D2C4)
 internal val ShopTint = Color(0xFFF5E1E5)
 
 @Composable
@@ -96,8 +96,8 @@ internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 
 }
 
 @Composable internal fun JournalNavigation(labels:List<String>,selected:Int,enabled:Boolean,onSelect:(Int)->Unit){
- ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=Color.Transparent,contentColor=ShopInk){
-  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,modifier=Modifier.padding(horizontal=4.dp,vertical=4.dp).background(listOf(Color(0xFFF0C2B1),Color(0xFFD9C6E6),Color(0xFFCDDBB4),Color(0xFFF0D69D))[i%4],RoundedCornerShape(topStart=14.dp,topEnd=14.dp)).border(if(selected==i)2.dp else 1.dp,if(selected==i)ShopInk else ShopInk.copy(alpha=.18f),RoundedCornerShape(topStart=14.dp,topEnd=14.dp)),text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
+ ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=Color.White,contentColor=ShopInk){
+  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
  }
 }
 

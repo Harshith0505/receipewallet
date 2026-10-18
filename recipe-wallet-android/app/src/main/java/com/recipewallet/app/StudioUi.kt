@@ -68,7 +68,7 @@ internal val Danger=Color(0xFFA64451)
 @Composable internal fun StudioTitle(text:String){Text(text,fontSize=25.sp,lineHeight=31.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.SemiBold,color=ShopInk,modifier=Modifier.semantics { heading() })}
 @Composable internal fun Signal(text:String,color:Color=Good){Text(text,color=color,fontSize=12.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.background(color.copy(alpha=.09f),RoundedCornerShape(50)).padding(horizontal=12.dp,vertical=8.dp))}
 @Composable internal fun ChipRail(labels:List<String>,enabled:Boolean=true,onSelect:(Int)->Unit){
- Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {labels.forEachIndexed { i,s->SuggestionChip(onClick={onSelect(i)},enabled=enabled,colors=SuggestionChipDefaults.suggestionChipColors(containerColor=listOf(Peach,Lilac,Mint,Citrus)[i%4],labelColor=ShopInk),border=BorderStroke(1.dp,ShopInk.copy(alpha=.4f)),label={Text(s,fontWeight=FontWeight.SemiBold)})}}
+ Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {labels.forEachIndexed { i,s->SuggestionChip(onClick={onSelect(i)},enabled=enabled,label={Text(s)})}}
 }
 @Composable internal fun MoodDeck(state:MealStudioState,enabled:Boolean=true){
  var drag by remember { mutableFloatStateOf(0f) }

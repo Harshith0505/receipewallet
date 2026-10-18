@@ -19,7 +19,3 @@ Pattern reference: Nielsen Norman Group, Progressive Disclosure: https://www.nng
 Main content cards and the scrolling tab bar use white surfaces against the peach background. Serif navigation labels distinguish destinations from body text.
 
 Discovery includes eight colored mood choices and seven cuisine categories, with a supported recipe for each. Cuisine chips are white when unselected and plum when selected. A compact dietary-safety strip keeps current exclusions visible. My week uses a seven-day calendar with five selectable dinner days and one photo-led meal detail at a time. The local-plan status badge is removed; AI attribution appears only for actual Gemini plans.
-
-The launcher logo has a transparent background. A muted rose, lilac and apricot background restores color contrast around white content cards. Action chips use pastel fills and stronger outlines so available options remain recognizable.
-
-The full-screen gradient is removed. A solid dusty-blush page supports distinct peach, lilac, sage and butter destination tabs, with a plum outline and underline for the active tab. Main scrapbook cards remain white.
