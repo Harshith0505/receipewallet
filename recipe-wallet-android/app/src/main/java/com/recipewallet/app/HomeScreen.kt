@@ -11,6 +11,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -37,26 +40,31 @@ import androidx.compose.ui.unit.sp
  }
  LaunchedEffect(vm.studio.currentWeek,vm.studio.autoWeek){if(vm.studio.autoWeek&&vm.studio.weekDue)vm.studio.buildWeek()}
  Scaffold(containerColor=ShopPaper){padding->
-  BoxWithConstraints(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter){
+  BoxWithConstraints(Modifier.fillMaxSize().drawBehind {
+   val gap=24.dp.toPx();var y=gap
+   while(y<size.height){var x=gap;while(x<size.width){drawCircle(ShopLine.copy(alpha=.48f),.7.dp.toPx(),androidx.compose.ui.geometry.Offset(x,y));x+=gap};y+=gap}
+  }.padding(padding),contentAlignment=Alignment.TopCenter){
    val wide=maxWidth>=840.dp
    Column(Modifier.widthIn(max=1200.dp).fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(if(wide)32.dp else 20.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-     Column{Text("recipe wallet",fontSize=23.sp,fontWeight=FontWeight.Bold,color=ShopInk,letterSpacing=(-1).sp);Eyebrow("Good food. Smarter baskets.")}
+     Column{Text("recipe wallet",fontSize=28.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.Bold,color=ShopInk,letterSpacing=(-1).sp);Eyebrow("a little kitchen journal")}
      TextButton(enabled=!vm.aiBusy,onClick={dismiss();recipes=saved.read();libraryPage="saved"}){Text("Saved recipes ↗")}
     }
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)){
-      Text(if(mode==2)"A little less waste.\nA lot more possibility." else if(mode==3)"Your week,\nwith dinner handled." else "Follow your mood.\nFind your next meal.",fontSize=if(wide)44.sp else 34.sp,lineHeight=if(wide)49.sp else 39.sp,fontWeight=FontWeight.SemiBold,color=ShopInk,letterSpacing=(-1.2).sp)
-      Text("From what you have to what you love.",fontSize=15.sp,color=ShopMuted)
+     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp)){
+      Eyebrow(when(mode){2->"the pantry pages";3->"a week worth keeping";4->"the good food rewind";else->"little cravings, big possibilities"})
+      Text(when(mode){2->"a little less waste,\na little more wonder.";3->"five dinners.\none happy week.";4->"your week,\nbeautifully served.";else->"a little hungry,\na little inspired."},fontSize=if(wide)49.sp else 32.sp,lineHeight=if(wide)55.sp else 39.sp,fontFamily=FontFamily.Serif,fontStyle=FontStyle.Italic,fontWeight=FontWeight.Medium,color=ShopInk,letterSpacing=(-1).sp)
+      Text("Collect the recipes. Follow the cravings. Make it yours.",fontSize=14.sp,color=ShopMuted)
      }
-     if(wide)Text(if(mode==2)"🥬"else if(mode==3)"🗓️"else mealMoods[vm.studio.mood].emoji,fontSize=86.sp,modifier=Modifier.background(Citrus,RoundedCornerShape(100)).padding(25.dp))
+     if(wide)FoodCollage(Modifier.width(340.dp).height(230.dp))
+     else FoodSticker(when(mode){2->"avo";3->"tomato";4->"berry";else->"lemon"},Modifier.size(112.dp))
     }
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup().background(Color(0xFFEAEDE5),RoundedCornerShape(16.dp)).padding(5.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-     listOf("Build with AI","Build manually","My pantry","My week").forEachIndexed{i,label->
-      Box(Modifier.defaultMinSize(minWidth=130.dp,minHeight=48.dp).background(if(mode==i)ShopInk else Color.Transparent,RoundedCornerShape(12.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(horizontal=14.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,color=if(mode==i)Color.White else ShopInk,fontWeight=FontWeight.SemiBold)}
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup().background(Color(0xFFF3E3D9),RoundedCornerShape(16.dp)).padding(5.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+     listOf("Build with AI","Build manually","My pantry","My week","My wrap-up").forEachIndexed{i,label->
+      Box(Modifier.defaultMinSize(minWidth=130.dp,minHeight=48.dp).background(if(mode==i)ShopInk else listOf(Peach,Citrus,Mint,Lilac,Peach)[i].copy(alpha=.45f),RoundedCornerShape(9.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(horizontal=14.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,color=if(mode==i)Color.White else ShopInk,fontWeight=FontWeight.SemiBold)}
      }
     }
-    if(vm.studio.weekDue&&mode!=3)StudioCard(tint=Lilac){
+    if(vm.studio.weekDue&&mode!=3&&mode!=4)StudioCard(tint=Lilac){
      Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
       Column(Modifier.weight(1f)){Eyebrow("A fresh week awaits");Text("Five dinners, one less thing to think about.",fontSize=14.sp,color=ShopInk)}
       TextButton(onClick={dismiss();mode=3}){Text("Plan my week →")}
@@ -71,12 +79,13 @@ import androidx.compose.ui.unit.sp
      }
      1->{
       if(wide)Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
-       Column(Modifier.weight(.8f),verticalArrangement=Arrangement.spacedBy(18.dp)){MoodDeck(vm.studio);TasteControls(vm.studio)}
-       Column(Modifier.weight(1.2f),verticalArrangement=Arrangement.spacedBy(18.dp)){ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
+       Column(Modifier.weight(.65f),verticalArrangement=Arrangement.spacedBy(18.dp)){MoodDeck(vm.studio);TasteControls(vm.studio)}
+       Column(Modifier.weight(1.35f),verticalArrangement=Arrangement.spacedBy(18.dp)){ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
       }else{MoodDeck(vm.studio);TasteControls(vm.studio);ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
      }
      2->PantryStudio(vm)
      3->WeeklyStudio(vm)
+     4->WeeklyWrapScreen(vm)
     }
     SmallNote("Demo groceries & rewards · No real grocery order. Preferences and pantry stay on this device; AI requests send the details you submit. Photos are sent only when you choose to scan.")
    }
@@ -109,10 +118,8 @@ import androidx.compose.ui.unit.sp
  }
 }
 @Composable private fun ManualRecipes(vm:WalletViewModel,add:()->Unit){
- StudioTitle("Choose a recipe")
+ Eyebrow("Pin it. Cook it. Love it.")
  SmallNote("A short list tuned by your time, diet, pantry and recent choices. Mood nudges the order; prices come from whole packages.")
- val matches=vm.studio.rankedRecipes()
- if(matches.isEmpty())StudioCard{Text("Nothing in this small catalog fits yet.",color=ShopInk);SmallNote("Increase your time slider or change the vegetarian filter.")}
- matches.forEachIndexed{i,r->RecipeTile(r,vm.studio,i){vm.choose(r.id)}}
+ RecipePinboard(vm)
  ShopButton("+ Add a recipe",outlined=true,onClick=add)
 }

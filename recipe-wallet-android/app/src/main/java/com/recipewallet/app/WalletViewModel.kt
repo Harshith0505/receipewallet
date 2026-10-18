@@ -15,6 +15,7 @@ import java.util.UUID
 
 class WalletViewModel(app: Application): AndroidViewModel(app) {
  val catalog = Catalog(app)
+ internal val wrap = NutritionWrapState(app,catalog,viewModelScope) { path,payload -> request(path,payload) }
  internal val studio = MealStudioState(app,catalog,viewModelScope) { path,payload -> request(path,payload) }
  var personalRecipe by mutableStateOf<PersonalRecipe?>(null)
   private set

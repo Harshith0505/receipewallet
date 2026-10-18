@@ -15,11 +15,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val ShopInk = Color(0xFF263A2E)
-internal val ShopMuted = Color(0xFF656B63)
-internal val ShopPaper = Color(0xFFFAF8F0)
-internal val ShopLine = Color(0xFFE1E3DC)
-internal val ShopTint = Color(0xFFF0F3EB)
+internal val ShopInk = Color(0xFF503542)
+internal val ShopMuted = Color(0xFF78616A)
+internal val ShopPaper = Color(0xFFFFF7E9)
+internal val ShopLine = Color(0xFFE6D2C4)
+internal val ShopTint = Color(0xFFF5E1E5)
 
 @Composable
 internal fun ShoppingPage(step: Int, onBack: () -> Unit, backEnabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {

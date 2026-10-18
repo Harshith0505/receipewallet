@@ -1,3 +1,7 @@
+# Scrapbook & weekly food story
+
+See [SCRAPBOOK_WRAP.md](SCRAPBOOK_WRAP.md) for the visual update, nutrition estimation limits, agent workflow, and Android Studio tablet preview.
+
 # Meal studio update
 
 See [MEAL_STUDIO.md](MEAL_STUDIO.md) for the frontend demo, pantry photo setup, weekly planning, and feature limits.

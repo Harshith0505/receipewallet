@@ -1,6 +1,8 @@
 package com.recipewallet.app
 
-import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -20,19 +22,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val Citrus=Color(0xFFF7CD58)
-internal val Mint=Color(0xFFDCECDF)
-internal val Lilac=Color(0xFFEAE1F5)
-internal val Peach=Color(0xFFFFE4D4)
-internal val Good=Color(0xFF216548)
-internal val Warn=Color(0xFF865200)
-internal val Danger=Color(0xFF9E3737)
+internal val Citrus=Color(0xFFF3D58A)
+internal val Mint=Color(0xFFF1D8DF)
+internal val Lilac=Color(0xFFE6DDF2)
+internal val Peach=Color(0xFFF6D2B7)
+internal val Good=Color(0xFF596139)
+internal val Warn=Color(0xFF95612D)
+internal val Danger=Color(0xFFA64451)
 
-@Composable internal fun StudioCard(tint:Color=Color.White,modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
- Column(modifier.fillMaxWidth().background(tint,RoundedCornerShape(24.dp)).border(1.dp,ShopLine,RoundedCornerShape(24.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
+@Composable internal fun StudioCard(tint:Color=Color(0xFFFFFCF5),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
+ Box(modifier.fillMaxWidth().padding(top=8.dp)) {
+  Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
+  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Citrus)
+ }
 }
 @Composable internal fun Eyebrow(text:String){Text(text.uppercase(),fontSize=11.sp,letterSpacing=1.5.sp,color=ShopMuted,fontWeight=FontWeight.Bold)}
-@Composable internal fun StudioTitle(text:String){Text(text,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.SemiBold,color=ShopInk,modifier=Modifier.semantics { heading() })}
+@Composable internal fun StudioTitle(text:String){Text(text,fontSize=25.sp,lineHeight=31.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.SemiBold,color=ShopInk,modifier=Modifier.semantics { heading() })}
 @Composable internal fun Signal(text:String,color:Color=Good){Text(text,color=color,fontSize=12.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.background(color.copy(alpha=.09f),RoundedCornerShape(50)).padding(horizontal=12.dp,vertical=8.dp))}
 @Composable internal fun ChipRail(labels:List<String>,enabled:Boolean=true,onSelect:(Int)->Unit){
  Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {labels.forEachIndexed { i,s->SuggestionChip(onClick={onSelect(i)},enabled=enabled,label={Text(s)})}}
@@ -44,7 +49,7 @@ internal val Danger=Color(0xFF9E3737)
  StudioCard(tint=tint,modifier=Modifier.graphicsLayer { translationX=drag*.18f;rotationZ=drag/100f }.pointerInput(enabled,state.mood){if(enabled)detectHorizontalDragGestures(onDragStart={drag=0f},onDragEnd={if(kotlin.math.abs(drag)>70)state.updateMood(state.mood+if(drag<0)1 else 3);drag=0f},onDragCancel={drag=0f}){change,delta->change.consume();drag+=delta}}){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){Eyebrow("The flavor of your day");Text("${state.mood+1} / 4",fontSize=12.sp,color=ShopMuted)}
   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)){
-   Text(mood.emoji,fontSize=52.sp)
+   FoodSticker(when(state.mood){0->"bread";1->"avo";2->"tomato";else->"lemon"},Modifier.size(78.dp))
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){StudioTitle(mood.name);Text(mood.subtitle,color=ShopInk,fontSize=14.sp)}
   }
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -76,7 +81,7 @@ internal val Danger=Color(0xFF9E3737)
  val have=recipe.ingredients.count { it.id in studio.owned }
  StudioCard(tint=listOf(Mint,Peach,Lilac)[index%3],modifier=Modifier.clickable(onClick=onClick)){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){
-   Text(recipe.emoji,fontSize=44.sp)
+   FoodSticker(recipe.id,Modifier.size(78.dp))
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
     Text(recipe.name,fontSize=20.sp,fontWeight=FontWeight.SemiBold,color=ShopInk)
     Text("${recipe.prepTime} min · ${recipe.ingredients.size} ingredients",fontSize=12.sp,color=ShopMuted)
@@ -92,7 +97,7 @@ internal val Danger=Color(0xFF9E3737)
 @Composable internal fun PriceTicket(quote:Quote,best:Long?=null,budget:Long?=null){
  val over=budget!=null&&budget>=0&&quote.charge>budget
  val color=if(!quote.complete||over)Danger else if(best==null||quote.charge==best)Good else Warn
- Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(ShopInk,Color(0xFF284F43))),RoundedCornerShape(20.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+ Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(ShopInk,Color(0xFF79505B))),RoundedCornerShape(20.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   Text("YOUR BASKET, DECODED",color=Citrus,fontSize=11.sp,letterSpacing=1.7.sp,fontWeight=FontWeight.Bold)
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.SpaceBetween){
    Column{Text("Pay today",color=Color.White.copy(alpha=.8f),fontSize=13.sp);Text(if(quote.complete)money(quote.charge)else "Incomplete",fontSize=36.sp,fontWeight=FontWeight.Bold,color=Color.White)}

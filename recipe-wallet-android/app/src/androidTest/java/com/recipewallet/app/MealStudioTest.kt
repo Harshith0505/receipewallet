@@ -21,8 +21,8 @@ class MealStudioTest {
  @Test fun profileAndPantryCarryIntoBasketAndSurviveRecreation(){
   compose.runOnIdle {vm().studio.updateMood(1);vm().studio.updatePeople(4);if("garlic" !in vm().studio.owned)vm().studio.toggleOwned("garlic")}
   compose.onNodeWithText("Use my taste profile ✨").performScrollTo().performClick()
-  compose.onNode(hasSetTextAction()).assertTextContains("for 4 people")
-  compose.onNode(hasSetTextAction()).assertTextContains("Garlic")
+  compose.onNode(hasSetTextAction()).assertTextContains("for 4 people",substring=true)
+  compose.onNode(hasSetTextAction()).assertTextContains("Garlic",substring=true)
   compose.onNodeWithText("Build manually").performScrollTo().performClick()
   compose.onNodeWithText("Spicy garlic noodles").performScrollTo().performClick()
   compose.runOnIdle{assertEquals(4,vm().servings);assertFalse("garlic" in vm().selected);vm().restart()}

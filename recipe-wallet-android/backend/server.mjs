@@ -7,6 +7,7 @@ import {recommend} from './recommend.mjs';
 import {sessionPlan} from './agent.mjs';
 import {suggestFromPantry} from './pantry.mjs';
 import {scanPantry,weeklyPlan} from './studio.mjs';
+import {buildWeeklyWrap} from './wrapup.mjs';
 const secret=process.env.STRIPE_SECRET_KEY||'';
 const publishableKey=process.env.STRIPE_PUBLISHABLE_KEY||'';
 const configured=secret.startsWith('sk_test_')&&publishableKey.startsWith('pk_test_');
@@ -21,11 +22,14 @@ export async function handleRequest(req,res) {
  res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
  const send=(status,data)=>{res.writeHead(status);res.end(JSON.stringify(data));};
  if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/pantry-scan','/weekly-plan'].includes(req.url)) return send(404,{error:'Not found'});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/pantry-scan','/weekly-plan','/weekly-wrap'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
-  let body='';for await(const chunk of req) {body+=chunk;if(body.length>(req.url==='/pantry-scan'?1550000:8192)) return send(413,{error:'Request too large'});}
+  let body='';for await(const chunk of req) {body+=chunk;if(body.length>(req.url==='/pantry-scan'?1550000:req.url==='/weekly-wrap'?64000:8192)) return send(413,{error:'Request too large'});}
   let input;try {input=JSON.parse(body);} catch{return send(400,{error:'Invalid JSON'});}
+  if(req.url==='/weekly-wrap') {
+   try {return send(200,await buildWeeklyWrap(input));} catch(e) {return send(400,{error:e.message});}
+  }
   if(req.url==='/pantry-scan'||req.url==='/weekly-plan') {
    try {return send(200,await (req.url==='/pantry-scan'?scanPantry(input):weeklyPlan(input)));} catch(e) {return send(e.message.startsWith('Invalid')?400:503,{error:e.message});}
   }

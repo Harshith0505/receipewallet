@@ -16,7 +16,7 @@ import java.time.temporal.TemporalAdjusters
 
 internal data class MealMood(val name:String,val emoji:String,val subtitle:String,val prompt:String)
 internal val mealMoods=listOf(
- MealMood("Cozy","🍲","A little comfort on a long day","comforting and familiar"),
+ MealMood("Cozy","🍞","A little comfort on a long day","comforting and familiar"),
  MealMood("Fresh","🥑","Bright flavors. A fresh start.","fresh vegetable-forward food"),
  MealMood("Adventure","🌶️","Try a different favorite tonight","bold, spicy flavors"),
  MealMood("Low effort","⚡","Less prep. More time for you.","the quickest easy meal"))
@@ -25,6 +25,8 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  private val saved=context.getSharedPreferences("meal-studio-v1",Context.MODE_PRIVATE)
  private fun ids(key:String)=runCatching { JSONArray(saved.getString(key,"[]")).let { a->List(a.length()){a.getString(it)} } }.getOrDefault(emptyList())
  val ingredients=catalog.recipes.flatMap { it.ingredients }.distinctBy { it.id }
+ var pinnedIds by mutableStateOf(ids("pins").toSet());private set
+ fun togglePin(id:String){pinnedIds=if(id in pinnedIds)pinnedIds-id else pinnedIds+id;saved.edit().putString("pins",JSONArray(pinnedIds.toList()).toString()).apply()}
  var history by mutableStateOf(ids("history").filter { id->catalog.recipes.any { it.id==id } });private set
  var owned by mutableStateOf(ids("owned").filter { id->ingredients.any { it.id==id } }.toSet());private set
  var mood by mutableIntStateOf(saved.getInt("mood",0).coerceIn(0,3));private set

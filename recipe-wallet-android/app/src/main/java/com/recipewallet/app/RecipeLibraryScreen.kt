@@ -22,9 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.UUID
 
-private val LibraryInk = Color(0xFF263A2E)
-private val LibraryMuted = Color(0xFF656B63)
-private val LibraryLine = Color(0xFFE1E3DC)
+private val LibraryInk = Color(0xFF503542)
+private val LibraryMuted = Color(0xFF78616A)
+private val LibraryLine = Color(0xFFE6D2C4)
 
 @Composable
 internal fun RecipeLibraryScreen(
@@ -39,7 +39,7 @@ internal fun RecipeLibraryScreen(
     onSave: (PersonalRecipe) -> String?
 ) {
     BackHandler(onBack = onBack)
-    Scaffold(containerColor = Color(0xFFFAFAF7)) { padding ->
+    Scaffold(containerColor = Color(0xFFFFF7E9)) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().imePadding()
                 .verticalScroll(rememberScrollState()).padding(24.dp),

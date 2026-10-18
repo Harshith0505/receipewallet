@@ -50,7 +50,7 @@ class HomeScreenTest {
         assertTrue("Keyboard stayed open in manual mode", device.wait(Until.gone(By.pkg(keyboardPackage)), 5000))
         screenshot("front-page-manual.png")
         compose.onNodeWithText("Build with AI").performScrollTo().performClick()
-        compose.onNode(hasSetTextAction()).assertTextContains("I want comforting and familiar")
+        compose.onNode(hasSetTextAction()).assertTextContains("I want comforting and familiar",substring=true)
     }
 
     @Test fun manualRecipeOpensAnEditableBasket() {

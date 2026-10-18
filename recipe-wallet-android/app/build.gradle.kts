@@ -6,8 +6,8 @@ android {
   applicationId = "com.recipewallet.app"
   minSdk = 26
   targetSdk = 36
-  versionCode = 3
-  versionName = "1.3-meal-studio"
+  versionCode = 4
+  versionName = "1.4-scrapbook"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   buildConfigField("String", "BACKEND_URL", "\"${providers.gradleProperty("BACKEND_URL").getOrElse("http://127.0.0.1:4242")}\"")
  }

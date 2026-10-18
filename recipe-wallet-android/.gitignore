@@ -6,3 +6,5 @@ backend/.env
 *.apk
 
 .kotlin/
+
+.idea/
