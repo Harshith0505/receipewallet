@@ -1,9 +1,27 @@
+import java.util.Properties
+
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
+
+val cloudProperties = Properties().apply {
+ val file = rootProject.file("supabase.properties")
+ if (file.isFile) file.inputStream().use { load(it) }
+}
+fun cloudSetting(name: String): String = (providers.gradleProperty(name).orNull
+ ?: System.getenv(name) ?: cloudProperties.getProperty(name, "")).trim()
+fun quoteBuildString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+val cloudUrl = cloudSetting("SUPABASE_URL")
+val cloudKey = cloudSetting("SUPABASE_PUBLISHABLE_KEY")
+require(cloudKey.isEmpty() || cloudKey.startsWith("sb_publishable_")) {
+ "Only a Supabase publishable key may be bundled in Android. Secret/service-role keys are forbidden."
+}
+
 android {
  namespace = "com.recipewallet.app"
  compileSdk = 36
  defaultConfig {
   applicationId = "com.recipewallet.app"
+  buildConfigField("String", "SUPABASE_URL", quoteBuildString(cloudUrl))
+  buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", quoteBuildString(cloudKey))
   minSdk = 26
   targetSdk = 36
   versionCode = 2
