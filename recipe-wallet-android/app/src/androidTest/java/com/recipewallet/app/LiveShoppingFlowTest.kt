@@ -55,6 +55,40 @@ class LiveShoppingFlowTest {
   compose.onNodeWithContentDescription("More packs for Pasta").performScrollTo().performClick()
   compose.runOnIdle{assertNull(vm.basket);assertFalse(vm.packagesReviewed)}
  }
+ @Test fun missingProductExplainsTheDisabledReviewAndTheWholeLabelCanConfirm(){
+  val requests=mutableListOf<String>()
+  val vm=RetailerViewModel{path,payload->
+   requests.add(path)
+   if(path.endsWith("stores"))JSONObject("""{"stores":[{"id":"s1","name":"QFC","address":"Seattle"}]}""")
+   else {
+    val chickpeas=payload.getString("query").contains("Chickpeas")
+    JSONObject("""{"storeId":"s1","currency":"usd","fetchedAt":"now","products":[{"productId":"${if(chickpeas)"beans"else "pasta"}","itemId":"${if(chickpeas)"beans"else "pasta"}","name":"${if(chickpeas)"Garbanzo Beans"else "Pasta"}","packageSize":"500 g","regularPriceCents":100,"stockLevel":"HIGH","soldBy":"UNIT"}]}""")
+   }
+  }
+  compose.setContent{MaterialTheme{LiveShoppingScreen("missing-product","Dinner",listOf(RetailerNeed("pasta","Pasta","200 g",200.0,"g"),RetailerNeed("chickpeas","Chickpeas","200 g",200.0,"g")),emptyList(),2000,{}, {},vm)}}
+  compose.waitUntil(10000){!vm.busy&&vm.selectedStore!=null}
+  compose.runOnIdle{assertEquals(listOf("chickpeas"),vm.unmatchedNeeds.map{it.id});vm.confirmPackages(true);assertFalse(vm.packagesReviewed)}
+  compose.onNodeWithContentDescription("Review item sizes and quantities").performScrollTo().assertIsNotEnabled()
+  compose.onNodeWithText("Choose a store product for: Chickpeas.").assertExists()
+  compose.onNodeWithText("Choose product for Chickpeas").performScrollTo().performClick()
+  compose.onNodeWithText("Hide alternatives").assertIsDisplayed()
+  compose.onNodeWithContentDescription("Select Garbanzo Beans for Chickpeas").performScrollTo().performClick()
+  compose.onNodeWithText("I reviewed the products, sizes, and quantities").performScrollTo().performClick()
+  compose.onNodeWithContentDescription("Review item sizes and quantities").assertIsOn()
+  compose.onNodeWithText("Review live basket →").assertIsEnabled()
+  compose.runOnIdle{assertTrue(vm.canReview);assertTrue(vm.packagesReviewed);assertFalse(requests.contains("/retailers/basket"))}
+ }
+ @Test fun combinedQuantityLimitIsExplainedAndCannotBeAcknowledgedAway(){
+  val vm=RetailerViewModel{path,_->if(path.endsWith("stores"))JSONObject("""{"stores":[{"id":"s1","name":"QFC","address":"Seattle"}]}""")else JSONObject("""{"storeId":"s1","currency":"usd","fetchedAt":"now","products":[{"productId":"pasta","itemId":"pasta","name":"Pasta","packageSize":"500 g","regularPriceCents":100,"stockLevel":"HIGH","soldBy":"UNIT"}]}""")}
+  compose.setContent{MaterialTheme{LiveShoppingScreen("same-product","Dinner",listOf(RetailerNeed("a","Pasta","200 g"),RetailerNeed("b","Pasta","200 g")),emptyList(),2000,{}, {},vm)}}
+  compose.waitUntil(10000){!vm.busy&&vm.selections.size==2}
+  compose.runOnIdle{vm.setQuantity("a",20);assertFalse(vm.canReview);vm.confirmPackages(true);assertFalse(vm.packagesReviewed);assertTrue(vm.unmatchedNeeds.isEmpty())}
+  compose.onNodeWithText("Review your shopping quantities").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithContentDescription("Review item sizes and quantities").assertIsNotEnabled()
+  compose.runOnIdle{vm.setQuantity("a",1)}
+  compose.onNodeWithText("I reviewed the products, sizes, and quantities").performScrollTo().performClick()
+  compose.runOnIdle{assertTrue(vm.canReview);assertTrue(vm.packagesReviewed)}
+ }
  @Test fun liveKrogerProductsReachTheReviewedBasketWithoutALookupButton(){
   org.junit.Assume.assumeTrue(androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("liveRetailer")=="true")
   val vm=RetailerViewModel()

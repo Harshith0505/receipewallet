@@ -3,7 +3,7 @@ import {catalog, calculate} from './pricing.mjs';
 import {planningGoals, rankMeals, inferPlanningGoal} from './meal-selection.mjs';
 import {matchesExclusion} from './studio.mjs';
 import {interact,createGeminiClient} from './gemini.mjs';
-import {safetyResponse} from './safety.mjs';
+import {safetyResponse,echoesInstructions,privacyReply} from './safety.mjs';
 
 const ingredientIds=[...new Set(catalog.recipes.flatMap(r=>r.ingredients.map(i=>i.id)))];
 const string={type:'string'};
@@ -168,6 +168,8 @@ export async function planShop(message,context={}, {apiKey=process.env.GEMINI_AP
  for(let round=0;round<7;round++) {
   const data=await request({model,store:false,system_instruction:system,input:history,tools},{apiKey,signal});
   if(!Array.isArray(data.steps)) throw new Error('Gemini returned an incomplete plan. Retry.');
+  const visible=data.steps.filter(s=>s.type==='model_output'||s.type==='function_call');
+  if(echoesInstructions(visible,system)) return {plan:null,reply:privacyReply,trace:runner.trace};
   history.push(...data.steps);
   const calls=data.steps.filter(s=>s.type==='function_call');
   if(!calls.length) {

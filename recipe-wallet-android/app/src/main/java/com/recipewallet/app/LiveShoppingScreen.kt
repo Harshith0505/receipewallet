@@ -2,6 +2,11 @@ package com.recipewallet.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +25,12 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
  var changingStore by remember{mutableStateOf(false)}
  var expandedNeed by remember{mutableStateOf<String?>(null)}
  var search by remember{mutableStateOf("")}
+ val scrollScope=rememberCoroutineScope()
+ val ingredientAnchors=remember(needs){needs.associate{it.id to BringIntoViewRequester()}}
+ fun chooseMissing(need:RetailerNeed){
+  expandedNeed=need.id;search=need.name
+  scrollScope.launch{withFrameNanos{};ingredientAnchors[need.id]?.bringIntoView()}
+ }
  ShoppingPage(2,back,backEnabled=!vm.cartUncertain){
   PageHeading(if(vm.reviewing)"Review your grocery basket"else "Your shopping basket",title)
   if(needs.isEmpty()){
@@ -55,7 +66,7 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
      val selection=vm.selections[need.id]
      val matches=vm.candidatesByNeed[need.id].orEmpty()
      QuietCard{
-      Text(need.name,color=ShopInk,fontWeight=FontWeight.Bold)
+      Text(need.name,color=ShopInk,fontWeight=FontWeight.Bold,modifier=Modifier.bringIntoViewRequester(ingredientAnchors.getValue(need.id)))
       SmallNote(need.amount)
       if(selection!=null){
        Text(selection.product.name,color=ShopInk)
@@ -84,12 +95,18 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
      }
     }
     if(vm.selectedStore!=null){
-     Row(verticalAlignment=Alignment.CenterVertically){
-      Checkbox(modifier=Modifier.semantics{contentDescription="Review item sizes and quantities"},checked=vm.packagesReviewed,onCheckedChange=vm::confirmPackages,enabled=!vm.editingBlocked&&vm.canReview)
-      Text("I reviewed the products, sizes, and quantities",modifier=Modifier.weight(1f),color=ShopInk)
+     if(!vm.canReview&&!vm.busy)QuietCard{
+      Text(if(vm.unmatchedNeeds.isNotEmpty())"Finish matching your ingredients"else "Review your shopping quantities",fontWeight=FontWeight.Bold,color=ShopInk)
+      SmallNote(vm.reviewBlockReason?:"Review each ingredient before continuing.")
+      vm.unmatchedNeeds.forEach{need->ShopButton("Choose product for ${need.name}",outlined=true,enabled=!vm.editingBlocked,onClick={chooseMissing(need)})}
      }
+     val reviewEnabled=!vm.editingBlocked&&vm.canReview
+     Row(Modifier.fillMaxWidth().semantics{contentDescription="Review item sizes and quantities"}.toggleable(value=vm.packagesReviewed,enabled=reviewEnabled,role=Role.Checkbox,onValueChange=vm::confirmPackages),verticalAlignment=Alignment.CenterVertically){
+      Checkbox(checked=vm.packagesReviewed,onCheckedChange=null,enabled=reviewEnabled)
+      Text("I reviewed the products, sizes, and quantities",modifier=Modifier.weight(1f),color=if(reviewEnabled)ShopInk else ShopMuted)
+     }
+     if(vm.busy)SmallNote("Wait for product matching to finish before confirming your review.")
      SmallNote("One item means one bottle, bag, box, or bunch of the displayed size—not one serving. Check that the quantities cover your recipe.")
-     if(!vm.canReview&&!vm.busy)SmallNote("Match each ingredient before continuing. Up to 12 different products and 20 of each product can be reviewed.")
      ShopButton("Review live basket →",enabled=!vm.editingBlocked&&vm.canReview&&vm.packagesReviewed,onClick=vm::refreshBasket)
      SmallNote("Prices are checked again before review. Taxes and fulfillment fees are added by the retailer; rewards do not reduce today's charge.")
     }

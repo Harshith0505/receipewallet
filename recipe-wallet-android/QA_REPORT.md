@@ -123,3 +123,10 @@ Verification: 140 backend tests and 28 JVM tests passed; preview build passed. T
 Final UI check: all five home destinations now fit the tab row without hiding My recipes. The nine home-navigation regressions passed again after that adjustment. Standard APK build also passed; the final preview APK was reinstalled on the USB tablet while preserving its data.
 
 A concurrent remote audit repair (834a67b) was merged without dropping discovery or recipe-history changes. The agent prompt conflict retains both the cuisine-constrained surprise fallback and the remote general-answer/safety guidance. All 159 merged backend tests passed, and a live request against the restarted merged backend drafted a new three-serving Mexican-inspired recipe with five cooking steps and the $40 constraint retained. Android sources were unchanged by that merge; the tested tablet UI remains installed.
+
+
+## Store product-review controls · 2026-10-18
+
+The review checkbox was disabled when an ingredient lacked a selected store product, but the generic hint did not identify what needed attention. The shopping page now lists unmatched ingredients and provides buttons that expand and scroll to their product choices. Quantity and product-count limits have separate explanations. The entire review label toggles the checkbox once the basket is complete. The view model also rejects attempts to mark an incomplete basket reviewed; product matching and retailer limits remain enforced.
+
+Verification: preview and instrumentation builds passed. Eleven native checks passed across LiveShoppingFlowTest (four), RecipeJournalFlowTest (four), and KrogerCartFlowTest (three), including the live Kroger product-to-reviewed-basket path. New coverage verifies the missing-ingredient explanation, jump to alternatives, selecting the missing product, tapping the full label, and correcting combined quantities above the retailer limit. No payment, order, or real retailer cart write occurred.
