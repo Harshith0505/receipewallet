@@ -142,15 +142,18 @@ private fun ShopComparison(vm: WalletViewModel) {
     PageHeading("Choose your shop",vm.recipe.name)
     SmallNote("Complete baskets ranked by estimated cost after rewards. Today's charge includes whole packages and fulfillment fees.")
     ShoppingControls(vm)
+    StudentDiscountControl(vm)
     vm.rankings.forEachIndexed { index,q ->
         QuietCard {
             if(index==0&&q.complete) Text("Lowest estimated cost",color=ShopInk,fontWeight=FontWeight.Medium)
             Text(q.store.name,color=ShopInk,fontSize=21.sp,fontWeight=FontWeight.Medium)
             SmallNote("${q.store.rating} rating · ${q.store.distanceMiles} mi")
             SmallNote(q.store.address)
+            StudentOfferLabel(q.store,vm.studentEligible)
             if(q.complete) {
                 BasketLines(q)
                 AmountRow("Whole-package groceries",money(q.groceries))
+                StudentSavingsRow(q)
                 AmountRow("Fulfillment fees",money(q.fees));AmountRow("Demo tax (0%)",money(q.tax))
                 AmountRow("Pay today",money(q.charge),prominent=true)
                 AmountRow("Estimated future rewards",money(q.rewards));AmountRow("Estimated cost after rewards",money(q.net))
@@ -177,16 +180,18 @@ private fun CheckoutPage(vm: WalletViewModel,pay:()->Unit) {
         BasketLines(vm.current)
         ShopButton("Edit basket or store",enabled=vm.canEditCheckout,outlined=true,onClick={vm.back()})
     }
+    StudentDiscountControl(vm)
+    StudentOfferLabel(vm.current.store,vm.studentEligible)
     Column(Modifier.selectableGroup(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text("Choose your Visa card",color=ShopInk,fontSize=18.sp,fontWeight=FontWeight.Medium)
-        val best=vm.catalog.cards.maxBy { it.rewards(vm.current.groceries) }
+        val best=vm.catalog.cards.maxBy { it.rewards(vm.current.discountedGroceries) }
         vm.catalog.cards.forEach { card ->
             val selected=card.id==vm.current.card.id
             QuietCard(selected=selected,modifier=Modifier.selectable(selected=selected,enabled=vm.canEditCheckout,role=Role.RadioButton,onClick={vm.switchCard(card.id)})) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     RadioButton(selected=selected,onClick=null)
                     Column(Modifier.weight(1f).padding(start=10.dp)) { Text(card.name,color=ShopInk);SmallNote(card.label) }
-                    Text(money(card.rewards(vm.current.groceries)),color=ShopInk,fontSize=19.sp)
+                    Text(money(card.rewards(vm.current.discountedGroceries)),color=ShopInk,fontSize=19.sp)
                 }
                 if(card.id==best.id) SmallNote("Best estimated rewards for this basket")
                 if(selected) SmallNote(card.notes)
@@ -195,6 +200,7 @@ private fun CheckoutPage(vm: WalletViewModel,pay:()->Unit) {
     }
     QuietCard {
         AmountRow("Whole-package groceries",money(vm.current.groceries))
+        StudentSavingsRow(vm.current)
         AmountRow("Fulfillment fees",money(vm.current.fees));AmountRow("Demo tax (0%)",money(vm.current.tax))
         AmountRow("Total charged today · test",money(vm.current.charge),prominent=true)
         AmountRow("Estimated future rewards",money(vm.current.rewards));AmountRow("Estimated cost after rewards",money(vm.current.net))
@@ -218,7 +224,7 @@ private fun ReceiptPage(vm:WalletViewModel) {
         Text(vm.receiptRecipeName,color=ShopInk,fontSize=21.sp,fontWeight=FontWeight.Medium)
         SmallNote(receipt.store.name+" · "+receipt.fulfillment)
         BasketLines(receipt)
-        AmountRow("Whole-package groceries",money(receipt.groceries));AmountRow("Fulfillment fees",money(receipt.fees));AmountRow("Demo tax (0%)",money(receipt.tax))
+        AmountRow("Whole-package groceries",money(receipt.groceries));StudentSavingsRow(receipt);AmountRow("Fulfillment fees",money(receipt.fees));AmountRow("Demo tax (0%)",money(receipt.tax))
         AmountRow(if(vm.paymentVerified) "Test amount paid · USD" else "Amount preview · USD",money(receipt.charge),prominent=true)
         SmallNote("Advisory rewards card: "+receipt.card.name)
         AmountRow("Estimated future rewards",money(receipt.rewards));AmountRow("Estimated cost after rewards",money(receipt.net))
@@ -247,6 +253,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
             SmallNote("${quote.store.name} · ${quote.card.name}")
             SmallNote(quote.card.label+". "+quote.card.notes)
             AmountRow("Groceries", money(quote.groceries))
+            StudentSavingsRow(quote)
             AmountRow("Fulfillment fees", money(quote.fees))
             AmountRow("Demo tax (0%)",money(quote.tax))
             AmountRow("Amount charged before rewards", money(quote.charge), prominent = true)
@@ -289,4 +296,33 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
   SmallNote("Need ${item.quantity} ${item.unit} · buy ${item.packages*item.product.packageQuantity} ${item.unit}"+if("organic" in item.product.tags) " · organic" else "")
  }
  q.customItems.forEach { item -> AmountRow("${item.product.name} · ${item.packages} × ${item.product.pack}",money(item.cost)) }
+}
+
+
+@Composable
+private fun StudentDiscountControl(vm: WalletViewModel) {
+    QuietCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Student discounts", color = ShopInk, fontWeight = FontWeight.Medium)
+                SmallNote("Demo student mode · applies sample offers to groceries.")
+            }
+            Switch(checked = vm.studentEligible, enabled = vm.canEditCheckout,
+                onCheckedChange = vm::changeStudentEligibility,
+                modifier = Modifier.semantics { contentDescription = "Apply demo student discounts" })
+        }
+        SmallNote("MVP offers only. Student status and retailer offers are not verified.")
+    }
+}
+
+@Composable
+private fun StudentOfferLabel(store: Store, eligible: Boolean) {
+    val rate = store.studentDiscountBps / 100
+    SmallNote(if (rate == 0L) "No student offer in this demo"
+        else "$rate% student offer · demo" + if (eligible) " · applied" else " · enable student mode to apply")
+}
+
+@Composable
+private fun StudentSavingsRow(quote: Quote) {
+    if (quote.studentDiscount > 0) AmountRow("Student discount · demo (${quote.store.studentDiscountBps / 100}%)", "−${money(quote.studentDiscount)}")
 }

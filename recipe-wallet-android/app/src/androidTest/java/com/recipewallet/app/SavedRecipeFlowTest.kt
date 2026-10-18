@@ -44,12 +44,12 @@ class SavedRecipeFlowTest {
             compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().assertIsDisplayed()
             screenshot("shopping-comparison.png")
             compose.onAllNodesWithText("Review checkout →").onFirst().performClick()
-            compose.onNodeWithText("Approve & pay $5.83").performScrollTo().assertIsEnabled()
+            compose.onNodeWithText("Approve & pay $5.54").performScrollTo().assertIsEnabled()
             screenshot("shopping-checkout.png")
             compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
             compose.onNodeWithText("Receipt preview").assertIsDisplayed()
             compose.onNodeWithText("No payment was made.").assertIsDisplayed()
-            compose.runOnIdle { assertFalse(vm.paymentVerified); assertEquals(583L, vm.receipt!!.charge) }
+            compose.runOnIdle { assertFalse(vm.paymentVerified); assertEquals(554L, vm.receipt!!.charge); assertEquals(62L, vm.receipt!!.studentDiscount) }
             screenshot("shopping-receipt.png")
         } finally { store.remove(recipe.id) }
     }

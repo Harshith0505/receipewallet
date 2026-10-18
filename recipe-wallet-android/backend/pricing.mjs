@@ -2,7 +2,22 @@ import {recipeGroceries} from './grocery.mjs';
 import {readFileSync} from 'node:fs';
 export const catalog=JSON.parse(readFileSync(new URL('./demo.json',import.meta.url),'utf8'));
 export const products=JSON.parse(readFileSync(new URL('./products.json',import.meta.url),'utf8'));
+// MVP eligibility is a demo switch. Rates are trusted shared fixture data, never client-supplied.
 export function calculate(input) {
+ if(input?.studentEligible!==undefined&&typeof input.studentEligible!=='boolean') throw new Error('Choose a valid student discount option');
+ const q=calculateBase(input);
+ const eligible=input.studentEligible===true;
+ const discount=eligible?Math.min(q.groceries,Math.floor((q.groceries*(q.store.studentDiscountBps||0)+5000)/10000)):0;
+ const discountedGroceries=q.groceries-discount;
+ const oldTax=q.groceryQuote?.taxCents ?? q.tax ?? 0;
+ const tax=q.groceryQuote||q.customItems?Math.round(discountedGroceries*q.store.taxBps/10000):0;
+ const amount=q.amount-discount-oldTax+tax;
+ const rewards=Math.round(discountedGroceries*(q.card.rewardType==='points'?q.card.rate*q.card.pointsValue:q.card.rate/100));
+ return {...q,studentEligible:eligible,studentDiscount:discount,discountedGroceries,rewards,amount,net:amount-rewards,
+  ...(q.customItems?{tax}:{}),
+  ...(q.groceryQuote?{groceryQuote:{...q.groceryQuote,studentDiscountCents:discount,discountedGroceriesCents:discountedGroceries,taxCents:tax,payableCents:amount}}:{})};
+}
+function calculateBase(input) {
  if(input.customBasket!==undefined) return calculateCustom(input);
  const recipe=catalog.recipes.find(r=>r.id===input.recipeId);
  const store=catalog.stores.find(s=>s.id===input.storeId);

@@ -173,7 +173,8 @@
       "serviceFee": 99,
       "deliveryEnabled": true,
       "taxBps": 0,
-      "packageDeliveryFee": 399
+      "packageDeliveryFee": 399,
+      "studentDiscountBps": 1000
     },
     {
       "id": "fresh",
@@ -188,7 +189,8 @@
       "serviceFee": 0,
       "deliveryEnabled": false,
       "taxBps": 0,
-      "packageDeliveryFee": 0
+      "packageDeliveryFee": 0,
+      "studentDiscountBps": 0
     },
     {
       "id": "pantry",
@@ -203,7 +205,8 @@
       "serviceFee": 149,
       "deliveryEnabled": true,
       "taxBps": 0,
-      "packageDeliveryFee": 299
+      "packageDeliveryFee": 299,
+      "studentDiscountBps": 500
     }
   ],
   "cards": [
