@@ -42,3 +42,13 @@ Merged `new-features-added-by-lakshmi` into `feat/live-grocery-data`; retained b
 - Android: debug/app-test builds and JVM tests pass. HomeScreenTest + AgentReviewTest: instrumentation reports OK (12 tests); 11 offline checks passed and the opt-in live-agent test was skipped.
 - Live Gemini: homemade pizza for four retained the $30 budget and owned flour/salt. A follow-up changed servings to two and retained pizza, budget, and owned ingredients while adding owned olive oil.
 - Generated meals have no fabricated price. Android reviews ingredients/steps and carries pantry exclusions into the editable personal-recipe basket and live retailer lookup. Sample checkout remains explicitly demo-priced.
+
+## Pantry branch integration
+
+Merged `feat/perceptron-pantry` and `pantry-suggest` into `feat/live-grocery-data`. Retained generated meal drafts, Kroger catalog/cart callbacks, server-verified basket receipts, and student discount calculations. Pantry recipe suggestions clear a prior personal-recipe selection and preserve only the missing catalog ingredients. Incoming IDE workspace files are excluded.
+
+- 102 backend tests passed, including memory route integration against mocked Stripe results and replay/used-up regression coverage. No real payment or grocery cart was changed.
+- 10 Android JVM tests passed.
+- Native regression instrumentation: OK (24 tests); 23 passed and the opt-in live-agent test was skipped. Covers home/recovery, generated recipes, pantry editing, student offers, saved recipes, Kroger cart safeguards and confirmation routing.
+- Updated Recipe Wallet Preview installed on the USB tablet.
+- Live Perceptron scanning was not exercised: this checkout has no PERCEPTRON_API_KEY configured. Purchase-memory hints represent verified Stripe test checkouts, not evidence of real food ownership. Pantry photo entries and catalog pantry selections remain separate local stores.

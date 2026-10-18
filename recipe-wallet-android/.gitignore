@@ -13,3 +13,6 @@ supabase.properties
 supabase/.temp/
 supabase/.branches/
 supabase/tests/node_modules/
+backend/memory.db*
+
+.idea/

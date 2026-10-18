@@ -12,6 +12,9 @@ const retailer = createRetailer();
 const krogerCart = createKrogerCart({retailer});
 import {scanPantry,ScanError} from './pantry-scan.mjs';
 let activeScans=0;
+import {openMemory,recordPurchase,likelyOwned,ownedHints,markUsedUp,validUser} from './memory.mjs';
+let memoryPromise;
+const purchaseMemory=()=>memoryPromise??=openMemory();
 const secret=process.env.STRIPE_SECRET_KEY||'';
 const publishableKey=process.env.STRIPE_PUBLISHABLE_KEY||'';
 const configured=secret.startsWith('sk_test_')&&publishableKey.startsWith('pk_test_');
@@ -37,7 +40,7 @@ export async function handleRequest(req,res) {
   res.writeHead(200);res.end(krogerReturnHtml());return;
  }
  if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured,krogerCartConfigured:krogerCart.configured,pantryScanConfigured:!!process.env.PERCEPTRON_API_KEY});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/pantry-scan','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/memory','/used-up','/pantry-scan','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
   const limit=req.url==='/pantry-scan'?4_001_024:8192;
@@ -62,8 +65,10 @@ export async function handleRequest(req,res) {
    try {return send(200,planGroceries(input,catalog));} catch(e) {return send(400,{error:e.message});}
   }
   if(req.url==='/plan') {
-   try {return send(200,await sessionPlan(input));} catch(e) {return send(503,{error:e.message});}
+   try {const out=await sessionPlan(input);return send(200,{...out,ownedHints:validUser(input.userId)?await ownedHints(await purchaseMemory(),input.userId,out.plan).catch(()=>[]):[]});} catch(e) {return send(503,{error:e.message});}
   }
+  if(req.url==='/memory') return send(200,{likelyOwned:await likelyOwned(await purchaseMemory(),input.userId).catch(()=>[])});
+  if(req.url==='/used-up') {try {await markUsedUp(await purchaseMemory(),input.userId,input.ingredientId);return send(200,{ok:true});} catch(e) {return send(400,{error:e.message});}}
   if(req.url==='/suggest') {
    try {return send(200,await suggestFromPantry(input));} catch(e) {return send(e.message.startsWith('Invalid')?400:503,{error:e.message});}
   }
@@ -75,13 +80,19 @@ export async function handleRequest(req,res) {
    let basket;try {basket=paymentBasket(input);} catch(e){return send(400,{error:e.message});}
    const q=basket.quote;
    if(typeof input.attempt!=='string'||!/^[a-f0-9-]{36}$/.test(input.attempt)) return send(400,{error:'Invalid payment attempt'});
-   const form=new URLSearchParams({amount:String(q.amount),currency:'usd','payment_method_types[]':'card',description:'Recipe Wallet TEST — no grocery order','metadata[application]':'recipe-wallet-demo','metadata[recipe]':input.recipeId,'metadata[store]':input.storeId,'metadata[advisoryCard]':input.cardId,'metadata[estimatedRewards]':String(q.rewards),'metadata[pricingVersion]':input.pricingVersion,'metadata[fulfillment]':input.fulfillment||'pickup','metadata[basket]':basket.fingerprint,'metadata[attempt]':basket.attempt});
+   const form=new URLSearchParams({amount:String(q.amount),currency:'usd','payment_method_types[]':'card',description:'Recipe Wallet TEST — no grocery order','metadata[application]':'recipe-wallet-demo','metadata[recipe]':input.recipeId,'metadata[store]':input.storeId,'metadata[advisoryCard]':input.cardId,'metadata[estimatedRewards]':String(q.rewards),'metadata[pricingVersion]':input.pricingVersion,'metadata[fulfillment]':input.fulfillment||'pickup','metadata[basket]':basket.fingerprint,'metadata[attempt]':basket.attempt,'metadata[ingredients]':input.ingredientIds.join(','),...(validUser(input.userId)?{'metadata[user]':input.userId}:{})});
    const intent=await stripe('payment_intents',form,`recipe-wallet-${input.attempt}`);
    return send(200,{clientSecret:intent.client_secret,paymentIntentId:intent.id,publishableKey,amount:q.amount});
   }
   if(typeof input.paymentIntentId!=='string'||!/^pi_[A-Za-z0-9]+$/.test(input.paymentIntentId)) return send(400,{error:'Invalid PaymentIntent'});
   const intent=await stripe(`payment_intents/${input.paymentIntentId}`);
-  try {return send(200,verifyPayment(intent,input));} catch(e){return send(400,{error:e.message});}
+  try {
+   const result=verifyPayment(intent,input);
+   if(result.paid&&validUser(intent.metadata?.user)&&catalog.recipes.some(r=>r.id===intent.metadata.recipe)) {
+    try {await recordPurchase(await purchaseMemory(),{userId:intent.metadata.user,paymentIntent:intent.id,recipeId:intent.metadata.recipe,ingredientIds:(intent.metadata.ingredients||'').split(',').filter(Boolean)});} catch { /* Test purchase memory never blocks a verified receipt. */ }
+   }
+   return send(200,result);
+  } catch(e){return send(400,{error:e.message});}
  } catch {send(502,{error:'Unable to complete the Stripe test request. Check backend setup and retry.'});}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {

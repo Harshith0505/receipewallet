@@ -135,4 +135,16 @@ class HomeScreenTest {
         compose.onNodeWithText("US ZIP code").assertExists()
     }
 
+    @Test fun pantrySuggestionReplacesAPersonalRecipeWithOnlyMissingCatalogItems() {
+        compose.runOnIdle {
+            val vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            vm.choosePersonal(PersonalRecipe("prior", "Prior personal meal", listOf("Pasta")))
+            vm.cookFromPantry(WalletViewModel.PantrySuggestion("noodles", listOf("garlic"), listOf("noodles", "soy"), false, "Two missing ingredients"))
+            assertEquals(false, vm.isPersonal)
+            assertEquals("noodles", vm.recipeId)
+            assertEquals(setOf("noodles", "soy"), vm.selected)
+            assertEquals(1, vm.step)
+        }
+    }
+
 }

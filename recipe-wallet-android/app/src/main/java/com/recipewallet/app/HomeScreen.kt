@@ -169,6 +169,7 @@ internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) 
                         onSubmit = { dismissKeyboard(); vm.suggest() })
                     if (vm.agentReply.isNotBlank()) AgentPlanReview(vm)
                 }
+                PantryPanel(vm)
                 if (manual || vm.agentReply.isBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

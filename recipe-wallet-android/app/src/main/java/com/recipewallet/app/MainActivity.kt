@@ -289,6 +289,13 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
             SmallNote("AI recipe draft. Review quantities and dietary requirements. Prices and availability are checked when you choose products; this draft has no quoted total.")
             ShopButton("Review ingredients →", enabled = !vm.aiBusy, onClick = { vm.approveGeneratedRecipe() })
         }
+        vm.ownedHints.forEach { hint ->
+            SmallNote(hint.text)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { vm.confirmOwned(hint) }, enabled = !vm.aiBusy) { Text("I have it, remove") }
+                TextButton(onClick = { vm.notOwned(hint) }, enabled = !vm.aiBusy) { Text("I’m out of it") }
+            }
+        }
         val recipe = vm.plannedRecipe
         val quote = vm.plannedQuote
         if (recipe != null && quote != null) {

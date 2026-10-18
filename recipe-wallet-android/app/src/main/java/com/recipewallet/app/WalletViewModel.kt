@@ -65,7 +65,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   aiBusy=true; aiError=null; agentPlan=null; generatedRecipe=null; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList()
   viewModelScope.launch {
    try {
-    val payload=JSONObject().put("message",message).put("studentEligible",studentEligible)
+    val payload=JSONObject().put("message",message).put("studentEligible",studentEligible).put("userId",userId)
     agentSession?.let { payload.put("sessionId",it) }
     val result=request("/plan",payload)
     val plan=result.optJSONObject("plan")
@@ -86,6 +86,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
      check(draft.getInt("servings") in 1..12) { "Review the generated serving count." }
     }
     generatedRecipe=draft
+    ownedHints=result.optJSONArray("ownedHints")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).let { o -> OwnedHint(o.getString("ingredientId"), o.getString("name"), o.getString("text")) } } } ?: emptyList()
     agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
     val changes=result.optJSONArray("changes")
     agentChanges=if(changes!=null) (0 until changes.length()).map { changes.getString(it) } else emptyList()
@@ -123,7 +124,79 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   selected=included
   personalBudget=budget
  }
- fun newPlan() { servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; generatedRecipe=null; personalBudget=-1L; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList(); aiError=null; preference="" }
+ fun newPlan() { ownedHints=emptyList(); servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; generatedRecipe=null; personalBudget=-1L; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList(); aiError=null; preference="" }
+
+ // ---- Purchase memory: anonymous per-install id; the backend remembers verified purchases under it ----
+ data class OwnedHint(val ingredientId: String, val name: String, val text: String)
+ data class RecentItem(val id: String, val name: String, val boughtDaysAgo: Int)
+ val userId: String = app.getSharedPreferences("recipe_wallet_pantry", android.content.Context.MODE_PRIVATE).let { p ->
+  p.getString("user_id", null) ?: UUID.randomUUID().toString().also { p.edit().putString("user_id", it).apply() }
+ }
+ var ownedHints by mutableStateOf<List<OwnedHint>>(emptyList())
+ var recentItems by mutableStateOf<List<RecentItem>>(emptyList())
+ fun loadMemory() {
+  viewModelScope.launch {
+   try {
+    val rows = request("/memory", JSONObject().put("userId", userId)).getJSONArray("likelyOwned")
+    recentItems = (0 until rows.length()).map { rows.getJSONObject(it).let { o -> RecentItem(o.getString("id"), o.getString("name"), o.getInt("boughtDaysAgo")) } }
+   } catch(e: Exception) { /* memory is optional; the app works without it */ }
+  }
+ }
+ /** "I already have this": tells the planner, which removes it from the basket and reprices. */
+ fun confirmOwned(h: OwnedHint) {
+  if(aiBusy) return
+  preference = "I already have ${h.name.lowercase()}"
+  suggest()
+ }
+ fun notOwned(h: OwnedHint) {
+  ownedHints = ownedHints.filter { it.ingredientId != h.ingredientId }
+  viewModelScope.launch { try { request("/used-up", JSONObject().put("userId", userId).put("ingredientId", h.ingredientId)) } catch(e: Exception) {} }
+ }
+ fun addRecentToPantry() {
+  pantry = pantry + recentItems.map { it.id }
+  prefs.edit().putStringSet("ids", pantry).apply()
+  pantrySuggestions = emptyList(); pantryReply = ""
+ }
+
+ // ---- Pantry: "what can I cook with what I have" (calls backend /suggest) ----
+ data class PantrySuggestion(val recipeId: String, val haveIds: List<String>, val missingIds: List<String>, val canCookNow: Boolean, val summary: String)
+ private val prefs = app.getSharedPreferences("recipe_wallet_pantry", android.content.Context.MODE_PRIVATE)
+ var pantry by mutableStateOf(prefs.getStringSet("ids", emptySet())?.toSet() ?: emptySet())
+ var pantryBusy by mutableStateOf(false)
+ var pantryError by mutableStateOf<String?>(null)
+ var pantryReply by mutableStateOf("")
+ var pantrySuggestions by mutableStateOf<List<PantrySuggestion>>(emptyList())
+ val allIngredients get() = catalog.recipes.flatMap { it.ingredients }.distinctBy { it.id }
+ fun togglePantry(id: String) {
+  pantry = if(id in pantry) pantry - id else pantry + id
+  prefs.edit().putStringSet("ids", pantry).apply()
+  pantrySuggestions = emptyList(); pantryReply = ""
+ }
+ fun suggestFromPantry() {
+  if(pantryBusy) return
+  pantryBusy = true; pantryError = null
+  viewModelScope.launch {
+   try {
+    val result = request("/suggest", JSONObject().put("pantryIds", JSONArray(pantry.toList())))
+    val rows = result.getJSONArray("suggestions")
+    fun ids(a: JSONArray) = (0 until a.length()).map { a.getString(it) }
+    pantrySuggestions = (0 until rows.length()).map { i ->
+     val o = rows.getJSONObject(i)
+     PantrySuggestion(o.getString("recipeId"), ids(o.getJSONArray("haveIds")), ids(o.getJSONArray("missingIds")), o.getBoolean("canCookNow"), o.getString("summary"))
+    }.filter { s -> catalog.recipes.any { it.id == s.recipeId } }
+    pantryReply = result.optString("reply")
+   } catch(e: Exception) { pantryError = e.message ?: "Could not reach the suggestion service." }
+   pantryBusy = false
+  }
+ }
+ /** Opens the normal basket flow with only the missing ingredients selected. */
+ fun cookFromPantry(s: PantrySuggestion) {
+  if(!canEditCheckout || s.canCookNow || s.missingIds.isEmpty()) return
+  choose(s.recipeId)
+  selected = s.missingIds.toSet()
+  storeId = ""; cardId = ""; attempt = UUID.randomUUID().toString(); step = 1; error = null
+ }
+ init { loadMemory() }
  var step by mutableIntStateOf(0)
  var recipeId by mutableStateOf(catalog.recipes.first().id)
  var selected by mutableStateOf(catalog.recipes.first().ingredients.map { it.id }.toSet())
@@ -210,6 +283,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   pendingRecipeName=recipe.name
   val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt).put("pricingVersion","packages-v1").put("servings",servings).put("fulfillment",fulfillment).put("organicOnly",organicOnly).put("studentEligible",studentEligible)
   if(isPersonal) payload.put("pricingVersion","custom-packages-v1").put("customBasket",customBasketJson())
+  payload.put("userId",userId)
   pendingPayload=payload
   viewModelScope.launch {
    try {
