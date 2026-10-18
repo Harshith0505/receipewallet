@@ -1,0 +1,8 @@
+allprojects { target ->
+    target.plugins.withId('com.android.application') {
+        target.extensions.getByName('androidComponents').finalizeDsl { androidDsl ->
+            androidDsl.defaultConfig.applicationId = 'com.recipewallet.app.pantrypreview'
+            androidDsl.sourceSets.getByName('debug').manifest.srcFile(target.rootProject.file('tools/AndroidManifest-pantry-preview.xml'))
+        }
+    }
+}

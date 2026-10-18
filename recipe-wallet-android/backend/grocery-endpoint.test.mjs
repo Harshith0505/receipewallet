@@ -6,6 +6,8 @@ import {Readable} from 'node:stream';
 process.env.STRIPE_SECRET_KEY = '';
 process.env.STRIPE_PUBLISHABLE_KEY = '';
 process.env.GEMINI_API_KEY = '';
+process.env.KROGER_CLIENT_ID = '';
+process.env.KROGER_CLIENT_SECRET = '';
 const {handleRequest} = await import('./server.mjs');
 
 async function request(body, {method = 'POST', url = '/grocery-quotes', raw = false} = {}) {
@@ -64,4 +66,16 @@ test('pantry suggestions coexist with grocery quotes without Stripe keys',async(
  assert.equal(result.status,200);
  assert.equal(result.body.suggestions[0].recipeId,'bowl');
  assert.equal((await request({pantryIds:['invented']},{url:'/suggest'})).status,400);
+});
+
+test('retailer routes distinguish unavailable credentials from invalid requests without demo fallback', async () => {
+ const missing = await request({postalCode:'98105'}, {url:'/retailers/stores'});
+ assert.equal(missing.status,503);
+ assert.match(missing.body.error,/Kroger is not connected/);
+ assert.equal(missing.body.stores,undefined);
+ assert.equal((await request({postalCode:'bad'}, {url:'/retailers/stores'})).status,400);
+ assert.equal((await request(null, {url:'/retailers/products'})).status,400);
+ assert.equal((await request({storeId:'1',items:[]}, {url:'/retailers/basket'})).status,400);
+ assert.equal((await request({storeId:'1',items:[{productId:'1',itemId:'1',quantity:1}]}, {url:'/retailers/basket'})).status,503);
+ assert.equal((await request({}, {method:'GET',url:'/health'})).body.krogerConfigured,false);
 });

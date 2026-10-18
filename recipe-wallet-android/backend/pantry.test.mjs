@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {rankRecipes,suggestFromPantry,validatePantry} from './pantry.mjs';
+import {catalog} from './pricing.mjs';
 
 test('ranks by how much of each recipe is already owned',()=>{
  const r=rankRecipes(['noodles','garlic','soy','sesame','chili','onion']);
@@ -14,7 +15,7 @@ test('partial pantry lists exactly what is missing',()=>{
  assert.match(r.summary,/2 of 5/);
 });
 test('empty pantry still returns every recipe with everything missing',()=>{
- const r=rankRecipes([]);assert.equal(r.length,3);assert.ok(r.every(x=>x.haveCount===0&&!x.canCookNow));
+ const r=rankRecipes([]);assert.equal(r.length,catalog.recipes.length);assert.ok(r.every(x=>x.haveCount===0&&!x.canCookNow));
 });
 test('vegetarian excludes pasta and prep time filters apply',()=>{
  assert.ok(!rankRecipes([],{diet:'vegetarian'}).some(x=>x.recipeId==='pasta'));
@@ -27,12 +28,12 @@ test('invented or duplicate pantry items are rejected',()=>{
 });
 test('works without Gemini and falls back when Gemini fails',async()=>{
  const a=await suggestFromPantry({pantryIds:['rice']},{apiKey:''});
- assert.ok(a.reply.length>0&&a.suggestions.length===3);
+ assert.ok(a.reply.length>0&&a.suggestions.length===catalog.recipes.length);
  const b=await suggestFromPantry({pantryIds:['rice']},{apiKey:'k',fetchImpl:async()=>{throw new Error('down');}});
  assert.equal(b.reply,a.reply);
 });
 test('uses Gemini sentence but suggestions always come from code',async()=>{
  const out=await suggestFromPantry({pantryIds:['rice']},{apiKey:'k',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'model_output',content:[{type:'text',text:'Try the bowl!'}]}]})})});
  assert.equal(out.reply,'Try the bowl!');
- assert.ok(out.suggestions.every(s=>['noodles','bowl','pasta'].includes(s.recipeId)));
+ assert.ok(out.suggestions.every(s=>catalog.recipes.some(r=>r.id===s.recipeId)));
 });

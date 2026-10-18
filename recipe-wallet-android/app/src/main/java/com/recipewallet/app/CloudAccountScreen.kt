@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun CloudAccountScreen(vm: RecipeCloudViewModel, onBack: () -> Unit) {
+internal fun CloudAccountScreen(vm: RecipeCloudViewModel, onBack: () -> Unit, backLabel: String = "← Saved recipes") {
     BackHandler(onBack = onBack)
     val ink = Color(0xFF263A2E)
     val muted = Color(0xFF656B63)
@@ -40,7 +40,7 @@ internal fun CloudAccountScreen(vm: RecipeCloudViewModel, onBack: () -> Unit) {
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().imePadding()
                 .verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("← Saved recipes", color = ink) }
+                TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text(backLabel, color = ink) }
                 Text("Your recipe library", color = ink, fontSize = 30.sp, fontWeight = FontWeight.Medium,
                     letterSpacing = (-0.6).sp)
                 if (!vm.configured) {

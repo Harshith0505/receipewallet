@@ -35,49 +35,48 @@ class SavedRecipeFlowTest {
             lateinit var vm: WalletViewModel
             compose.runOnIdle {
                 vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+                assertFalse(vm.studentEligible)
+                vm.changeStudentEligibility(true)
                 assertTrue(vm.isPersonal)
                 assertEquals(648L, vm.subtotal)
                 assertEquals(2, vm.customBasketJson().getJSONArray("items").length())
             }
             screenshot("saved-ingredients.png")
             compose.onNodeWithText("Compare complete baskets →").performClick()
+        compose.runOnIdle { ViewModelProvider(compose.activity)[WalletViewModel::class.java].illustrativeComparison=true }
             compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().assertIsDisplayed()
             screenshot("shopping-comparison.png")
             compose.onAllNodesWithText("Review checkout →").onFirst().performClick()
-            compose.onNodeWithText("Approve & pay $5.83").performScrollTo().assertIsEnabled()
+            compose.onNodeWithText("Approve & pay $5.54").performScrollTo().assertIsEnabled()
             screenshot("shopping-checkout.png")
             compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
             compose.onNodeWithText("Receipt preview").assertIsDisplayed()
             compose.onNodeWithText("No payment was made.").assertIsDisplayed()
-            compose.runOnIdle { assertFalse(vm.paymentVerified); assertEquals(583L, vm.receipt!!.charge) }
+            compose.runOnIdle { assertFalse(vm.paymentVerified); assertEquals(554L, vm.receipt!!.charge); assertEquals(62L, vm.receipt!!.studentDiscount) }
             screenshot("shopping-receipt.png")
         } finally { store.remove(recipe.id) }
     }
 
-    @Test fun unmatchedIngredientsRequireAnExplicitProductChoice() {
+    @Test fun unmatchedIngredientsCanReachRetailerMatchingWithoutAnIllustrativeProduct() {
         compose.runOnUiThread {
             compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             ViewModelProvider(compose.activity)[WalletViewModel::class.java].choosePersonal(
                 PersonalRecipe(UUID.randomUUID().toString(), "Unmatched recipe", listOf("mystery ingredient")))
         }
-        compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsEnabled()
         compose.runOnIdle {
             val vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]
-            vm.compare(); assertEquals(1,vm.step)
-            vm.matchProduct("line-0","flour");vm.setPacks("line-0",2)
-            assertTrue(vm.canCompare);assertEquals(598L,vm.subtotal)
+            assertFalse(vm.canCompare);vm.compare();assertEquals(2,vm.step)
         }
-        compose.onNodeWithText("Compare complete baskets →").assertIsEnabled()
+        compose.onNodeWithText("Your shopping basket").assertExists()
     }
-    @Test fun aboutMenuOpensAUsableDialog() {
+    @Test fun aboutDisclosureExplainsTheDemoAndPrivacy() {
         compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
-        compose.onNodeWithContentDescription("More options").performClick()
-        compose.onNodeWithText("About this demo").performClick()
-        compose.onNodeWithText("About Recipe Wallet").assertIsDisplayed()
-        compose.onNodeWithText("Got it").assertIsDisplayed()
+        compose.onNodeWithText("About prices & privacy").performScrollTo().performClick()
+        compose.onNodeWithText("Preferences and pantry are stored on this device.",substring=true).assertExists()
         screenshot("shopping-about.png")
-        compose.onNodeWithText("Got it").performClick()
-        compose.onNodeWithText("Build with AI").assertIsDisplayed()
+        compose.onNodeWithText("Build with AI").performScrollTo()
+        compose.onNodeWithText("Build with AI").assertExists()
     }
 
 }

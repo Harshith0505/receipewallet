@@ -1,0 +1,245 @@
+{
+  "version": 1,
+  "label": "Illustrative ingredient nutrition estimates",
+  "note": "Rounded demo reference profiles, not exact USDA food records or product labels. Estimates describe explicitly logged portions eaten, not groceries purchased or a complete daily diet. Sugar is total sugar, including naturally occurring sugar; added sugar is not available. Cooking, draining, brands, edible weights, and portion size change actual values.",
+  "sources": [
+    {
+      "title": "USDA FoodData Central: edible portions and nutrient scaling methodology",
+      "url": "https://fdc.nal.usda.gov/Foundation_Foods_Documentation/"
+    },
+    {
+      "title": "USDA FoodData Central: find product-specific nutrition",
+      "url": "https://fdc.nal.usda.gov/food-search/"
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "noodles",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 13,
+      "carbsG": 75,
+      "sugarG": 3,
+      "fatG": 2,
+      "fiberG": 3,
+      "kcal": 371,
+      "assumption": "Dry wheat noodles; rounded generic dry-pasta proxy, not cooked weight."
+    },
+    {
+      "id": "garlic",
+      "basisQuantity": 1,
+      "unit": "each",
+      "proteinG": 1.9,
+      "carbsG": 9.9,
+      "sugarG": 0.3,
+      "fatG": 0.2,
+      "fiberG": 0.6,
+      "kcal": 45,
+      "assumption": "One bulb approximated as 30 g edible peeled garlic."
+    },
+    {
+      "id": "soy",
+      "basisQuantity": 100,
+      "unit": "ml",
+      "proteinG": 9.5,
+      "carbsG": 5.7,
+      "sugarG": 0.7,
+      "fatG": 0.5,
+      "fiberG": 0.9,
+      "kcal": 62,
+      "assumption": "Generic regular soy sauce; 100 ml approximated as 116 g. Brands vary."
+    },
+    {
+      "id": "sesame",
+      "basisQuantity": 100,
+      "unit": "ml",
+      "proteinG": 0,
+      "carbsG": 0,
+      "sugarG": 0,
+      "fatG": 92,
+      "fiberG": 0,
+      "kcal": 813,
+      "assumption": "Pure sesame oil; 100 ml approximated as 92 g, all recipe oil counted as eaten."
+    },
+    {
+      "id": "chili",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 12,
+      "carbsG": 57,
+      "sugarG": 10,
+      "fatG": 17,
+      "fiberG": 27,
+      "kcal": 318,
+      "assumption": "Dried red pepper flakes; generic ground cayenne proxy."
+    },
+    {
+      "id": "onion",
+      "basisQuantity": 1,
+      "unit": "each",
+      "proteinG": 1.8,
+      "carbsG": 7.3,
+      "sugarG": 2.3,
+      "fatG": 0.2,
+      "fiberG": 2.6,
+      "kcal": 32,
+      "assumption": "One bunch approximated as 100 g edible raw green onion."
+    },
+    {
+      "id": "rice",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 8,
+      "carbsG": 77,
+      "sugarG": 0.9,
+      "fatG": 3,
+      "fiberG": 3.5,
+      "kcal": 370,
+      "assumption": "Dry brown rice, not cooked rice. Catalog's 190 g is interpreted as dry weight."
+    },
+    {
+      "id": "avo",
+      "basisQuantity": 1,
+      "unit": "each",
+      "proteinG": 3,
+      "carbsG": 12.8,
+      "sugarG": 1,
+      "fatG": 22.1,
+      "fiberG": 10.1,
+      "kcal": 240,
+      "assumption": "One medium avocado approximated as 150 g edible flesh, excluding skin and pit."
+    },
+    {
+      "id": "chickpeas",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 7,
+      "carbsG": 23,
+      "sugarG": 4.8,
+      "fatG": 3,
+      "fiberG": 6,
+      "kcal": 139,
+      "assumption": "Generic canned chickpea solids. Catalog's 400 g is treated as edible drained weight; actual can yield varies."
+    },
+    {
+      "id": "greens",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 2,
+      "carbsG": 3.5,
+      "sugarG": 1,
+      "fatG": 0.3,
+      "fiberG": 2,
+      "kcal": 20,
+      "assumption": "Raw mixed salad greens; rounded generic leafy-greens proxy."
+    },
+    {
+      "id": "lemon",
+      "basisQuantity": 1,
+      "unit": "each",
+      "proteinG": 0.6,
+      "carbsG": 5.4,
+      "sugarG": 1.5,
+      "fatG": 0.2,
+      "fiberG": 1.6,
+      "kcal": 17,
+      "assumption": "One lemon approximated as 58 g edible pulp; whole edible portion counted, not only squeezed juice."
+    },
+    {
+      "id": "pasta",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 13,
+      "carbsG": 75,
+      "sugarG": 3,
+      "fatG": 2,
+      "fiberG": 3,
+      "kcal": 371,
+      "assumption": "Dry wheat rigatoni, not cooked weight."
+    },
+    {
+      "id": "tomato",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 0.9,
+      "carbsG": 3.9,
+      "sugarG": 2.6,
+      "fatG": 0.2,
+      "fiberG": 1.2,
+      "kcal": 18,
+      "assumption": "Raw cherry tomatoes; rounded generic raw tomato proxy."
+    },
+    {
+      "id": "basil",
+      "basisQuantity": 1,
+      "unit": "each",
+      "proteinG": 0.9,
+      "carbsG": 0.7,
+      "sugarG": 0.1,
+      "fatG": 0.2,
+      "fiberG": 0.4,
+      "kcal": 6,
+      "assumption": "One bunch approximated as 28 g edible fresh basil leaves."
+    },
+    {
+      "id": "oil",
+      "basisQuantity": 100,
+      "unit": "ml",
+      "proteinG": 0,
+      "carbsG": 0,
+      "sugarG": 0,
+      "fatG": 92,
+      "fiberG": 0,
+      "kcal": 813,
+      "assumption": "Pure olive oil; 100 ml approximated as 92 g, all recipe oil counted as eaten."
+    },
+    {
+      "id": "cheese",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 36,
+      "carbsG": 3.2,
+      "sugarG": 0.8,
+      "fatG": 26,
+      "fiberG": 0,
+      "kcal": 392,
+      "assumption": "Generic hard Parmesan; brand and moisture content vary."
+    },
+    {
+      "id": "cumin",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 18,
+      "carbsG": 44,
+      "sugarG": 2,
+      "fatG": 22,
+      "fiberG": 11,
+      "kcal": 375,
+      "assumption": "Rounded illustrative ground cumin profile."
+    },
+    {
+      "id": "masala",
+      "basisQuantity": 100,
+      "unit": "g",
+      "proteinG": 12,
+      "carbsG": 50,
+      "sugarG": 5,
+      "fatG": 14,
+      "fiberG": 20,
+      "kcal": 350,
+      "assumption": "Illustrative mixed-spice profile; blends vary. Check actual labels."
+    },
+    {
+      "id": "cucumber",
+      "basisQuantity": 1,
+      "unit": "each",
+      "proteinG": 2,
+      "carbsG": 11,
+      "sugarG": 5,
+      "fatG": 0.3,
+      "fiberG": 1.5,
+      "kcal": 45,
+      "assumption": "One cucumber approximated as 300 g edible raw cucumber."
+    }
+  ]
+}

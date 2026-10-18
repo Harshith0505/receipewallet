@@ -1,5 +1,6 @@
 package com.recipewallet.app
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -15,35 +16,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val ShopInk = Color(0xFF263A2E)
-internal val ShopMuted = Color(0xFF656B63)
-internal val ShopPaper = Color(0xFFFAFAF7)
-internal val ShopLine = Color(0xFFE1E3DC)
-internal val ShopTint = Color(0xFFF0F3EB)
+internal val ShopInk = Color(0xFF503542)
+internal val ShopMuted = Color(0xFF78616A)
+internal val ShopPaper = Color(0xFFFFF7E9)
+internal val ShopLine = Color(0xFFE6D2C4)
+internal val ShopTint = Color(0xFFF3E3D9)
 
 @Composable
 internal fun ShoppingPage(step: Int, onBack: () -> Unit, backEnabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     Scaffold(containerColor = ShopPaper) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().imePadding()
+            Column(Modifier.widthIn(max = 1040.dp).fillMaxWidth().imePadding()
                 .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("recipe wallet", color = ShopInk, fontSize = 22.sp,
-                        letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
+                    BrandWordmark(Modifier.weight(1f))
                     TextButton(onClick = onBack, enabled = backEnabled) { Text("← Back", color = ShopInk) }
                 }
-                if (step in 1..3) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    listOf("Ingredients", "Shops", "Checkout").forEachIndexed { index, label ->
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Text("${index + 1}  $label", color = if (index + 1 == step) ShopInk else ShopMuted,
-                                fontSize = 12.sp, fontWeight = if (index + 1 == step) FontWeight.SemiBold else FontWeight.Normal)
-                            HorizontalDivider(color = if (index + 1 == step) ShopInk else ShopLine,
-                                thickness = if (index + 1 == step) 2.dp else 1.dp)
-                        }
-                    }
-                }
+                if(step in 1..3)JourneySteps(step)
                 content()
                 Spacer(Modifier.height(12.dp))
             }
@@ -62,8 +53,8 @@ internal fun PageHeading(title: String, subtitle: String) {
 
 @Composable
 internal fun QuietCard(modifier: Modifier = Modifier, selected: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color.White, RoundedCornerShape(14.dp))
-        .border(1.dp, if (selected) ShopInk else ShopLine, RoundedCornerShape(14.dp)).padding(18.dp),
+    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color.White, RoundedCornerShape(22.dp))
+        .border(1.dp, if (selected) ShopInk else ShopLine, RoundedCornerShape(22.dp)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }
 
@@ -81,12 +72,38 @@ internal fun AmountRow(label: String, value: String, prominent: Boolean = false)
 @Composable
 internal fun ShopButton(text: String, enabled: Boolean = true, outlined: Boolean = false, onClick: () -> Unit) {
     if (outlined) OutlinedButton(onClick = onClick, enabled = enabled,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(12.dp)) { Text(text) }
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(text) }
     else Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = ShopInk)) {
+        shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = ShopInk)) {
         Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
-internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 12.sp, lineHeight = 18.sp) }
+internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 13.sp, lineHeight = 19.sp) }
+
+@Composable internal fun JourneySteps(current:Int){
+ Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+  Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically){
+   listOf("Meal","Basket","Store","Checkout").forEachIndexed{i,label->
+    Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+     Text((if(i<current)"✓ "else "")+label,color=if(i<=current)ShopInk else ShopMuted,fontSize=16.sp,fontWeight=if(i==current)FontWeight.Bold else FontWeight.Normal)
+     Box(Modifier.width(76.dp).height(if(i==current)3.dp else 1.dp).background(if(i==current)ShopInk else ShopLine))
+    }
+   }
+  }
+ }
+}
+
+@Composable internal fun JournalNavigation(labels:List<String>,selected:Int,enabled:Boolean,onSelect:(Int)->Unit){
+ TabRow(selectedTabIndex=selected,containerColor=Color.White,contentColor=ShopInk){
+  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,selectedContentColor=ShopInk,unselectedContentColor=ShopInk,text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=14.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
+ }
+}
+
+@Composable internal fun BrandWordmark(modifier:Modifier=Modifier){
+ Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
+  androidx.compose.foundation.Image(painter=androidx.compose.ui.res.painterResource(R.drawable.ic_wallet),contentDescription="Recipe Wallet logo",modifier=Modifier.size(40.dp))
+  Text("Recipe Wallet",color=ShopInk,fontFamily=androidx.compose.ui.text.font.FontFamily.SansSerif,fontWeight=FontWeight.ExtraBold,fontSize=26.sp,letterSpacing=(-1).sp,lineHeight=29.sp)
+ }
+}

@@ -1,3 +1,11 @@
+# Scrapbook & weekly food story
+
+See [SCRAPBOOK_WRAP.md](SCRAPBOOK_WRAP.md) for the visual update, nutrition estimation limits, agent workflow, and Android Studio tablet preview.
+
+# Meal studio update
+
+See [MEAL_STUDIO.md](MEAL_STUDIO.md) for the frontend demo, pantry photo setup, weekly planning, and feature limits.
+
 # Recipe Wallet — Android AI grocery planner
 
 Kotlin + Jetpack Compose, API 26+, JDK 17 and Android SDK 36. This version combines the Android home and saved recipe library, whole-package grocery planner, and basket-bound Stripe test checkout.
@@ -12,7 +20,13 @@ Kotlin + Jetpack Compose, API 26+, JDK 17 and Android SDK 36. This version combi
 
 See [Grocery planner](GROCERY_PLANNER.md) and [Tablet setup](TABLET_SETUP.md) for details. Saved personal recipes stay on the device and can be shopped after the user confirms product matches and pack counts.
 
+## Retailer price lookup
+
+The normal **Compare complete baskets →** step now loads nearby Kroger-family stores and searches current products for the selected ingredients automatically. The initial ZIP is explicitly shown as Seattle 98105; change it or the selected store inline. This selects the first returned nearby store, not a claim of the cheapest store. Literal matching suggests eligible packages, and users can choose alternatives under each ingredient. Compatible single package sizes can suggest whole-package counts; ambiguous or incompatible units require manual review. Approve the package review before **Review live basket →** refreshes the exact selected products on the server. Edits invalidate the reviewed quote. Requires backend-only Kroger credentials; see [Kroger setup](RETAILER_SETUP.md). Missing prices or availability are never filled with illustrative prices. Tax, fulfillment fees, promotions and actual rewards are not confirmed. The reviewed basket supports explicit retailer cart transfer, with final payment at the retailer. Illustrative store comparisons and Stripe test checkout remain in a secondary, clearly separate section.
+
 ## Planning and pricing
+
+The live basket also has an optional **Kroger cart handoff** with customer browser sign-in and explicit transfer approval. It rechecks a signed reviewed quote before sending exact UPC/package counts, prevents duplicate submission of successful attempts, and blocks automatic retries when the result is uncertain. This requires additional Cart API permission and callback registration; see [Cart setup](KROGER_CART_SETUP.md). Final shopping location, prices, fees and payment are reviewed at the retailer. This does not change the Stripe test checkout or place grocery orders automatically. Real shopper consent/cart transfer has not yet been verified.
 
 Gemini defaults to `gemini-3.5-flash-lite` through the Interactions API. `find_recipes`, `compare_baskets` and `prepare_basket` ground its choices in catalog data; the model cannot order or pay. Follow-ups retain the latest constraints and four recent requests in local sessions that expire after 20 minutes. The app shows actual tool summaries and validates returned totals. Requests use `store: false`, which disables stored Interaction objects, rather than changing the provider's broader data policies. Payment credentials are never sent to Gemini.
 
@@ -51,9 +65,9 @@ References: [Gemini function calling](https://ai.google.dev/gemini-api/docs/func
 
 The native screens share the same typography, restrained green palette, borders, and navigation. The top-right overflow menu opens a scrollable About panel.
 
-Save a personal recipe locally, open it from **Saved recipes**, and tap **Use this recipe**. The ingredient screen suggests matches from a separate 26-product demo grocery catalog. Review each product and its package size, choose pack counts, and uncheck anything not being purchased. Every included ingredient must be matched before comparing shops. Matching uses literal aliases, not dietary or quantity inference; quantities must be reviewed manually.
+Save a personal recipe, open it from **Saved recipes**, and tap **Use this recipe**. Review its ingredients and exclude pantry items, then continue into the same automatic retailer matching flow. No match to the illustrative product catalog is required. Recognized explicit weights/volumes can suggest package counts; review all quantities before approval.
 
-Personal baskets continue through shop comparison, advisory Visa selection, and basket-bound Stripe test checkout or an unpaid receipt preview. Both meal templates and saved recipes use whole packages and configured 0% demo tax. Saved recipes use manually selected packs from a separate product catalog with illustrative per-store price adjustments. Stock and organic attributes are not verified for that separate catalog; the organic and automatic serving controls apply only to the meal templates. All prices and card rules remain fictional.
+The secondary illustrative comparison supports advisory Visa selection and basket-bound Stripe test checkout or an unpaid receipt preview. Both meal templates and saved recipes use whole packages and configured 0% demo tax. Saved recipes use manually selected packs from a separate product catalog with illustrative per-store price adjustments. Stock and organic attributes are not verified for that separate catalog; the organic and automatic serving controls apply only to the meal templates. All prices and card rules remain fictional.
 
 Android and the backend share identical `products.json` fixtures. Custom checkout uses `pricingVersion: "custom-packages-v1"` with product IDs and integer pack counts in `customBasket.items`; the backend derives prices from its own catalog and rejects unknown products, duplicated IDs, and counts outside 1–20 per product. It does not accept a client-supplied payment amount. Existing backend key setup is still required for live AI and Stripe test payments.
 
@@ -74,3 +88,9 @@ Copy `supabase.properties.example` to the ignored `supabase.properties`, then su
 This feature stores personal recipes. AI sessions, basket quotes and payment attempts have not been migrated to Supabase by this branch.
 
 Integration verification: 56 backend tests, seven Kotlin tests, 24 offline Android checks and the local PostgreSQL migration/isolation suite passed. A live native Stripe test also completed the $15.80 catalog payment through server verification. The live Supabase account/sync check was not run because local project settings are absent.
+
+### Meals beyond the sample catalog
+
+Gemini can draft named meals such as homemade pizza using `draft_recipe`. Drafts include servings, ingredient quantities, explicit pantry ownership, preparation time and cooking steps. They are **unpriced**, with no invented stores, availability or savings. Follow-ups revise the previous generated recipe rather than retaining an unrelated sample meal.
+
+On Android choose **Review ingredients →**, adjust pantry exclusions, then **Compare complete baskets →** to load actual Kroger products inline. Generated serving counts are retained. The existing personal-recipe sample checkout remains separately labeled; products missing from its small sample catalog must be matched through live retailer lookup. Draft quantities and dietary suitability require user review. The requested budget is retained for the sample checkout guard, while live retailer totals must be reviewed before any cart transfer.
