@@ -96,8 +96,8 @@ internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 
 }
 
 @Composable internal fun JournalNavigation(labels:List<String>,selected:Int,enabled:Boolean,onSelect:(Int)->Unit){
- ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=ShopTint,contentColor=ShopInk){
-  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,selectedContentColor=Color(0xFFFFFCF5),unselectedContentColor=ShopInk,modifier=Modifier.background(if(selected==i)ShopInk else listOf(Peach,Citrus,Mint,Lilac)[i%4]),text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
+ ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=Color.White,contentColor=ShopInk){
+  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,selectedContentColor=ShopInk,unselectedContentColor=ShopInk,text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
  }
 }
 
