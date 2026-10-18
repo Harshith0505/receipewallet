@@ -73,7 +73,7 @@ internal class RetailerViewModel(
     var candidatesByNeed by mutableStateOf<Map<String,List<RetailerProduct>>>(emptyMap()); private set
     var matchErrors by mutableStateOf<Map<String,String>>(emptyMap()); private set
     var packagesReviewed by mutableStateOf(false); private set
-    fun confirmPackages(value:Boolean) { if(!editingBlocked) packagesReviewed=value }
+    fun confirmPackages(value:Boolean) { if(!editingBlocked&&(!value||canReview)) packagesReviewed=value }
     var postalCode by mutableStateOf("")
     var query by mutableStateOf("")
     var stores by mutableStateOf<List<RetailerStore>>(emptyList()); private set
@@ -104,6 +104,14 @@ internal class RetailerViewModel(
     val recipeMode get() = context != "browse"
     val activeLabel get() = needs.firstOrNull { it.id == activeNeed }?.name
     private fun combined() = selections.values.groupBy { it.product.key }
+    val unmatchedNeeds get() = needs.filter{it.id !in selections}
+    val reviewBlockReason:String? get() = when {
+        unmatchedNeeds.isNotEmpty()->"Choose a store product for: "+unmatchedNeeds.joinToString{it.name}+"."
+        selections.isEmpty()->"Choose at least one grocery item before reviewing."
+        combined().size>12->"This basket has more than 12 different products. Return to the recipe and reduce the shopping list, or combine ingredients that use the same product."
+        combined().values.any{rows->rows.sumOf{it.quantity} !in 1..20}->"Reduce the combined quantity to 20 or fewer for each product. Ingredients using the same product share this limit."
+        else->null
+    }
     val canReview get() = selections.isNotEmpty() && needs.all { it.id in selections } && combined().let { groups ->
         groups.size <= 12 && groups.values.all { rows -> rows.sumOf { it.quantity } in 1..20 }
     }
