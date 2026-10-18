@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 
 internal val ShopInk = Color(0xFF263A2E)
 internal val ShopMuted = Color(0xFF656B63)
-internal val ShopPaper = Color(0xFFFAFAF7)
+internal val ShopPaper = Color(0xFFFAF8F0)
 internal val ShopLine = Color(0xFFE1E3DC)
 internal val ShopTint = Color(0xFFF0F3EB)
 
@@ -25,7 +25,7 @@ internal val ShopTint = Color(0xFFF0F3EB)
 internal fun ShoppingPage(step: Int, onBack: () -> Unit, backEnabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     Scaffold(containerColor = ShopPaper) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().imePadding()
+            Column(Modifier.widthIn(max = 1040.dp).fillMaxWidth().imePadding()
                 .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -62,8 +62,8 @@ internal fun PageHeading(title: String, subtitle: String) {
 
 @Composable
 internal fun QuietCard(modifier: Modifier = Modifier, selected: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color.White, RoundedCornerShape(14.dp))
-        .border(1.dp, if (selected) ShopInk else ShopLine, RoundedCornerShape(14.dp)).padding(18.dp),
+    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color.White, RoundedCornerShape(22.dp))
+        .border(1.dp, if (selected) ShopInk else ShopLine, RoundedCornerShape(22.dp)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }
 
@@ -81,12 +81,12 @@ internal fun AmountRow(label: String, value: String, prominent: Boolean = false)
 @Composable
 internal fun ShopButton(text: String, enabled: Boolean = true, outlined: Boolean = false, onClick: () -> Unit) {
     if (outlined) OutlinedButton(onClick = onClick, enabled = enabled,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(12.dp)) { Text(text) }
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(16.dp)) { Text(text) }
     else Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = ShopInk)) {
+        shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = ShopInk)) {
         Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
-internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 12.sp, lineHeight = 18.sp) }
+internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 13.sp, lineHeight = 19.sp) }

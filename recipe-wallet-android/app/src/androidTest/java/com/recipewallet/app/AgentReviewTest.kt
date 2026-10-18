@@ -29,11 +29,15 @@ class AgentReviewTest {
   }
   return vm
  }
+ @org.junit.Before fun resetLocalProfile() {
+  InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("meal-studio-v1",android.content.Context.MODE_PRIVATE).edit().clear().commit()
+  compose.activityRule.scenario.recreate()
+ }
  @Test fun approvedBasketUsesExactReviewedIngredientsAndAmount() {
   val vm=showPlan()
-  compose.onNodeWithText("Amount charged before rewards").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Pay today").performScrollTo().assertIsDisplayed()
   compose.onAllNodesWithText("$15.80").onFirst().assertExists()
-  compose.onNodeWithText("Already owned: Garlic").assertExists()
+  compose.onNodeWithText("✓ Garlic · This meal only").assertExists()
   compose.onNodeWithText("Review package-priced basket  →").performScrollTo().assertIsEnabled()
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
   File(compose.activity.getExternalFilesDir(null),"agent-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
@@ -60,7 +64,7 @@ class AgentReviewTest {
  }
  @Test fun overBudgetPlanCannotBeApproved() {
   val vm=showPlan(100)
-  compose.onNodeWithText("This is above your budget. Revise your request or budget before approving.").performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("! Above your meal budget").performScrollTo().assertIsDisplayed()
   compose.onNodeWithText("Review package-priced basket  →").performScrollTo().assertIsNotEnabled()
   compose.runOnIdle {vm.approvePlan();assertEquals(0,vm.step)}
  }

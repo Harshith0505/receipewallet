@@ -27,9 +27,13 @@ class HomeScreenTest {
         }
     }
 
+ @org.junit.Before fun resetLocalProfile() {
+  InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("meal-studio-v1",android.content.Context.MODE_PRIVATE).edit().clear().commit()
+  compose.activityRule.scenario.recreate()
+ }
     @Test fun switchingBuildModesPreservesTheMealDraft() {
         compose.onNodeWithText("Build with AI").assertIsSelected()
-        compose.onNodeWithText("Try: vegetarian noodles under $30").performClick()
+        compose.onNodeWithText("Use my taste profile ✨").performClick()
         compose.onNodeWithText("Build my meal").assertIsEnabled()
         screenshot("front-page-ai.png")
         compose.onNode(hasSetTextAction()).performClick()
@@ -46,7 +50,7 @@ class HomeScreenTest {
         assertTrue("Keyboard stayed open in manual mode", device.wait(Until.gone(By.pkg(keyboardPackage)), 5000))
         screenshot("front-page-manual.png")
         compose.onNodeWithText("Build with AI").performScrollTo().performClick()
-        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $30. I already have garlic.")
+        compose.onNode(hasSetTextAction()).assertTextContains("I want comforting and familiar")
     }
 
     @Test fun manualRecipeOpensAnEditableBasket() {

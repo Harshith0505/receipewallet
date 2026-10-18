@@ -81,6 +81,8 @@ private fun IngredientPage(vm: WalletViewModel) {
     PageHeading("Ingredients", vm.recipe.name)
     SmallNote(if(vm.isPersonal) "Confirm the suggested products and pack counts against your saved recipe. Uncheck pantry items." else "Unchecked ingredients are already in your pantry. Purchases use whole packages.")
     ShoppingControls(vm)
+    Signal("${vm.selected.size} to buy · ${vm.recipe.ingredients.size-vm.selected.size} already owned")
+    SmallNote("Uncheck an ingredient to keep it out of this purchase. Confirm you have enough; this is a meal-only choice.")
     QuietCard {
         vm.recipe.ingredients.forEachIndexed { index, ingredient ->
             if(index>0) HorizontalDivider(color=ShopLine)
@@ -139,33 +141,46 @@ private fun ProductChoice(vm: WalletViewModel, ingredient: Ingredient) {
 
 @Composable
 private fun ShopComparison(vm: WalletViewModel) {
-    PageHeading("Choose your shop",vm.recipe.name)
-    SmallNote("Complete baskets ranked by estimated cost after rewards. Today's charge includes whole packages and fulfillment fees.")
+    PageHeading("Find your basket", "${vm.recipe.name} · compare the whole picture")
     ShoppingControls(vm)
-    vm.rankings.forEachIndexed { index,q ->
-        QuietCard {
-            if(index==0&&q.complete) Text("Lowest estimated cost",color=ShopInk,fontWeight=FontWeight.Medium)
-            Text(q.store.name,color=ShopInk,fontSize=21.sp,fontWeight=FontWeight.Medium)
-            SmallNote("${q.store.rating} rating · ${q.store.distanceMiles} mi")
-            SmallNote(q.store.address)
-            if(q.complete) {
-                BasketLines(q)
-                AmountRow("Whole-package groceries",money(q.groceries))
-                AmountRow("Fulfillment fees",money(q.fees));AmountRow("Demo tax (0%)",money(q.tax))
-                AmountRow("Pay today",money(q.charge),prominent=true)
-                AmountRow("Estimated future rewards",money(q.rewards));AmountRow("Estimated cost after rewards",money(q.net))
-                SmallNote(q.card.name)
-                ShopButton("Review checkout →",outlined=index!=0,onClick={vm.checkout(q.store.id)})
-            } else SmallNote("Unavailable: "+q.missing.joinToString()+". Partial baskets cannot be checked out.")
-            val context=LocalContext.current
-            ShopButton("Walking directions · Google Maps",outlined=true,onClick={
-                try { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(q.store.address)+"&travelmode=walking"))) }
-                catch(_:Exception) { vm.error="No browser or maps app is available" }
-            })
+    val quotes=vm.rankings
+    var selected by remember { mutableStateOf(quotes.firstOrNull { it.complete }?.store?.id ?: quotes.first().store.id) }
+    LaunchedEffect(vm.fulfillment,vm.organicOnly,vm.servings) { if(quotes.none { it.store.id==selected&&it.complete }) quotes.firstOrNull { it.complete }?.let { selected=it.store.id } }
+    ShopMap(quotes,selected) { selected=it }
+    ChipRail(quotes.map { it.store.name+if(it.complete) " · "+money(it.charge) else " · unavailable" }) { selected=quotes[it].store.id }
+    val q=quotes.first { it.store.id==selected }
+    val best=quotes.filter { it.complete }.minOfOrNull { it.charge }
+    StudioCard {
+        Eyebrow("Your selected shop")
+        StudioTitle(q.store.name)
+        SmallNote("${q.store.rating} rating · ${q.store.distanceMiles} sample mi · ${q.store.address}")
+        if(q.complete) {
+            PriceTicket(q,best,if(vm.planBudget>=0)vm.planBudget else null)
+            var expanded by remember(q.store.id) { mutableStateOf(false) }
+            TextButton(onClick={expanded=!expanded}) { Text(if(expanded) "Hide package breakdown ↑" else "See every package & price ↓") }
+            if(expanded) BasketLines(q)
+            ShopButton("Review checkout →",onClick={vm.checkout(q.store.id)})
+        } else {
+            Signal("! This basket is incomplete",Danger)
+            Text("Unavailable: "+q.missing.joinToString(),color=Danger)
+            SmallNote("Choose another shop or revise your preferences. Partial baskets cannot be checked out.")
+        }
+        val context=LocalContext.current
+        ShopButton("Walking directions · Google Maps",outlined=true,onClick={
+            try { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(q.store.address)+"&travelmode=walking"))) }
+            catch(_:Exception) { vm.error="No browser or maps app is available" }
+        })
+    }
+    StudioTitle("At a glance")
+    SmallNote("Green = lowest upfront total · Amber = higher total · Red = unavailable. Estimated future rewards are separate.")
+    quotes.forEach { quote ->
+        QuietCard(selected=quote.store.id==selected,modifier=Modifier.clickable { selected=quote.store.id }) {
+            AmountRow(quote.store.name,if(quote.complete)money(quote.charge)else "Unavailable",prominent=true)
+            Signal(if(!quote.complete)"! Cannot supply this basket"else if(quote.charge==best)"✓ Lowest upfront total"else "↗ ${money(quote.charge-(best?:quote.charge))} more",if(!quote.complete)Danger else if(quote.charge==best)Good else Warn)
         }
     }
-    vm.error?.let { SmallNote(it) }
-    SmallNote(if(vm.isPersonal) "Sample products and store adjustments; saved-recipe stock and organic attributes are unverified. No retailer integration." else "Real locations for directions only. Prices, stock, organic attributes, fees and fulfillment are simulated.")
+    vm.error?.let { Text(it,color=Danger) }
+    SmallNote("Real locations for directions only. Prices, distances, stock, product attributes, fees and fulfillment are simulated.")
 }
 
 @Composable
@@ -230,37 +245,52 @@ private fun ReceiptPage(vm:WalletViewModel) {
 
 @Composable
 internal fun AgentPlanReview(vm: WalletViewModel) {
-    QuietCard {
-        Text("Your meal", color = ShopInk, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-        Text(vm.agentReply, color = ShopInk, fontSize = 14.sp)
+    StudioCard(tint=Mint) {
+        Eyebrow("Your meal · ready for your touch")
+        StudioTitle(vm.plannedRecipe?.name ?: "Let's fine-tune your request")
+        Text(vm.agentReply,color=ShopInk,fontSize=14.sp)
         if(vm.agentChanges.isNotEmpty()) {
-            Text("What changed",color=ShopInk,fontWeight=FontWeight.Medium)
-            vm.agentChanges.forEach { SmallNote(it) }
+            StudioCard(tint=androidx.compose.ui.graphics.Color.White) {
+                Signal("↻ What changed",Good)
+                vm.agentChanges.forEach { Text("• $it",color=ShopInk,fontSize=15.sp) }
+            }
         }
-        val recipe = vm.plannedRecipe
-        val quote = vm.plannedQuote
-        if (recipe != null && quote != null) {
-            Text(recipe.name, color = ShopInk, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-            SmallNote("${vm.planDiet} · ${if (vm.planBudget >= 0) money(vm.planBudget) + " upfront budget" else "No budget set"}${if (vm.planTime > 0) " · Under ${vm.planTime} min" else ""}")
-            Text("To buy: " + recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name }, color = ShopInk, fontSize = 13.sp)
-            SmallNote("Already owned: " + recipe.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" })
-            SmallNote("${quote.store.name} · ${quote.card.name}")
-            SmallNote(quote.card.label+". "+quote.card.notes)
-            AmountRow("Groceries", money(quote.groceries))
-            AmountRow("Fulfillment fees", money(quote.fees))
-            AmountRow("Demo tax (0%)",money(quote.tax))
-            AmountRow("Amount charged before rewards", money(quote.charge), prominent = true)
-            AmountRow("Estimated future rewards", money(quote.rewards))
-            AmountRow("Estimated cost after rewards", money(quote.net))
-            if (!vm.planWithinBudget) Text("This is above your budget. Revise your request or budget before approving.", color = ShopInk)
-            ShopButton("Review package-priced basket  →", enabled = vm.planWithinBudget && !vm.aiBusy,
-                onClick = { vm.approvePlan() })
+        val recipe=vm.plannedRecipe
+        val quote=vm.plannedQuote
+        if(recipe!=null&&quote!=null) {
+            Signal("${recipe.prepTime} min · ${vm.agentPlan?.optInt("servings",2)} servings · ${vm.planDiet} · ${if(vm.planBudget>=0)money(vm.planBudget)+" budget"else "No budget set"}")
+            ReviewSection("01  To buy", "Whole packages in your next basket", Peach) {
+                recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.forEach { Text("+ "+it.name,color=ShopInk) }
+            }
+            ReviewSection("02  Already owned", "Confirmed pantry and items from this conversation", Mint) {
+                val owned=recipe.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }
+                if(owned.isEmpty())SmallNote("No pantry ingredients specified for this meal.")
+                owned.forEach { Text("✓ ${it.name} · "+if(it.id in vm.studio.owned)"My pantry"else "This meal only",color=ShopInk) }
+                SmallNote("My pantry is saved on your device. Meal-only items came from your request. Check you have enough for the recipe.")
+            }
+            ReviewSection("03  Ingredient remix", "Change the vibe, then let the agent revise", Lilac) {
+                ChipRail(listOf("Mild · remove chili","Spicy · include chili","Use my pantry"),enabled=!vm.aiBusy){i->
+                    vm.preference=when(i){0->"Remove chili from this recipe to make it mild. Keep all other constraints.";1->"Include chili if this recipe supports it. Keep my other constraints.";else->"I already have "+vm.studio.ingredients.filter { it.id in vm.studio.owned }.joinToString { it.name }+". Revise this meal, keeping my constraints."}
+                    vm.suggest()
+                }
+                val omissions=vm.agentPlan?.optJSONArray("omittedIngredientIds")
+                if(omissions!=null&&omissions.length()>0) SmallNote("Left out of the recipe: "+(0 until omissions.length()).map { omissions.getString(it) }.mapNotNull { id->recipe.ingredients.firstOrNull { it.id==id }?.name }.joinToString())
+                SmallNote("Only supported catalog ingredients can change. Review the result before approving.")
+            }
+            PriceTicket(quote,budget=vm.planBudget)
+            ShopButton("Review package-priced basket  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
         }
         var details by remember { mutableStateOf(false) }
-        TextButton(onClick = { details = !details }) { Text(if (details) "Hide comparison details" else "How this was chosen") }
-        if (details) vm.agentTrace.forEach { SmallNote(it) }
-        TextButton(onClick = { vm.newPlan() }, enabled = !vm.aiBusy) { Text("Start a new shop") }
-        SmallNote("Two-serving pickup plan with whole packages and configured 0% demo tax. Adjust shopping preferences on the next screen. Review dietary requirements yourself.")
+        TextButton(onClick={details=!details}) { Text(if(details)"Hide comparison details"else "How this was chosen") }
+        if(details)vm.agentTrace.forEach { SmallNote(it) }
+        TextButton(enabled=!vm.aiBusy,onClick={vm.newPlan()}){Text("Start a new shop")}
+    }
+}
+@Composable private fun ReviewSection(title:String,subtitle:String,tint:androidx.compose.ui.graphics.Color,content:@Composable ColumnScope.()->Unit) {
+    var open by remember { mutableStateOf(true) }
+    StudioCard(tint=tint) {
+        TextButton(onClick={open=!open},modifier=Modifier.fillMaxWidth()) { Text(title,modifier=Modifier.weight(1f),fontWeight=FontWeight.Bold);Text(if(open)"−"else "+") }
+        if(open) {SmallNote(subtitle);content()}
     }
 }
 

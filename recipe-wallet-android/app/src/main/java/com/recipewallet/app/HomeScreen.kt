@@ -1,15 +1,10 @@
 package com.recipewallet.app
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -20,230 +15,104 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val HomeInk = Color(0xFF263A2E)
-private val HomeMuted = Color(0xFF656B63)
-private val HomePaper = Color(0xFFFAFAF7)
-private val HomeLine = Color(0xFFE1E3DC)
-
-@Composable
-internal fun HomeScreen(vm: WalletViewModel) {
-    var manual by rememberSaveable { mutableStateOf(false) }
-    var libraryPage by rememberSaveable { mutableStateOf(if (vm.isPersonal) "saved" else "home") }
-    var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-    val recipeStore = remember { PersonalRecipeStore(context) }
-    var personalRecipes by remember { mutableStateOf(recipeStore.read()) }
-    var about by rememberSaveable { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    val dismissKeyboard: () -> Unit = { focusManager.clearFocus(force = true); keyboard?.hide() }
-
-    LaunchedEffect(manual, libraryPage) {
-        if (manual || libraryPage != "home") {
-            focusManager.clearFocus(force = true)
-            keyboard?.hide()
-        }
+@Composable internal fun HomeScreen(vm:WalletViewModel){
+ var mode by rememberSaveable { mutableIntStateOf(0) }
+ var libraryPage by rememberSaveable { mutableStateOf(if(vm.isPersonal)"saved" else "home") }
+ var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+ val context=LocalContext.current;val saved=remember{PersonalRecipeStore(context)}
+ var recipes by remember{mutableStateOf(saved.read())}
+ androidx.activity.compose.BackHandler(enabled=libraryPage!="home"||mode!=0) { if(libraryPage!="home")libraryPage=if(libraryPage=="saved")"home" else "saved" else mode=0 }
+ val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
+ val dismiss:()->Unit={focus.clearFocus();keyboard?.hide()}
+ if(libraryPage!="home"){
+  RecipeLibraryScreen(page=libraryPage,recipe=recipes.firstOrNull{it.id==selectedId},recipes=recipes,
+   onBack={dismiss();libraryPage=if(libraryPage=="saved")"home" else "saved"},onAdd={selectedId=null;libraryPage="add"},
+   onOpen={selectedId=it.id;libraryPage="detail"},onEdit={libraryPage="add"},onUse={dismiss();vm.choosePersonal(it)},
+   onSave={r->runCatching{recipes=saved.save(r);dismiss();libraryPage="saved"}.exceptionOrNull()?.message})
+  return
+ }
+ LaunchedEffect(vm.studio.currentWeek,vm.studio.autoWeek){if(vm.studio.autoWeek&&vm.studio.weekDue)vm.studio.buildWeek()}
+ Scaffold(containerColor=ShopPaper){padding->
+  BoxWithConstraints(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.TopCenter){
+   val wide=maxWidth>=840.dp
+   Column(Modifier.widthIn(max=1200.dp).fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(if(wide)32.dp else 20.dp),verticalArrangement=Arrangement.spacedBy(22.dp)){
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+     Column{Text("recipe wallet",fontSize=23.sp,fontWeight=FontWeight.Bold,color=ShopInk,letterSpacing=(-1).sp);Eyebrow("Good food. Smarter baskets.")}
+     TextButton(enabled=!vm.aiBusy,onClick={dismiss();recipes=saved.read();libraryPage="saved"}){Text("Saved recipes ↗")}
     }
-    if (libraryPage != "home") {
-        RecipeLibraryScreen(
-            page = libraryPage,
-            recipe = personalRecipes.firstOrNull { it.id == selectedRecipeId },
-            recipes = personalRecipes,
-            onBack = { dismissKeyboard(); libraryPage = if (libraryPage == "saved") "home" else "saved" },
-            onAdd = { selectedRecipeId = null; libraryPage = "add" },
-            onOpen = { selectedRecipeId = it.id; libraryPage = "detail" },
-            onEdit = { libraryPage = "add" },
-            onUse = { dismissKeyboard(); vm.choosePersonal(it) },
-            onSave = { recipe ->
-                runCatching {
-                    personalRecipes = recipeStore.save(recipe)
-                    dismissKeyboard()
-                    libraryPage = "saved"
-                }.exceptionOrNull()?.message
-            }
-        )
-        return
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)){
+      Text(if(mode==2)"A little less waste.\nA lot more possibility." else if(mode==3)"Your week,\nwith dinner handled." else "Follow your mood.\nFind your next meal.",fontSize=if(wide)44.sp else 34.sp,lineHeight=if(wide)49.sp else 39.sp,fontWeight=FontWeight.SemiBold,color=ShopInk,letterSpacing=(-1.2).sp)
+      Text("From what you have to what you love.",fontSize=15.sp,color=ShopMuted)
+     }
+     if(wide)Text(if(mode==2)"🥬"else if(mode==3)"🗓️"else mealMoods[vm.studio.mood].emoji,fontSize=86.sp,modifier=Modifier.background(Citrus,RoundedCornerShape(100)).padding(25.dp))
     }
-
-    Scaffold(containerColor = HomePaper) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            Column(
-                Modifier.widthIn(max = 720.dp).fillMaxWidth().imePadding()
-                    .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp)
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("recipe wallet", color = HomeInk, fontSize = 22.sp,
-                        letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { dismissKeyboard(); personalRecipes = recipeStore.read(); libraryPage = "saved" }, enabled = !vm.aiBusy) {
-                            Text("Saved recipes", color = HomeInk, fontSize = 13.sp)
-                        }
-                        Box {
-                            IconButton(onClick = { dismissKeyboard(); menuOpen = true },
-                                modifier = Modifier.semantics { contentDescription = "More options" }) {
-                                Canvas(Modifier.size(24.dp)) {
-                                    listOf(-6f, 0f, 6f).forEach { offset ->
-                                        drawCircle(HomeInk, radius = 1.6.dp.toPx(),
-                                            center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2 + offset.dp.toPx()))
-                                    }
-                                }
-                            }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(text = { Text("About this demo") }, onClick = { menuOpen = false; about = true })
-                            }
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("What’s for dinner?", color = HomeInk, fontSize = 32.sp,
-                        lineHeight = 38.sp, letterSpacing = (-0.8).sp,
-                        fontWeight = FontWeight.Medium, modifier = Modifier.semantics { heading() })
-                    Text("Plan a meal, compare shops, and choose your Visa card.",
-                        color = HomeMuted, fontSize = 15.sp, lineHeight = 22.sp)
-                }
-                Row(
-                    Modifier.fillMaxWidth().selectableGroup()
-                        .background(Color(0xFFEEEFE9), RoundedCornerShape(12.dp)).padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    listOf("Build with AI", "Build manually").forEachIndexed { index, label ->
-                        val selected = manual == (index == 1)
-                        Box(
-                            Modifier.weight(1f).heightIn(min = 48.dp)
-                                .background(if (selected) Color.White else Color.Transparent, RoundedCornerShape(9.dp))
-                                .selectable(selected = selected, enabled = !vm.aiBusy, role = Role.Tab,
-                                    onClick = { dismissKeyboard(); manual = index == 1 }),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(label, fontSize = 14.sp, color = if (selected) HomeInk else HomeMuted,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
-                        }
-                    }
-                }
-                if (!manual) {
-                    MealComposer(vm, onManual = { dismissKeyboard(); manual = true },
-                        onSubmit = { dismissKeyboard(); vm.suggest() })
-                    if (vm.agentReply.isNotBlank()) AgentPlanReview(vm)
-                }
-                if (manual || vm.agentReply.isBlank()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(if (manual) "Choose a recipe" else "Or start with a recipe",
-                                color = HomeInk, fontSize = 18.sp, fontWeight = FontWeight.Medium,
-                                modifier = Modifier.semantics { heading() })
-                            Text(if (manual) "Edit the ingredients before comparing shops." else "Pick one to build your basket yourself.",
-                                color = HomeMuted, fontSize = 13.sp)
-                        }
-                        Column(Modifier.fillMaxWidth().border(1.dp, HomeLine, RoundedCornerShape(14.dp))
-                            .background(Color.White, RoundedCornerShape(14.dp))) {
-                            vm.catalog.recipes.forEachIndexed { index, recipe ->
-                                if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 18.dp), color = HomeLine)
-                                Row(
-                                    Modifier.fillMaxWidth().clickable(enabled = !vm.aiBusy, role = Role.Button,
-                                        onClick = { dismissKeyboard(); vm.choose(recipe.id) }).padding(horizontal = 18.dp, vertical = 18.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    Text("0${index + 1}", color = HomeMuted, fontSize = 12.sp)
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Text(recipe.name, color = HomeInk, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                                        Text("${recipe.prepTime} min  ·  ${recipe.ingredients.size} ingredients",
-                                            color = HomeMuted, fontSize = 12.sp)
-                                    }
-                                    Text("→", color = HomeInk, fontSize = 20.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-                if (manual) {
-                    OutlinedButton(onClick = { dismissKeyboard(); selectedRecipeId = null; libraryPage = "add" },
-                        enabled = !vm.aiBusy, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                        shape = RoundedCornerShape(12.dp)) {
-                        Text("+ Add a recipe", color = HomeInk)
-                    }
-                }
-                Text("Demo catalog · ${vm.catalog.recipes.size} recipes · Sample prices and rewards",
-                    color = HomeMuted, fontSize = 11.sp, lineHeight = 17.sp,
-                    modifier = Modifier.padding(bottom = 12.dp))
-            }
-        }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup().background(Color(0xFFEAEDE5),RoundedCornerShape(16.dp)).padding(5.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+     listOf("Build with AI","Build manually","My pantry","My week").forEachIndexed{i,label->
+      Box(Modifier.defaultMinSize(minWidth=130.dp,minHeight=48.dp).background(if(mode==i)ShopInk else Color.Transparent,RoundedCornerShape(12.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(horizontal=14.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,color=if(mode==i)Color.White else ShopInk,fontWeight=FontWeight.SemiBold)}
+     }
     }
-    if (about) {
-        AlertDialog(
-            onDismissRequest = { about = false },
-            shape = RoundedCornerShape(16.dp),
-            title = { Text("About Recipe Wallet") },
-            text = {
-                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("Recipes use sample package prices, shops and Visa rewards. Demo tax is configured at 0%. Saved recipes use the packages you select.")
-                    Text("Meal requests and recent preferences go to Gemini. Card details do not. Planning sessions expire after 20 minutes.")
-                    Text("Checkout uses Stripe test mode. No real grocery order, delivery, or rewards result.")
-                }
-            },
-            confirmButton = { TextButton(onClick = { about = false }) { Text("Got it") } }
-        )
+    if(vm.studio.weekDue&&mode!=3)StudioCard(tint=Lilac){
+     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+      Column(Modifier.weight(1f)){Eyebrow("A fresh week awaits");Text("Five dinners, one less thing to think about.",fontSize=14.sp,color=ShopInk)}
+      TextButton(onClick={dismiss();mode=3}){Text("Plan my week →")}
+     }
     }
+    when(mode){
+     0->{
+      if(wide)Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
+       Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(20.dp)){MealComposer(vm,{mode=1},dismiss);if(vm.agentReply.isNotBlank())MoodDeck(vm.studio,!vm.aiBusy)else HistorySuggestions(vm)}
+       Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(20.dp)){if(vm.agentReply.isNotBlank())AgentPlanReview(vm)else {MoodDeck(vm.studio,!vm.aiBusy);TasteControls(vm.studio,!vm.aiBusy)}}
+      }else{MoodDeck(vm.studio,!vm.aiBusy);MealComposer(vm,{mode=1},dismiss);if(vm.agentReply.isNotBlank())AgentPlanReview(vm);TasteControls(vm.studio,!vm.aiBusy);HistorySuggestions(vm)}
+     }
+     1->{
+      if(wide)Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
+       Column(Modifier.weight(.8f),verticalArrangement=Arrangement.spacedBy(18.dp)){MoodDeck(vm.studio);TasteControls(vm.studio)}
+       Column(Modifier.weight(1.2f),verticalArrangement=Arrangement.spacedBy(18.dp)){ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
+      }else{MoodDeck(vm.studio);TasteControls(vm.studio);ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
+     }
+     2->PantryStudio(vm)
+     3->WeeklyStudio(vm)
+    }
+    SmallNote("Demo groceries & rewards · No real grocery order. Preferences and pantry stay on this device; AI requests send the details you submit. Photos are sent only when you choose to scan.")
+   }
+  }
+ }
 }
 
-@Composable
-private fun MealComposer(vm: WalletViewModel, onManual: () -> Unit, onSubmit: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(if (vm.agentReply.isBlank()) "Describe your meal" else "Adjust your meal",
-            color = HomeInk, fontSize = 18.sp, fontWeight = FontWeight.Medium,
-            modifier = Modifier.semantics { heading() })
-        OutlinedTextField(
-            value = vm.preference,
-            onValueChange = { if (it.length <= 600) vm.preference = it },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !vm.aiBusy,
-            label = { Text(if (vm.agentReply.isBlank()) "Meal, budget, and pantry items" else "What would you like to change?") },
-            placeholder = { Text(if (vm.agentReply.isBlank()) "Vegetarian noodles under $30.\nI already have garlic." else "I already have soy sauce too.") },
-            minLines = 3, maxLines = 5,
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White, focusedContainerColor = Color.White,
-                unfocusedBorderColor = Color(0xFFB9BFB5), focusedBorderColor = HomeInk)
-        )
-        if (vm.agentReply.isBlank() && !vm.aiBusy) {
-            TextButton(
-                onClick = { vm.preference = "Find me a vegetarian noodle dinner under $30. I already have garlic." },
-                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
-            ) { Text("Try: vegetarian noodles under $30", color = HomeInk, fontSize = 13.sp) }
-        }
-        Button(
-            onClick = onSubmit, enabled = !vm.aiBusy && vm.preference.isNotBlank(),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = HomeInk)
-        ) {
-            if (vm.aiBusy) {
-                CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-            }
-            Text(if (vm.aiBusy) "Building your meal…" else if (vm.agentReply.isBlank()) "Build my meal" else "Update my meal",
-                fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        }
-        if (vm.aiBusy) Text("Finding recipes and comparing shops.", color = HomeMuted, fontSize = 12.sp)
-        vm.aiError?.let { error ->
-            Column(Modifier.fillMaxWidth().background(Color(0xFFF7EEE8), RoundedCornerShape(12.dp)).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Couldn’t build your meal", color = Color(0xFF7B3A29), fontWeight = FontWeight.Medium)
-                Text(error, color = Color(0xFF7B3A29), fontSize = 13.sp)
-                TextButton(onClick = onManual, contentPadding = PaddingValues(0.dp)) { Text("Choose a recipe instead") }
-            }
-        }
-        Text("Meal requests are processed by Gemini. You review the basket before checkout.",
-            color = HomeMuted, fontSize = 11.sp, lineHeight = 16.sp)
-    }
+@Composable private fun MealComposer(vm:WalletViewModel,onManual:()->Unit,dismiss:()->Unit){
+ StudioCard{
+  Eyebrow(if(vm.agentReply.isBlank())"Your meal studio"else "Keep the good. Remix the rest.")
+  StudioTitle(if(vm.agentReply.isBlank())"What sounds good?"else "Adjust your meal")
+  if(vm.agentReply.isNotBlank())Text("Keep your conversation going. Your earlier budget and preferences stay in this session.",color=ShopMuted,fontSize=13.sp)
+  OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=1200)vm.preference=it},enabled=!vm.aiBusy,label={Text(if(vm.agentReply.isBlank())"Tell us what you're craving"else "What would you like to change?")},placeholder={Text("Something cozy, under $30. I have garlic.")},minLines=3,maxLines=5,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+  ChipRail(if(vm.agentReply.isBlank())listOf("Use my taste profile ✨","Use what I have 🥬","Surprise me")else listOf("Less heat","More pantry, less shopping","Lower the cost","Try another recipe"),enabled=!vm.aiBusy){i->
+   vm.preference=if(vm.agentReply.isBlank())when(i){0->vm.studio.prompt();1->vm.studio.prompt()+" Prioritize ingredients I already own.";else->vm.studio.prompt()+" Suggest a different recipe from my recent choices."}else when(i){0->"Make this meal mild by removing chili if present. Keep my budget and dietary constraints.";1->"Use my confirmed pantry: "+vm.studio.ingredients.filter{it.id in vm.studio.owned}.joinToString{it.name}+". Keep my other constraints.";2->"Find a cheaper complete basket while keeping my dietary constraints.";else->"Choose another supported recipe with ${mealMoods[vm.studio.mood].prompt}, keeping my budget and dietary constraints."}
+  }
+  ShopButton(if(vm.aiBusy)"Creating your meal…"else if(vm.agentReply.isBlank())"Build my meal"else "Update my meal",enabled=!vm.aiBusy&&vm.preference.isNotBlank(),onClick={dismiss();vm.suggest()})
+  if(vm.aiBusy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Matching your request to recipes and whole-package prices…")}
+  vm.aiError?.let{Signal("Couldn't build your meal",Danger);Text(it,color=ShopMuted,fontSize=13.sp);TextButton(onClick=onManual){Text("Choose a recipe instead")}}
+  SmallNote("Gemini plans; you approve. Review dietary needs and ingredient swaps before shopping.")
+ }
+}
+@Composable private fun HistorySuggestions(vm:WalletViewModel){
+ StudioCard(tint=Mint){Eyebrow("Made for your rhythm")
+  val favorite=vm.studio.favorite
+  StudioTitle(if(favorite==null)"Your story starts here."else "Back to a favorite?")
+  Text(if(favorite==null)"Choose a few meals and this space will learn from your choices on this device."else "${favorite.name} appears most often in your recent choices.",fontSize=14.sp,color=ShopInk)
+  if(favorite!=null){TextButton(onClick={vm.preference="Something like ${favorite.name}. "+vm.studio.prompt()}){Text("Make it my kind of dinner →")};TextButton(onClick={vm.studio.clearHistory()}){Text("Clear meal history")}}
+  if(vm.studio.owned.isNotEmpty())SmallNote("${vm.studio.owned.size} confirmed pantry ingredients can shape your next request.")
+ }
+}
+@Composable private fun ManualRecipes(vm:WalletViewModel,add:()->Unit){
+ StudioTitle("Choose a recipe")
+ SmallNote("A short list tuned by your time, diet, pantry and recent choices. Mood nudges the order; prices come from whole packages.")
+ val matches=vm.studio.rankedRecipes()
+ if(matches.isEmpty())StudioCard{Text("Nothing in this small catalog fits yet.",color=ShopInk);SmallNote("Increase your time slider or change the vegetarian filter.")}
+ matches.forEachIndexed{i,r->RecipeTile(r,vm.studio,i){vm.choose(r.id)}}
+ ShopButton("+ Add a recipe",outlined=true,onClick=add)
 }

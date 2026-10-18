@@ -15,6 +15,7 @@ import java.util.UUID
 
 class WalletViewModel(app: Application): AndroidViewModel(app) {
  val catalog = Catalog(app)
+ internal val studio = MealStudioState(app,catalog,viewModelScope) { path,payload -> request(path,payload) }
  var personalRecipe by mutableStateOf<PersonalRecipe?>(null)
   private set
  var productMatches by mutableStateOf<Map<String, String>>(emptyMap())
@@ -60,7 +61,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun suggest() {
   if(aiBusy || preference.isBlank()) return
   val message=preference
-  aiBusy=true; aiError=null; agentPlan=null; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList()
+  aiBusy=true; aiError=null
   viewModelScope.launch {
    try {
     val payload=JSONObject().put("message",message)
@@ -96,6 +97,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun approvePlan() {
   val p=agentPlan ?: return
   if(!planWithinBudget || aiBusy || !canEditCheckout) return
+  studio.record(p.getString("recipeId"))
   clearPayment()
   servings=p.optInt("servings",2); fulfillment=p.optString("fulfillment","pickup"); organicOnly=p.optBoolean("organicOnly",false)
   personalRecipe=null; recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
@@ -155,7 +157,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun changeOrganicOnly(value:Boolean) { if(!canEditCheckout) return; organicOnly=value; settingsChanged() }
  val canEditCheckout get() = !busy && !awaitingVerification
  private fun clearPayment() { pending=null; pendingPayload=null; intentId=null; error=null; attempt=UUID.randomUUID().toString() }
- fun choose(id: String) { if(!canEditCheckout) return; clearPayment(); newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet(); storeId=""; cardId=""; step=1 }
+ fun choose(id: String) { if(!canEditCheckout) return; clearPayment(); newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet()-studio.owned; servings=studio.people; studio.record(id); storeId=""; cardId=""; step=1 }
  fun toggle(id: String) { if(!canEditCheckout) return; clearPayment(); selected=if(id in selected) selected-id else selected+id }
  fun compare() { if(!canEditCheckout || !canCompare) return; val best=rankings.firstOrNull { it.complete } ?: return; storeId=best.store.id; cardId=best.card.id; step=2 }
  fun checkout(store: String) { if(!canEditCheckout || selected.isEmpty() || rankings.none { it.store.id==store && it.complete }) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }

@@ -12,11 +12,16 @@ import org.junit.Assert.*
 
 class GroceryFlowTest {
  @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+ @org.junit.Before fun resetLocalProfile() {
+  InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("meal-studio-v1",android.content.Context.MODE_PRIVATE).edit().clear().commit()
+  compose.activityRule.scenario.recreate()
+ }
  @Test fun manualPackageShoppingAndPreviewNeedNoBackend() {
+  compose.onNodeWithText("Build manually").performClick()
   compose.onNodeWithText("Tomato basil pasta").performScrollTo().performClick()
   compose.onNodeWithText("2 servings").assertExists()
   compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
-  compose.onNodeWithText("Choose your shop").assertExists()
+  compose.onNodeWithText("Find your basket").assertExists()
   lateinit var vm:WalletViewModel
   compose.runOnIdle {
    vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]

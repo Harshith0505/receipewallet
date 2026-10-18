@@ -86,3 +86,10 @@ test('diffPlans reports pantry, basket, store, card and total changes from code'
  assert.deepEqual(diffPlans(null,after),[]);
  assert.deepEqual(diffPlans(after,after),[]);
 });
+test('mood remix omits chili without claiming ownership and prices requested servings',()=>{
+ const r=createToolRunner();r.run('find_recipes',{...constraints,servings:4,omitIds:['chili']});
+ const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
+ const p=options[0];assert.equal(p.servings,4);assert.ok(!p.ingredientIds.includes('chili'));assert.ok(!p.ownedIngredientIds.includes('chili'));assert.deepEqual(p.omittedIngredientIds,['chili']);
+ assert.ok(p.groceries>0);
+ assert.throws(()=>r.run('find_recipes',{...constraints,servings:99}),/Invalid servings/);
+});
