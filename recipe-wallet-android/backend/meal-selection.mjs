@@ -16,7 +16,8 @@ export function mealScore(recipe, constraints, {goal='balanced', recentRecipeIds
   let score = cues[recipe.id]?.test(preference) ? 10 : 0;
   if (preference.includes(recipe.name.toLowerCase())) score += 100;
   if (goal === 'profile' && recipe.id === preferredRecipeId) score += 30;
-  if (goal === 'pantry') score = coverage * 100 + used;
+  if (goal === 'profile' && recentRecipeIds.at(-1) === recipe.id) score -= 45;
+  if (goal === 'pantry') score = coverage * 100 + used - (recentRecipeIds.at(-1)===recipe.id ? 0.5 : 0);
   if (goal === 'surprise') score = -recentRecipeIds.filter(id => id === recipe.id).length * 100;
   if (goal === 'cheapest') score = 0;
   return {score, pantryUsed:used, pantryCoverage:coverage};

@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<RetailerNeed>, cards:List<RewardCard>, budget:Long,
- onBack:()->Unit, onIllustrativeComparison:()->Unit, vm:RetailerViewModel) {
+ onBack:()->Unit, onIllustrativeComparison:()->Unit, vm:RetailerViewModel,meal:JournalMeal?=null,onSampleCheckout:((String,Long)->Unit)?=null) {
  LaunchedEffect(contextId,needs){vm.startShopping(contextId,needs)}
  val back:()->Unit={if(vm.reviewing)vm.reviewing=false else onBack()}
  BackHandler { if(!vm.cartUncertain)back() }
@@ -26,6 +26,7 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
    Signal("Your pantry covers this meal")
    SmallNote("No grocery purchase is needed. Check that you have enough of each ingredient.")
   }else{
+   if(meal!=null)InfoDisclosure("Your recipe","Ingredients and cooking steps stay with your basket"){RecipeFoods(meal);RecipeMethod(meal.steps)}
    SmallNote("Current Kroger-family products · Suggestions need your review · No order placed")
    if(vm.busy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Finding products for your ingredients… ${vm.candidatesByNeed.size+vm.matchErrors.size} of ${needs.size}")}
    vm.error?.let{Signal(it,Danger)}
@@ -58,11 +59,11 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
       SmallNote(need.amount)
       if(selection!=null){
        Text(selection.product.name,color=ShopInk)
-       SmallNote("${selection.product.size} · ${money(selection.product.price!!)} per package")
+       SmallNote("${selection.product.size} · ${money(selection.product.price!!)} each")
        if(suggestedPackageCount(need,selection.product)==null) SmallNote("Package count needs your review; these units cannot be safely converted.")
        Row(verticalAlignment=Alignment.CenterVertically){
         TextButton(enabled=!vm.editingBlocked&&selection.quantity>1,onClick={vm.setQuantity(need.id,selection.quantity-1)},modifier=Modifier.semantics{contentDescription="Fewer packs for ${need.name}"}){Text("−")}
-        Text("${selection.quantity} packages",color=ShopInk)
+        Text("${selection.quantity} × ${selection.product.size?:"item"}",color=ShopInk)
         TextButton(enabled=!vm.editingBlocked&&selection.quantity<20,onClick={vm.setQuantity(need.id,selection.quantity+1)},modifier=Modifier.semantics{contentDescription="More packs for ${need.name}"}){Text("+")}
         Text(money(selection.product.price*selection.quantity),color=ShopInk)
        }
@@ -70,7 +71,7 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
       vm.matchErrors[need.id]?.let{SmallNote(it)}
       TextButton(enabled=!vm.editingBlocked&&vm.selectedStore!=null,onClick={expandedNeed=if(expandedNeed==need.id)null else need.id;search=need.name}){Text(if(expandedNeed==need.id)"Hide alternatives"else if(selection==null)"Choose product"else "Change product")}
       if(expandedNeed==need.id){
-       if(matches.isEmpty())SmallNote("No eligible priced packages found. Try a more specific search.")
+       if(matches.isEmpty())SmallNote("No eligible priced items found. Try a more specific search.")
        matches.forEach{product->
         Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxWidth()){
          RadioButton(modifier=Modifier.semantics{contentDescription="Select ${product.name} for ${need.name}"},selected=selection?.product?.key==product.key,enabled=!vm.editingBlocked,onClick={vm.selectForNeed(need.id,product)})
@@ -84,10 +85,11 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
     }
     if(vm.selectedStore!=null){
      Row(verticalAlignment=Alignment.CenterVertically){
-      Checkbox(modifier=Modifier.semantics{contentDescription="Review package quantities"},checked=vm.packagesReviewed,onCheckedChange=vm::confirmPackages,enabled=!vm.editingBlocked&&vm.canReview)
-      Text("I checked the products and have enough packages",modifier=Modifier.weight(1f),color=ShopInk)
+      Checkbox(modifier=Modifier.semantics{contentDescription="Review item sizes and quantities"},checked=vm.packagesReviewed,onCheckedChange=vm::confirmPackages,enabled=!vm.editingBlocked&&vm.canReview)
+      Text("I reviewed the products, sizes, and quantities",modifier=Modifier.weight(1f),color=ShopInk)
      }
-     if(!vm.canReview&&!vm.busy)SmallNote("Match each ingredient before continuing. Up to 12 different products and 20 combined packages of each product can be reviewed.")
+     SmallNote("One item means one bottle, bag, box, or bunch of the displayed size—not one serving. Check that the quantities cover your recipe.")
+     if(!vm.canReview&&!vm.busy)SmallNote("Match each ingredient before continuing. Up to 12 different products and 20 of each product can be reviewed.")
      ShopButton("Review live basket →",enabled=!vm.editingBlocked&&vm.canReview&&vm.packagesReviewed,onClick=vm::refreshBasket)
      SmallNote("Prices are checked again before review. Taxes and fulfillment fees are added by the retailer; rewards do not reduce today's charge.")
     }
@@ -104,6 +106,11 @@ internal fun LiveShoppingScreen(contextId:String, title:String, needs:List<Retai
       AmountRow("Retailer item subtotal",money(basket.subtotal),prominent=true)
       SmallNote("Refreshed ${basket.fetchedAt} · Taxes and fulfillment fees not included")
       if(budget>=0)Signal(if(basket.subtotal>budget)"Items alone are ${money(basket.subtotal-budget)} over your budget"else "${money(budget-basket.subtotal)} remains for taxes and fees",if(basket.subtotal>budget)Danger else Good)
+     }
+     if(onSampleCheckout!=null)QuietCard{
+      Text("Ready to keep cooking?",fontWeight=FontWeight.Bold,color=ShopInk)
+      SmallNote("Try sample checkout, then find this meal and its cooking steps in My recipes. No payment or grocery order is placed.")
+      ShopButton("Continue to sample checkout",enabled=!vm.editingBlocked,onClick={onSampleCheckout(vm.selectedStore?.name.orEmpty(),basket.subtotal)})
      }
      if(cards.isNotEmpty()){
       val best=cards.maxBy{it.rewards(basket.subtotal)}

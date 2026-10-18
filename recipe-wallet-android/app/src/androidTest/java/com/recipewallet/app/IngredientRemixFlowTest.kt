@@ -20,7 +20,7 @@ class IngredientRemixFlowTest {
    vm.newPlan();vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Your meal is ready.";vm.planningGoal="surprise"
   }
   compose.onNodeWithText("01  To buy").performScrollTo().performClick()
-  compose.onNodeWithText("+ Chili flakes").assertExists()
+  compose.onNodeWithContentDescription("To buy: Chili flakes").assertExists()
   compose.onNodeWithText("03  Ingredient remix").performScrollTo().performClick()
   compose.onNodeWithText("Mild · remove chili").performScrollTo().assertIsDisplayed().performClick()
   compose.waitForIdle()
@@ -30,15 +30,15 @@ class IngredientRemixFlowTest {
    assertEquals("balanced",vm.planningGoal)
    assertFalse("Expected chili removed: ${vm.agentPlan}","chili" in vm.planIds("ingredientIds"));assertTrue("chili" in vm.planIds("omittedIngredientIds"));assertFalse("Omitted chili must not be owned: ${vm.agentPlan}","chili" in vm.planIds("ownedIngredientIds"))
   }
-  compose.onNodeWithText("+ Chili flakes").assertDoesNotExist()
-  compose.onNodeWithText("+ Wheat noodles").assertExists() // Open section survives the update.
+  compose.onNodeWithContentDescription("To buy: Chili flakes").assertDoesNotExist()
+  compose.onNodeWithContentDescription("To buy: Wheat noodles").assertExists() // Open section survives the update.
   compose.onNodeWithText("Spicy · include chili").performScrollTo().performClick()
   compose.waitUntil(20000){!vm.aiBusy}
   compose.runOnIdle{assertNull(vm.aiError);assertTrue("chili" in vm.planIds("ingredientIds"));assertEquals("noodles",vm.plannedRecipe!!.id)}
-  compose.onNodeWithText("+ Chili flakes").assertExists()
+  compose.onNodeWithContentDescription("To buy: Chili flakes").assertExists()
   compose.onNodeWithContentDescription("Include Soy sauce in recipe").performScrollTo().performClick()
   compose.waitUntil(20000){!vm.aiBusy}
-  compose.onNodeWithText("+ Soy sauce").assertDoesNotExist()
+  compose.onNodeWithContentDescription("To buy: Soy sauce").assertDoesNotExist()
   compose.runOnIdle{assertNull(vm.aiError);vm.approvePlan();assertFalse("soy" in vm.selected);assertTrue("soy" in vm.omittedIngredientIds);vm.back()}
   compose.onNodeWithText("Left out of recipe: Soy sauce").assertExists()
  }
@@ -50,7 +50,7 @@ class IngredientRemixFlowTest {
   compose.runOnIdle{vm.remix("omit","not-a-recipe-ingredient")}
   compose.waitUntil(20000){!vm.aiBusy}
   compose.runOnIdle{assertNotNull(vm.aiError);assertEquals("noodles",vm.plannedRecipe!!.id);assertTrue("chili" in vm.planIds("ingredientIds"))}
-  compose.onNodeWithText("+ Chili flakes").assertExists()
+  compose.onNodeWithContentDescription("To buy: Chili flakes").assertExists()
  }
  @Test fun pantryRemixCanEmptyTheShoppingListWithoutLosingTheMeal(){
   val store=PantryStore(InstrumentationRegistry.getInstrumentation().targetContext)

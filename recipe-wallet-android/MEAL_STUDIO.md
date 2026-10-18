@@ -52,3 +52,9 @@ The combined branch retains Supabase account/library callbacks, reviewed Kroger 
 Meal shortcuts send distinct goals to the agent: profile fit, confirmed pantry coverage, and variety that avoids recent suggestions. Typed requests can express the same goals. Recipe selection respects cuisine and ingredient exclusions before comparison; cost is not the default objective for every request. Generated servings survive ingredient review. Initial AI recommendations show meal facts and pantry use rather than illustrative shopping totals.
 
 Continuing from ingredients or an AI meal opens automatic Kroger product matching. The ZIP and selected nearby store are visible and editable. Suggestions are reviewable, alternatives are selectable inline, and ambiguous package quantities require user review. Package approval is cleared on edits, and the exact selected basket is repriced server-side before cart actions. Live reward estimates use the refreshed item subtotal with explicit illustrative-profile assumptions. Tax and fees remain retailer responsibilities. The separate price-lookup buttons have been removed; illustrative comparisons and Stripe test checkout remain secondary.
+
+### Recipe continuity and sample checkout
+
+Choose a discovery shortcut and press Build/Update my meal. Surprise uses recent suggestions and keeps dietary/cuisine filters; it can draft a new recipe when no different catalog option fits. Try a prompt provides quick starting requests. Your recipe is available with ingredients and cooking steps while shopping.
+
+After reviewing current products and quantities, Continue to sample checkout → Simulate payment & view recipe opens My recipes. This is a simulation with no charge, order, or cart write. The latest sample meal is featured and prior viewed recipes are saved locally. The My recipes navigation item reopens the collection. Real Kroger cart transfer and optional Stripe testing remain separate flows.

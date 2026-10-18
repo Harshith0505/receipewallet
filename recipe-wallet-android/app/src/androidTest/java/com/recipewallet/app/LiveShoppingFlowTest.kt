@@ -41,7 +41,7 @@ class LiveShoppingFlowTest {
   compose.onAllNodesWithText("Change product").onFirst().performScrollTo().performClick()
   compose.onNodeWithContentDescription("Select Pasta large pack for Pasta").performScrollTo().performClick()
   compose.onNodeWithText("Review live basket →").performScrollTo().assertIsNotEnabled()
-  compose.onNodeWithContentDescription("Review package quantities").performScrollTo().performClick()
+  compose.onNodeWithContentDescription("Review item sizes and quantities").performScrollTo().performClick()
   compose.onNodeWithText("Review live basket →").performScrollTo().performClick()
   compose.waitUntil(10000){vm.reviewing&&!vm.busy}
   compose.onNodeWithText("Review your grocery basket").assertExists()
@@ -64,7 +64,7 @@ class LiveShoppingFlowTest {
    assertNull(vm.error);assertTrue(vm.candidatesByNeed["pasta"].orEmpty().isNotEmpty())
    if(vm.selections["pasta"]==null)vm.selectForNeed("pasta",vm.candidatesByNeed.getValue("pasta").first())
   }
-  compose.onNodeWithContentDescription("Review package quantities").performScrollTo().performClick()
+  compose.onNodeWithContentDescription("Review item sizes and quantities").performScrollTo().performClick()
   compose.onNodeWithText("Review live basket →").performScrollTo().performClick()
   compose.waitUntil(95000){!vm.busy&&vm.reviewing}
   compose.runOnIdle{assertNull(vm.error);assertTrue(vm.basket!!.subtotal>0);assertEquals(vm.selectedStore!!.id,vm.basket!!.storeId);assertNotNull(vm.basket!!.quoteToken)}

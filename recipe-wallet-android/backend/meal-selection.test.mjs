@@ -58,3 +58,16 @@ test('meal explanations use actual recipe facts instead of model claims about to
  assert.ok(plan.explanation.includes('Chickpeas'));assert.ok(!plan.explanation.includes('Already have: Rice'));assert.ok(!plan.explanation.includes('$50'));
  assert.ok(plan.explanation.includes('check the shopping total'));
 });
+
+
+test('surprise asks for a new draft when the only cuisine match was just seen',()=>{
+ const runner=createToolRunner({goal:'surprise',recentRecipeIds:['mexican-rice'],cuisine:'Mexican'});
+ const found=runner.run('find_recipes',constraints);
+ assert.equal(found.recipes.length,0);
+ assert.match(found.selectionRule,/draft_recipe/);
+});
+test('profile offers another fitting meal after its first suggestion',()=>{
+ const first=compare({goal:'profile',preferredRecipeId:'chana'}).options[0].recipeId;
+ const next=compare({goal:'profile',preferredRecipeId:'chana',recentRecipeIds:[first]}).options[0].recipeId;
+ assert.notEqual(next,first);
+});

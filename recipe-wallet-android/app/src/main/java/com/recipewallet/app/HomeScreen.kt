@@ -62,7 +62,7 @@ import kotlinx.coroutines.withContext
      TextButton(enabled=!vm.aiBusy,onClick={dismiss();accountReturnPage="home";libraryPage="account"}){Text(if(library.state.email==null)"Login"else "Account")}
 
     }
-    JournalNavigation(listOf("Build with AI","Build manually","My pantry","My week"),mode,!vm.aiBusy){dismiss();mode=it}
+    JournalNavigation(listOf("Build with AI","Build manually","My pantry","My week","My recipes"),mode,!vm.aiBusy){dismiss();if(it==4)vm.openRecipeHistory()else mode=it}
     if(mode in 0..1)JourneySteps(0)
     Column(Modifier.fillMaxWidth().background(Color(0xFFFFE6CE),RoundedCornerShape(10.dp)).border(1.dp,Warn.copy(alpha=.5f),RoundedCornerShape(10.dp)).padding(horizontal=12.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){
      Text("! Dietary safety",color=ShopInk,fontWeight=FontWeight.Bold,fontSize=14.sp)
@@ -100,11 +100,16 @@ import kotlinx.coroutines.withContext
   StudioTitle(if(vm.agentReply.isBlank())"What sounds good?"else "Adjust your meal")
   if(vm.agentReply.isNotBlank())Text("Keep your conversation going. Your earlier budget and preferences stay in this session.",color=ShopMuted,fontSize=13.sp)
   OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=1200){vm.planningGoal="balanced";vm.preference=it}},enabled=!vm.aiBusy,label={Text(if(vm.agentReply.isBlank())"Tell us what you're craving"else "What would you like to change?")},placeholder={Text("Something cozy, under $30. I have garlic.")},minLines=2,maxLines=5,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
-  ChipRail(if(vm.agentReply.isBlank())listOf("Use my taste profile ✨","Use what I have 🥬","Surprise me")else listOf("Less heat","More pantry, less shopping","Lower the cost","Try another recipe"),enabled=!vm.aiBusy){i->
-   if(vm.agentReply.isBlank()) vm.chooseMealShortcut(i) else {
+  ChipRail(listOf("Use my taste profile ✨","Use what I have 🥬","Surprise me"),enabled=!vm.aiBusy){i->vm.chooseMealShortcut(i)}
+  SmallNote("Choose an idea, then build. Surprise me avoids recent suggestions; your saved diet and cuisine stay in place.")
+  if(vm.agentReply.isNotBlank())ChipRail(listOf("Less heat","More pantry, less shopping","Lower the cost","Try another recipe"),enabled=!vm.aiBusy){i->
+   run {
    vm.planningGoal=when(i){1->"pantry";2->"cheapest";3->"surprise";else->"balanced"}
    vm.preference=when(i){0->"Make this meal mild by removing chili if present. Keep my budget and dietary constraints.";1->"Use my confirmed pantry: "+vm.studio.ingredients.filter{it.id in vm.studio.owned}.joinToString{it.name}+". Keep my other constraints.";2->"Find a cheaper complete basket while keeping my dietary constraints.";else->"Choose another supported recipe with ${mealMoods[vm.studio.mood].prompt}, keeping my budget and dietary constraints."}
    }
+  }
+  InfoDisclosure("Try a prompt","A few ideas to get you started"){
+   listOf("A quick vegetarian dinner for tonight","Use what I have for a fresh lunch","Surprise me with a meal I have not tried").forEach{idea->ShopButton(idea,outlined=true,enabled=!vm.aiBusy,onClick={vm.planningGoal="balanced";vm.preference=idea})}
   }
   ShopButton(if(vm.aiBusy)"Creating your meal…"else if(vm.agentReply.isBlank())"Build my meal"else "Update my meal",enabled=!vm.aiBusy&&vm.preference.isNotBlank(),onClick={dismiss();vm.suggest()})
   if(vm.aiBusy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Planning your meal and shopping list…")}

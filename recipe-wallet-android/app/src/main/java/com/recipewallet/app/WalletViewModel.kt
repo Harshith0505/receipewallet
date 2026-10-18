@@ -15,8 +15,14 @@ import java.util.UUID
 
 class WalletViewModel(app: Application): AndroidViewModel(app) {
  val catalog = Catalog(app)
+ internal val journal=MealJournal(app)
+ internal var sampleStore by mutableStateOf("");private set
+ internal var sampleSubtotal by mutableLongStateOf(0);private set
  internal val wrap = NutritionWrapState(app,catalog,viewModelScope) { path,payload -> request(path,payload) }
  internal val studio = MealStudioState(app,catalog,viewModelScope) { path,payload -> request(path,payload) }
+ init {
+  if(journal.meals.isEmpty())studio.history.distinct().forEach{id->catalog.recipes.firstOrNull{it.id==id}?.let{r->runCatching{journal.remember(recipeSnapshot(r,studio.people,studio.owned))}}}
+ }
  var personalRecipe by mutableStateOf<PersonalRecipe?>(null)
   private set
  var productMatches by mutableStateOf<Map<String, String>>(emptyMap())
@@ -32,6 +38,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   packCounts=value.ingredients.indices.associate { "line-$it" to 1 }
   selected=value.ingredients.indices.map { "line-$it" }.toSet()
   storeId=""; cardId=""; error=null; attempt=UUID.randomUUID().toString(); step=1
+  rememberCurrentMeal()
  }
  fun matchProduct(lineId: String, productId: String) {
   if(!canEditCheckout || lineId !in recipe.ingredients.map { it.id }) return
@@ -56,9 +63,10 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private var suggestedRecipeIds = emptyList<String>()
  fun chooseMealShortcut(index:Int) {
   planningGoal=when(index){1->"pantry";2->"surprise";else->"profile"}
+  val theme=listOf("bright and citrusy","cozy and comforting","crisp and refreshing","warmly spiced")[(journal.meals.size+suggestedRecipeIds.size)%4]
   preference=studio.prompt()+when(index){
    1->" Prioritize the meal with the highest coverage of my confirmed pantry ingredients, rather than the cheapest meal. If none are saved, say so."
-   2->" Choose a different meal from my recent suggestions and recent choices. Variety is the goal, not the cheapest meal."
+   2->" Surprise me with a different $theme meal from my recent suggestions and recent choices. Keep my saved cuisine and dietary constraints. If that collection is exhausted, draft a new recipe. Variety is the goal, not the cheapest meal."
    else->" Prioritize my taste profile and chosen mood, not the cheapest meal."
   }
  }
@@ -93,7 +101,8 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   val defaults="\nSaved defaults, only when this request or the existing conversation has no value: ${studio.people} servings, budget $${studio.budget.toInt()}, at most ${studio.minutes.toInt()} minutes."+(if(studio.vegetarian)" Vegetarian only." else "")
   val message=preference+defaults+profileContext+pantryContext
   val goal=planningGoal
-  val recent=(studio.history+suggestedRecipeIds).distinct().takeLast(20)
+  val viewed=journal.meals.asReversed().map{it.id}.filter{id->catalog.recipes.any{it.id==id}}
+  val recent=(studio.history+viewed+suggestedRecipeIds).asReversed().distinct().asReversed().takeLast(20)
   val currentPlan=agentPlan
   aiBusy=true; aiError=null
   viewModelScope.launch {
@@ -131,6 +140,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
     agentChanges=if(changes!=null) (0 until changes.length()).map { changes.getString(it) } else emptyList()
     val trace=result.getJSONArray("trace")
     agentTrace=(0 until trace.length()).map { trace.getJSONObject(it).getString("summary") }
+    rememberSuggestedMeal()
     preference=""
    } catch(e: Exception) { aiError=e.message ?: "AI is unavailable. Choose a recipe below." }
    aiBusy=false
@@ -156,6 +166,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   studentEligible=p.optBoolean("studentEligible",false)
   personalRecipe=null; recipeId=p.getString("recipeId"); omittedIngredientIds=planIds("omittedIngredientIds"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; illustrativeComparison=false; step=2
+  rememberCurrentMeal()
  }
  fun approveGeneratedRecipe() {
   val draft=generatedRecipe ?: return
@@ -168,7 +179,34 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   selected=included
   servings=draft.getInt("servings")
   personalBudget=budget
+  val methods=draft.getJSONArray("steps")
+  journal.remember(JournalMeal("saved:${value.id}",value.name,draft.optString("explanation","AI recipe draft. Review ingredients before cooking."),servings,value.prepMinutes?:0,List(rows.length()){i->rows.getJSONObject(i).let{MealFood(it.getString("name"),it.getString("amount"),it.getBoolean("owned"))}},List(methods.length()){methods.getString(it)},System.currentTimeMillis()))
  }
+
+ internal fun currentMealSnapshot():JournalMeal {
+  val base=recipeSnapshot(recipe,servings,recipe.ingredients.map{it.id}.toSet()-selected,omittedIngredientIds,personal=isPersonal)
+  val old=journal.meals.firstOrNull{it.id==recipe.id}
+  return if(isPersonal)base.copy(foods=old?.foods?.mapIndexed{i,f->f.copy(owned="line-$i" !in selected)}?:personalRecipe!!.ingredients.mapIndexed{i,line->MealFood(line,"","line-$i" !in selected)},steps=old?.steps.orEmpty(),description=old?.description?:"Your personal recipe")else base
+ }
+ private fun rememberCurrentMeal(){try{journal.remember(currentMealSnapshot())}catch(e:Exception){error=e.message}}
+ private fun rememberSuggestedMeal(){
+  try{
+   plannedRecipe?.let{journal.remember(recipeSnapshot(it,agentPlan!!.optInt("servings",2),planIds("ownedIngredientIds"),planIds("omittedIngredientIds")))}
+   generatedRecipe?.let{d->val f=d.getJSONArray("ingredients");val methods=d.getJSONArray("steps");journal.remember(JournalMeal("saved:${d.getString("id")}",d.getString("name"),d.optString("explanation","AI recipe draft. Review ingredients before cooking."),d.getInt("servings"),d.getInt("prepMinutes"),List(f.length()){i->f.getJSONObject(i).let{MealFood(it.getString("name"),it.getString("amount"),it.getBoolean("owned"))}},List(methods.length()){methods.getString(it)},System.currentTimeMillis()))}
+  }catch(e:Exception){error=e.message}
+ }
+ internal fun openRecipeHistory(){if(canEditCheckout)step=6}
+ internal fun startSampleCheckout(store:String,subtotal:Long){
+  if(!canEditCheckout||step !in listOf(2,3))return
+  error=null;rememberCurrentMeal();if(error!=null)return
+  sampleStore=store;sampleSubtotal=subtotal;step=5
+ }
+ internal fun completeSampleCheckout(){
+  if(step!=5||!canEditCheckout)return
+  error=null
+  try{rememberCurrentMeal();if(error!=null)return;journal.completeSample(recipe.id,sampleStore,sampleSubtotal);step=6}catch(e:Exception){error=e.message}
+ }
+
  fun newPlan() { omittedIngredientIds=emptySet(); illustrativeComparison=false; planningGoal="balanced"; ownedHints=emptyList(); servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; generatedRecipe=null; personalBudget=-1L; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList(); aiError=null; preference="" }
 
  // ---- Purchase memory: anonymous per-install id; the backend remembers verified purchases under it ----
@@ -303,7 +341,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  fun changeOrganicOnly(value:Boolean) { if(!canEditCheckout) return; organicOnly=value; settingsChanged() }
  val canEditCheckout get() = !busy && !awaitingVerification
  private fun clearPayment() { pending=null; pendingPayload=null; intentId=null; error=null; attempt=UUID.randomUUID().toString() }
- fun choose(id: String) { if(!canEditCheckout) return; if(!studio.fits(catalog.recipes.first{it.id==id})){error="This recipe contains an ingredient in your exclusions.";return}; clearPayment(); newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet()-studio.owned; servings=studio.people; studio.record(id); storeId=""; cardId=""; step=1 }
+ fun choose(id: String) { if(!canEditCheckout) return; if(!studio.fits(catalog.recipes.first{it.id==id})){error="This recipe contains an ingredient in your exclusions.";return}; clearPayment(); newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet()-studio.owned; servings=studio.people; studio.record(id); storeId=""; cardId=""; step=1; rememberCurrentMeal() }
  fun toggle(id: String) { if(!canEditCheckout) return; clearPayment(); selected=if(id in selected) selected-id else selected+id }
  fun compare() { if(!canEditCheckout || selected.isEmpty() || !studio.fits(recipe)) return; val best=rankings.firstOrNull { it.complete }; storeId=best?.store?.id.orEmpty(); cardId=best?.card?.id.orEmpty(); step=2 }
  fun checkout(store: String) { if(!canEditCheckout || selected.isEmpty() || rankings.none { it.store.id==store && it.complete }) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }

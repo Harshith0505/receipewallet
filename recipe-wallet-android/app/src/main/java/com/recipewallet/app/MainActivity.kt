@@ -84,9 +84,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
     val retailer:RetailerViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
+    if(vm.step==5){SampleCheckoutScreen(vm);return}
+    if(vm.step==6){RecipeHistoryScreen(vm);return}
     if(vm.step==2&&!vm.illustrativeComparison){
         val needs=vm.recipe.ingredients.filter{it.id in vm.selected}.map{retailerNeed(it,vm.servings,vm.recipe.baseServings,vm.isPersonal).let{need->if(vm.organicOnly)need.copy(name="Organic "+need.name)else need}}
-        LiveShoppingScreen(vm.recipeId,vm.recipe.name,needs,vm.catalog.cards,vm.planBudget,onBack={vm.back()},onIllustrativeComparison={vm.illustrativeComparison=true},vm=retailer)
+        LiveShoppingScreen(vm.recipeId,vm.recipe.name,needs,vm.catalog.cards,vm.planBudget,onBack={vm.back()},onIllustrativeComparison={vm.illustrativeComparison=true},vm=retailer,meal=vm.currentMealSnapshot(),onSampleCheckout={store,subtotal->vm.startSampleCheckout(store,subtotal)})
         return
     }
     val back: () -> Unit = { if (vm.step == 4) vm.restart() else vm.back() }
@@ -107,6 +109,7 @@ private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
 @Composable
 private fun IngredientPage(vm: WalletViewModel) {
     PageHeading("Ingredients", vm.recipe.name)
+    RecipeHero(vm.currentMealSnapshot())
     if(!vm.studio.fits(vm.recipe))Signal("Excluded ingredients: "+vm.studio.conflicts(vm.recipe).joinToString()+". Choose another recipe or revise your exclusions.",Danger)
     if(vm.studio.faith!="None")Signal("${vm.studio.faith}: verify product certification and preparation.",Warn)
     SmallNote("Review ingredient quantities and uncheck what you already have. Current retailer products are matched in the next step.")
@@ -136,6 +139,7 @@ private fun IngredientPage(vm: WalletViewModel) {
         AmountRow("Selected package base estimate",money(vm.subtotal),prominent=true)
         SmallNote("Review package counts: recipe quantities are not automatically converted. These illustrative product prices and attributes are unverified; use retailer lookup for current products.")
     }
+    InfoDisclosure("Cooking method","Keep the full recipe with your shopping list"){RecipeMethod(vm.currentMealSnapshot().steps)}
     if(vm.selected.isEmpty()) SmallNote("Your pantry covers this recipe. No grocery purchase is needed.")
     if(vm.illustrativeComparison&&vm.canCompare&&vm.rankings.none { it.complete }) SmallNote("No store can supply this selection. Review the organic or fulfillment preference.")
     ShopButton("Compare complete baskets →",enabled=vm.canEditCheckout&&vm.selected.isNotEmpty()&&vm.studio.fits(vm.recipe),onClick={vm.compare()})
@@ -260,7 +264,10 @@ private fun CheckoutPage(vm: WalletViewModel,pay:()->Unit) {
     if(!vm.checkoutWithinBudget) SmallNote("This revised basket exceeds your budget. Review the basket or revise your meal request before paying.")
     if(vm.awaitingVerification) SmallNote("Verify the existing test payment before editing this basket or trying another payment.")
     if(vm.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+    ShopButton("Continue to sample checkout",enabled=vm.canEditCheckout&&vm.canCompare&&vm.current.complete,onClick={vm.startSampleCheckout(vm.current.store.name,vm.current.groceries)})
+    InfoDisclosure("Optional Stripe test","A separate payment integration test"){
     ShopButton(if(vm.busy) "Processing…" else if(vm.awaitingVerification) "Verification required" else "Approve & pay ${money(vm.current.charge)}",enabled=vm.canEditCheckout&&vm.canCompare&&vm.current.complete&&vm.checkoutWithinBudget,onClick=pay)
+    }
     if(vm.canVerify) ShopButton("Verify pending test payment",enabled=!vm.busy,outlined=true,onClick={vm.verify()})
     ShopButton("Preview confirmation without payment",enabled=vm.canEditCheckout&&vm.canCompare&&vm.current.complete,outlined=true,onClick={vm.walkthrough()})
     SmallNote("Test checkout only: no real charge, grocery order, delivery or rewards. Use 4242 4242 4242 4242, a future expiry, a three-digit test CVC and a test ZIP.")
@@ -281,6 +288,7 @@ private fun ReceiptPage(vm:WalletViewModel) {
         vm.receiptPaymentId?.let { SmallNote("Stripe test reference: $it") }
     }
     SmallNote("No real grocery order was placed. No delivery is scheduled and no actual rewards were earned.")
+    ShopButton("Open my recipes",onClick={vm.openRecipeHistory()})
     ShopButton("Plan another meal",onClick={vm.restart()})
 }
 
@@ -289,17 +297,12 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
     StudioCard(tint=Color.White) {
         Eyebrow("Your meal · ready for your touch")
         StudioTitle(vm.plannedRecipe?.name ?: vm.generatedRecipe?.getString("name") ?: "Let's fine-tune your request")
+        vm.plannedRecipe?.let{FoodSticker(it.id,Modifier.fillMaxWidth().height(170.dp))}
         vm.generatedRecipe?.let { draft ->
             SmallNote("${draft.getInt("servings")} servings · ${draft.getInt("prepMinutes")} min estimated")
             val budget = draft.getJSONObject("constraints").getLong("budgetCents")
             if (budget >= 0) SmallNote("Requested budget: ${money(budget)} · not yet priced")
-            val ingredients = draft.getJSONArray("ingredients")
-            for (index in 0 until ingredients.length()) {
-                val item = ingredients.getJSONObject(index)
-                Text("${item.getString("amount")} ${item.getString("name")}" + if (item.getBoolean("owned")) " · already owned" else "", color = ShopInk, fontSize = 13.sp)
-            }
-            val instructions = draft.getJSONArray("steps")
-            for (index in 0 until instructions.length()) SmallNote("${index + 1}. ${instructions.getString(index)}")
+            vm.journal.meals.firstOrNull{it.id=="saved:${draft.getString("id")}"}?.let{RecipeFoods(it);RecipeMethod(it.steps)}
             SmallNote("AI recipe draft. Review quantities and dietary requirements. Prices and availability are checked when you choose products; this draft has no quoted total.")
             ShopButton("Review ingredients →", enabled = !vm.aiBusy, onClick = { vm.approveGeneratedRecipe() })
         }
@@ -326,7 +329,10 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
             val toBuy=recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }
             ReviewSection("01  To buy", if(toBuy.isEmpty())"Nothing to buy · your pantry covers this meal"else "${toBuy.size} ingredients · "+toBuy.joinToString{it.name}, Peach) {
                 if(toBuy.isEmpty())SmallNote("Nothing to buy. Check that your pantry quantities cover this meal.")
-                recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.forEach { Text("+ "+it.name,color=ShopInk) }
+                recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.forEach { item->
+                    Row(Modifier.fillMaxWidth().semantics{contentDescription="To buy: ${item.name}"},horizontalArrangement=Arrangement.SpaceBetween){Text(item.name,color=ShopInk,fontWeight=FontWeight.Medium,modifier=Modifier.weight(1f));Text("${kotlin.math.ceil(item.quantity.toDouble()*(vm.agentPlan?.optInt("servings",2)?:2)/recipe.baseServings).toLong()} ${item.unit}",color=ShopInk)}
+                    HorizontalDivider(color=ShopLine)
+                }
             }
             ReviewSection("02  Already owned", "Confirmed pantry and items from this conversation", Mint) {
                 val owned=recipe.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }
@@ -354,6 +360,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
             }
 
         }
+        if(recipe!=null)InfoDisclosure("Cooking method","Numbered steps saved with this recipe"){RecipeMethod(cookingMethod(recipe.id))}
         var details by remember { mutableStateOf(false) }
         TextButton(onClick={details=!details}) { Text(if(details)"Hide comparison details"else "How this was chosen") }
         if(details)vm.agentTrace.forEach { SmallNote(it) }
