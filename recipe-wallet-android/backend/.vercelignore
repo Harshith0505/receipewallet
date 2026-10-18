@@ -1,0 +1,6 @@
+.env
+.env.*
+memory.db*
+node_modules
+*.test.mjs
+.vercel

@@ -65,3 +65,14 @@ test('pantry suggestions coexist with grocery quotes without Stripe keys',async(
  assert.equal(result.body.suggestions[0].recipeId,'bowl');
  assert.equal((await request({pantryIds:['invented']},{url:'/suggest'})).status,400);
 });
+
+test('plan accepts the audit prompt alias and rejects malformed or ambiguous messages',async()=>{
+ for(const body of [{prompt:'Noodles'}, {message:'Noodles'}, {message:'Noodles',prompt:'Noodles'}]) {
+  const result=await request(body,{url:'/plan'});
+  assert.equal(result.status,503);
+  assert.match(result.body.error,/GEMINI_API_KEY/);
+ }
+ for(const body of [null,{}, {prompt:''}, {prompt:42}, {prompt:'x'.repeat(601)}, {message:'Noodles',prompt:'Different'}]) {
+  assert.equal((await request(body,{url:'/plan'})).status,400);
+ }
+});

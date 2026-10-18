@@ -29,7 +29,14 @@ export async function handleRequest(req,res) {
    try {return send(200,planGroceries(input,catalog));} catch(e) {return send(400,{error:e.message});}
   }
   if(req.url==='/plan') {
-   try {return send(200,await sessionPlan(input));} catch(e) {return send(503,{error:e.message});}
+   // Hosted audit clients send `prompt`; Android sends `message`.
+   // Both enter the same planner and validation, without a separate audit policy.
+   const message=input?.message??input?.prompt;
+   if(typeof message!=='string'||!message.trim()||message.length>600||
+      (input.message!==undefined&&input.prompt!==undefined&&input.message!==input.prompt)) {
+    return send(400,{error:'Describe your shop in 1–600 characters using message or prompt.'});
+   }
+   try {return send(200,await sessionPlan({...input,message}));} catch(e) {return send(503,{error:e.message});}
   }
   if(req.url==='/suggest') {
    try {return send(200,await suggestFromPantry(input));} catch(e) {return send(e.message.startsWith('Invalid')?400:503,{error:e.message});}

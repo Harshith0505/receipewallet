@@ -3,6 +3,8 @@
 **/build/
 local.properties
 backend/.env
+backend/.env.*.local
+backend/.vercel/
 *.apk
 
 # Local cloud project configuration
