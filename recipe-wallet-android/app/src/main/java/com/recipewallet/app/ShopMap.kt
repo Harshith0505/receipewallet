@@ -24,7 +24,7 @@ private val storeCoordinates=mapOf("market" to (47.6615 to -122.2985),"fresh" to
  StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Explore your basket's neighborhood")
   StudioTitle("A good meal starts nearby.")
-  SmallNote("Use two fingers to pan or pinch; tap a price pin. Approximate Seattle demo pins; prices and distances are sample data, not your current location.")
+  SmallNote("Pinch to zoom; tap a price pin to compare estimated totals. Approximate Seattle store locations, not your current location.")
   AndroidView(modifier=Modifier.fillMaxWidth().height(330.dp).clipToBounds(),factory={context->WebView(context).apply{
    settings.javaScriptEnabled=true;settings.allowFileAccess=false;settings.allowContentAccess=false;settings.domStorageEnabled=false
    settings.userAgentString=settings.userAgentString+" RecipeWalletDemo/1.0"

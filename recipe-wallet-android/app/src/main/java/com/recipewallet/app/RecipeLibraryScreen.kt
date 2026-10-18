@@ -65,7 +65,7 @@ internal fun RecipeLibraryScreen(
                         }
                         ShopButton("Use this recipe", onClick = { onUse(recipe) })
                         ShopButton("Edit recipe", outlined = true, onClick = onEdit)
-                        Text("Match your ingredients to sample products, then compare shops and Visa rewards.",
+                        Text("Review ingredients and package sizes, then compare shopping options and estimated rewards.",
                             color = LibraryMuted, fontSize = 12.sp, lineHeight = 18.sp)
                     }
                     else -> {

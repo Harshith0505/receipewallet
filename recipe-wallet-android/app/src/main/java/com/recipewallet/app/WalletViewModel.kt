@@ -244,7 +244,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   private set
  var organicOnly by mutableStateOf(false)
   private set
- var studentEligible by mutableStateOf(true)
+ var studentEligible by mutableStateOf(false)
   private set
  fun changeStudentEligibility(value:Boolean) {
   if(!canEditCheckout || value==studentEligible) return
@@ -302,7 +302,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
     check(result.getLong("amount")==pending!!.charge) { "Price changed. Please review your basket." }
     intentId=result.getString("paymentIntentId")
     onReady(result.getString("publishableKey"),result.getString("clientSecret"))
-   } catch(e: Exception) { error=e.message ?: "Unable to connect to the demo payment server."; busy=false }
+   } catch(e: Exception) { error=e.message ?: "Checkout is unavailable. Please try again."; busy=false }
   }
  }
  fun verify() {

@@ -15,7 +15,7 @@ fun packageQuote(recipe:Recipe, selected:Set<String>, store:Store, card:RewardCa
   val chosen=candidates.firstOrNull()
   if(chosen==null) missing.add(i.name) else lines.add(GroceryLine(i.id,i.name,needed,i.unit,chosen.first,chosen.second))
  }
- if(fulfillment=="delivery"&&!store.deliveryEnabled) missing.add("Delivery unavailable in this demo")
+ if(fulfillment=="delivery"&&!store.deliveryEnabled) missing.add("Delivery unavailable for this estimate")
  val groceries=lines.sumOf { it.cost }
  val fees=if(fulfillment=="pickup") store.pickupFee else store.packageDeliveryFee+store.serviceFee
  val discount=studentDiscount(groceries,store,studentEligible)

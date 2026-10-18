@@ -61,9 +61,9 @@ test('real orchestration executes model-requested tools and preserves signed ste
  assert.ok(requests[1].input.some(s=>s.type==='function_result'&&s.call_id==='call_0'));
 });
 test('provider failures and tool-less text never become an approved plan',async()=>{
- await assert.rejects(()=>planShop('Dinner',{}, {apiKey:''}),/GEMINI_API_KEY/);
+ await assert.rejects(()=>planShop('Dinner',{}, {apiKey:''}),/Meal planning is unavailable/);
  await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:false,status:429,json:async()=>({})})}),/rate limit/);
- await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'model_output',content:[{type:'text',text:'Paid!'}]}]})})}),/did not check/);
+ await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'model_output',content:[{type:'text',text:'Paid!'}]}]})})}),/could not verify/);
 });
 test('follow-up context is passed to Gemini, with no hidden default budget',async()=>{
  let captured;

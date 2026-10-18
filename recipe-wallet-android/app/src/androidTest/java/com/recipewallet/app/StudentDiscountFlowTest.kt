@@ -18,9 +18,10 @@ class StudentDiscountFlowTest {
         compose.onNodeWithText("Build manually").performScrollTo().performClick()
         compose.onNodeWithText("Tomato basil pasta").performScrollTo().performClick()
         compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
-        compose.onNodeWithText("10% student offer · demo · applied").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("5% student offer · demo · applied").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("No student offer in this demo").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Apply illustrative student offers").performScrollTo().performClick()
+        compose.onNodeWithText("10% illustrative student offer · applied").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("5% illustrative student offer · applied").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("No illustrative student offer").performScrollTo().assertIsDisplayed()
         lateinit var vm:WalletViewModel
         compose.runOnIdle {
             vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]
@@ -30,7 +31,7 @@ class StudentDiscountFlowTest {
             assertEquals(q.groceries-q.studentDiscount+q.fees+q.tax,q.charge)
             vm.checkout("market")
         }
-        compose.onNodeWithText("Student discount · demo (10%)").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Illustrative student offer (10%)").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Total charged today · test").performScrollTo().assertIsDisplayed()
         compose.waitForIdle()
         val instrumentation=InstrumentationRegistry.getInstrumentation()
@@ -38,12 +39,12 @@ class StudentDiscountFlowTest {
         var discounted=0L
         var savings=0L
         compose.runOnIdle {discounted=vm.current.charge;savings=vm.current.studentDiscount}
-        compose.onNodeWithContentDescription("Apply demo student discounts").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Apply illustrative student offers").performScrollTo().performClick()
         compose.runOnIdle {assertFalse(vm.studentEligible);assertEquals(discounted+savings,vm.current.charge);assertEquals(0L,vm.current.studentDiscount)}
-        compose.onNodeWithContentDescription("Apply demo student discounts").performClick()
+        compose.onNodeWithContentDescription("Apply illustrative student offers").performClick()
         compose.runOnIdle {assertTrue(vm.studentEligible);assertEquals(discounted,vm.current.charge)}
         compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
-        compose.onNodeWithText("Student discount · demo (10%)").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Illustrative student offer (10%)").performScrollTo().assertIsDisplayed()
         compose.runOnIdle {assertEquals(discounted,vm.receipt!!.charge);assertEquals(savings,vm.receipt!!.studentDiscount);assertFalse(vm.paymentVerified)}
     }
 }

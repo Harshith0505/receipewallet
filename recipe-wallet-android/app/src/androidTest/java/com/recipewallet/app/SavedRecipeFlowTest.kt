@@ -35,6 +35,8 @@ class SavedRecipeFlowTest {
             lateinit var vm: WalletViewModel
             compose.runOnIdle {
                 vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+                assertFalse(vm.studentEligible)
+                vm.changeStudentEligibility(true)
                 assertTrue(vm.isPersonal)
                 assertEquals(648L, vm.subtotal)
                 assertEquals(2, vm.customBasketJson().getJSONArray("items").length())
@@ -71,8 +73,8 @@ class SavedRecipeFlowTest {
     }
     @Test fun aboutDisclosureExplainsTheDemoAndPrivacy() {
         compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
-        compose.onNodeWithText("About this demo & privacy").performScrollTo().performClick()
-        compose.onNodeWithText("Preferences and pantry stay on this device.",substring=true).assertExists()
+        compose.onNodeWithText("About prices & privacy").performScrollTo().performClick()
+        compose.onNodeWithText("Preferences and pantry are stored on this device.",substring=true).assertExists()
         screenshot("shopping-about.png")
         compose.onNodeWithText("Build with AI").performScrollTo()
         compose.onNodeWithText("Build with AI").assertExists()

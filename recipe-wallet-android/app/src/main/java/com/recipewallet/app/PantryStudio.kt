@@ -110,7 +110,7 @@ import kotlinx.coroutines.withContext
   if(state.weekBusy)LinearProgressIndicator(Modifier.fillMaxWidth())
   state.weekError?.let{Text(it,color=Danger,fontSize=13.sp)}
   InfoDisclosure("Planning options","Automatic plan: ${if(state.autoWeek)"on"else "off"} · Automatic cart: ${if(state.autoCart)"on"else "off"}"){
-  TextButton(enabled=!state.weekBusy,onClick={state.buildLocalWeek()}){Text("Build a local catalog plan instead")}
+  TextButton(enabled=!state.weekBusy,onClick={state.buildLocalWeek()}){Text("Plan without AI")}
   Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Switch(checked=state.autoWeek,onCheckedChange={state.updateAutoWeek(it)});Text("Auto-plan on my first visit each week",modifier=Modifier.weight(1f).padding(start=10.dp),color=ShopInk,fontSize=13.sp)}
   Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Switch(checked=state.autoCart,onCheckedChange={state.updateAutoCart(it)});Text("Automatically prepare my weekly grocery cart",modifier=Modifier.weight(1f).padding(start=10.dp),color=ShopInk,fontSize=13.sp)}
   SmallNote("Builds a saved cart draft when your weekly plan is generated or edited. Review quantities and pantry stock before shopping; no automatic payment.")
@@ -155,8 +155,8 @@ import kotlinx.coroutines.withContext
    }
    }
    val quote=vm.catalog.stores.map{s->packageQuote(recipe,recipe.ingredients.map{it.id}.toSet(),s,vm.catalog.cards.first(),vm.catalog.productOffers,state.people,"pickup",false)}.filter{it.complete}.minByOrNull{it.charge}
-   if(quote!=null){Signal("Combined package estimate · ${quote.store.name}");Text(money(quote.charge),fontSize=32.sp,color=ShopInk);SmallNote("Whole packages, pickup fees and demo tax. Before pantry deductions and future rewards. Shop each dinner above; combined weekly checkout is not available.")}
-   else SmallNote("No single demo store can supply the full week. Shop each meal separately.")
+   if(quote!=null){Signal("Combined package estimate · ${quote.store.name}");Text(money(quote.charge),fontSize=32.sp,color=ShopInk);SmallNote("Illustrative whole-package prices and pickup fees; tax not included. Before pantry deductions and future rewards. Shop each dinner above; combined weekly checkout is not available.")}
+   else SmallNote("No single estimated basket covers the full week. Shop each meal separately.")
   }
  }
 }

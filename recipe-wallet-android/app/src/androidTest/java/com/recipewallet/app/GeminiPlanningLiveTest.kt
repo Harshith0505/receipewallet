@@ -21,6 +21,7 @@ class GeminiPlanningLiveTest {
         compose.runOnIdle {
             compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            vm.changeStudentEligibility(true)
         }
         compose.onNode(hasSetTextAction()).performClick()
         compose.waitForIdle()

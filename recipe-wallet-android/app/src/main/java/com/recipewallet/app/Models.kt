@@ -48,7 +48,7 @@ fun customQuote(items:List<Pair<GroceryProduct,Int>>,store:Store,card:RewardCard
  val fees=if(fulfillment=="pickup") store.pickupFee else store.packageDeliveryFee+store.serviceFee
  val discount=studentDiscount(groceries,store,studentEligible)
  val tax=((groceries-discount)*store.taxBps+5000)/10000
- val missing=if(fulfillment=="delivery"&&!store.deliveryEnabled) listOf("Delivery unavailable in this demo") else emptyList()
+ val missing=if(fulfillment=="delivery"&&!store.deliveryEnabled) listOf("Delivery unavailable for this estimate") else emptyList()
  return Quote(store,card,groceries,card.rewards(groceries-discount),fees,tax,fulfillment=fulfillment,missing=missing,customItems=lines,studentDiscount=discount)
 }
 class Catalog(context: Context):CatalogData(JSONObject(context.assets.open("demo.json").bufferedReader().use { it.readText() })) {

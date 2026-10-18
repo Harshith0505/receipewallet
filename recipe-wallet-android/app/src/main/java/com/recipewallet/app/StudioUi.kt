@@ -143,7 +143,7 @@ internal val Danger=Color(0xFFA64451)
   }
   var breakdown by remember(quote){mutableStateOf(false)}
   TextButton(onClick={breakdown=!breakdown}){Text(if(breakdown)"Hide price breakdown −"else "View price breakdown +",color=Color.White)}
-  if(breakdown) listOf("Whole packages" to quote.groceries,"Student discount · demo" to -quote.studentDiscount,"Fees" to quote.fees,"Demo tax (0%)" to quote.tax).forEach{(label,value)->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,color=Color.White.copy(alpha=.8f),fontSize=13.sp);Text(money(value),color=Color.White,fontSize=13.sp)}}
+  if(breakdown) listOf("Whole packages" to quote.groceries,"Illustrative student offer" to -quote.studentDiscount,"Fees" to quote.fees,"Tax not included" to quote.tax).forEach{(label,value)->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,color=Color.White.copy(alpha=.8f),fontSize=13.sp);Text(money(value),color=Color.White,fontSize=13.sp)}}
   Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha=.1f),RoundedCornerShape(12.dp)).padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween){Text("Estimated future rewards",color=Color.White,fontSize=12.sp);Text("+ ${money(quote.rewards)}",color=Citrus,fontWeight=FontWeight.Bold)}
   Text("Rewards arrive later and do not lower today's charge.",color=Color.White.copy(alpha=.75f),fontSize=11.sp)
  }

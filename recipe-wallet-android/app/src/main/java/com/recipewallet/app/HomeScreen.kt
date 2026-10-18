@@ -87,8 +87,8 @@ import kotlinx.coroutines.withContext
      3->WeeklyStudio(vm)
 
     }
-    SmallNote("Demo prices & rewards · No real grocery order")
-    InfoDisclosure("About this demo & privacy"){SmallNote("Preferences and pantry stay on this device. AI requests send the details you submit; photos are sent only when you choose to scan.")}
+    SmallNote("Live retailer lookup available · Other prices & rewards are estimates")
+    InfoDisclosure("About prices & privacy"){SmallNote("Preferences and pantry are stored on this device. AI receives submitted meal details; photos are uploaded only when you choose to scan. Saved recipes sync to your account when signed in. Store comparisons and card profiles are illustrative; live retailer prices are labeled separately. Checkout uses Stripe test mode and places no grocery order.")}
    }
   }
  }
@@ -104,7 +104,7 @@ import kotlinx.coroutines.withContext
    vm.preference=if(vm.agentReply.isBlank())when(i){0->vm.studio.prompt();1->vm.studio.prompt()+" Prioritize ingredients I already own.";else->vm.studio.prompt()+" Suggest a different recipe from my recent choices."}else when(i){0->"Make this meal mild by removing chili if present. Keep my budget and dietary constraints.";1->"Use my confirmed pantry: "+vm.studio.ingredients.filter{it.id in vm.studio.owned}.joinToString{it.name}+". Keep my other constraints.";2->"Find a cheaper complete basket while keeping my dietary constraints.";else->"Choose another supported recipe with ${mealMoods[vm.studio.mood].prompt}, keeping my budget and dietary constraints."}
   }
   ShopButton(if(vm.aiBusy)"Creating your meal…"else if(vm.agentReply.isBlank())"Build my meal"else "Update my meal",enabled=!vm.aiBusy&&vm.preference.isNotBlank(),onClick={dismiss();vm.suggest()})
-  if(vm.aiBusy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Matching your request to recipes and whole-package prices…")}
+  if(vm.aiBusy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Planning your meal and shopping list…")}
   vm.aiError?.let{Signal("Couldn't build your meal",Danger);Text(it,color=ShopMuted,fontSize=13.sp);TextButton(onClick=onManual){Text("Choose a recipe instead")};TextButton(onClick={vm.newPlan()}){Text("Start a new shop")}}
   SmallNote("Gemini plans; you approve. Review dietary needs and ingredient swaps before shopping.")
  }

@@ -136,14 +136,14 @@ private fun IngredientPage(vm: WalletViewModel, onRetailerPrices: () -> Unit) {
     if(vm.isPersonal) {
         if(!vm.canCompare&&vm.selected.isNotEmpty()) SmallNote("Match every included ingredient and choose at most 20 packs per product.")
         AmountRow("Selected package base estimate",money(vm.subtotal),prominent=true)
-        SmallNote("Review pack counts yourself. Saved-recipe quantities are not automatically converted. Store adjustments and fees appear next; product stock and organic attributes are not verified for this separate demo catalog.")
+        SmallNote("Review package counts: recipe quantities are not automatically converted. These illustrative product prices and attributes are unverified; use retailer lookup for current products.")
     }
     if(vm.selected.isEmpty()) SmallNote("Your pantry covers this recipe. No grocery purchase is needed.")
     if(vm.canCompare&&vm.rankings.none { it.complete }) SmallNote("No store can supply this selection. Review the organic or fulfillment preference.")
     ShopButton("Look up retailer prices", outlined = true, enabled = vm.canEditCheckout, onClick = onRetailerPrices)
     ShopButton("Compare complete baskets →",enabled=vm.canEditCheckout&&vm.canCompare&&vm.rankings.any { it.complete },onClick={vm.compare()})
     vm.error?.let { SmallNote(it) }
-    SmallNote("Demo package prices · Configured tax 0% · No real grocery order")
+    SmallNote("Illustrative package estimates · Tax not included · No grocery order placed")
 }
 
 @Composable
@@ -178,7 +178,7 @@ private fun ProductChoice(vm: WalletViewModel, ingredient: Ingredient) {
 private fun ShopComparison(vm: WalletViewModel,onRetailerPrices:()->Unit) {
     PageHeading("Find your basket", "${vm.recipe.name} · compare the whole picture")
     ShopButton("Check live retailer prices",outlined=true,enabled=vm.canEditCheckout,onClick=onRetailerPrices)
-    SmallNote("Review real Kroger products through live lookup. The map and store estimates below use demo prices.")
+    SmallNote("Use live lookup for current Kroger products. Comparisons below use illustrative prices, availability and fees.")
     ShoppingControls(vm)
     StudentDiscountControl(vm)
     val quotes=vm.rankings
@@ -191,7 +191,7 @@ private fun ShopComparison(vm: WalletViewModel,onRetailerPrices:()->Unit) {
     StudioCard {
         Eyebrow("Your selected shop")
         StudioTitle(q.store.name)
-        SmallNote("${q.store.rating} rating · ${q.store.distanceMiles} sample mi · ${q.store.address}")
+        SmallNote("${q.store.address}")
         if(q.complete) {
             StudentSavingsRow(q)
             PriceTicket(q,best,if(vm.planBudget>=0)vm.planBudget else null)
@@ -221,7 +221,7 @@ private fun ShopComparison(vm: WalletViewModel,onRetailerPrices:()->Unit) {
         }
     }
     vm.error?.let { Text(it,color=Danger) }
-    SmallNote("Real locations for directions only. Prices, distances, stock, product attributes, fees and fulfillment are simulated.")
+    SmallNote("Locations are approximate. Estimated baskets do not confirm retailer stock, fulfillment or final prices.")
 }
 
 @Composable
@@ -236,7 +236,7 @@ private fun CheckoutPage(vm: WalletViewModel,pay:()->Unit) {
     StudentDiscountControl(vm)
     StudentOfferLabel(vm.current.store,vm.studentEligible)
     Column(Modifier.selectableGroup(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Text("Choose your Visa card",color=ShopInk,fontSize=18.sp,fontWeight=FontWeight.Medium)
+        Text("Compare Visa reward profiles",color=ShopInk,fontSize=18.sp,fontWeight=FontWeight.Medium)
         val best=vm.catalog.cards.maxBy { it.rewards(vm.current.discountedGroceries) }
         vm.catalog.cards.forEach { card ->
             val selected=card.id==vm.current.card.id
@@ -254,10 +254,10 @@ private fun CheckoutPage(vm: WalletViewModel,pay:()->Unit) {
     QuietCard {
         AmountRow("Whole-package groceries",money(vm.current.groceries))
         StudentSavingsRow(vm.current)
-        AmountRow("Fulfillment fees",money(vm.current.fees));AmountRow("Demo tax (0%)",money(vm.current.tax))
+        AmountRow("Fulfillment fees",money(vm.current.fees));AmountRow("Tax not included",money(vm.current.tax))
         AmountRow("Total charged today · test",money(vm.current.charge),prominent=true)
         AmountRow("Estimated future rewards",money(vm.current.rewards));AmountRow("Estimated cost after rewards",money(vm.current.net))
-        SmallNote("Future rewards do not reduce today's payment. The sample card is advisory; Stripe collects separate test card details. No actual rewards are earned.")
+        SmallNote("Rewards are estimates from illustrative card profiles and do not reduce today's charge. Stripe collects separate test card details; no rewards are earned.")
     }
     vm.error?.let { QuietCard { Text(it,color=ShopInk) } }
     if(!vm.checkoutWithinBudget) SmallNote("This revised basket exceeds your budget. Review the basket or revise your meal request before paying.")
@@ -266,7 +266,7 @@ private fun CheckoutPage(vm: WalletViewModel,pay:()->Unit) {
     ShopButton(if(vm.busy) "Processing…" else if(vm.awaitingVerification) "Verification required" else "Approve & pay ${money(vm.current.charge)}",enabled=vm.canEditCheckout&&vm.canCompare&&vm.current.complete&&vm.checkoutWithinBudget,onClick=pay)
     if(vm.canVerify) ShopButton("Verify pending test payment",enabled=!vm.busy,outlined=true,onClick={vm.verify()})
     ShopButton("Preview confirmation without payment",enabled=vm.canEditCheckout&&vm.canCompare&&vm.current.complete,outlined=true,onClick={vm.walkthrough()})
-    SmallNote("Simulated checkout. No real grocery order, delivery or rewards. Use test card 4242 4242 4242 4242, a future expiry, a three-digit test CVC and a test ZIP.")
+    SmallNote("Test checkout only: no real charge, grocery order, delivery or rewards. Use 4242 4242 4242 4242, a future expiry, a three-digit test CVC and a test ZIP.")
 }
 
 @Composable
@@ -277,7 +277,7 @@ private fun ReceiptPage(vm:WalletViewModel) {
         Text(vm.receiptRecipeName,color=ShopInk,fontSize=21.sp,fontWeight=FontWeight.Medium)
         SmallNote(receipt.store.name+" · "+receipt.fulfillment)
         BasketLines(receipt)
-        AmountRow("Whole-package groceries",money(receipt.groceries));StudentSavingsRow(receipt);AmountRow("Fulfillment fees",money(receipt.fees));AmountRow("Demo tax (0%)",money(receipt.tax))
+        AmountRow("Whole-package groceries",money(receipt.groceries));StudentSavingsRow(receipt);AmountRow("Fulfillment fees",money(receipt.fees));AmountRow("Tax not included",money(receipt.tax))
         AmountRow(if(vm.paymentVerified) "Test amount paid · USD" else "Amount preview · USD",money(receipt.charge),prominent=true)
         SmallNote("Advisory rewards card: "+receipt.card.name)
         AmountRow("Estimated future rewards",money(receipt.rewards));AmountRow("Estimated cost after rewards",money(receipt.net))
@@ -371,7 +371,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
    Switch(enabled=vm.canEditCheckout,checked=vm.organicOnly,onCheckedChange={vm.changeOrganicOnly(it)})
    Text("Organic products only",modifier=Modifier.padding(start=12.dp),color=ShopInk)
   }
-  if(!vm.isPersonal) Text("Organic is an explicit demo product attribute. No quality is inferred from store rating.",fontSize=11.sp,color=ShopMuted)
+  if(!vm.isPersonal) Text("Organic filtering uses illustrative product labels. Verify certification with the retailer.",fontSize=11.sp,color=ShopMuted)
  }
 }
 
@@ -389,25 +389,25 @@ private fun StudentDiscountControl(vm: WalletViewModel) {
     QuietCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Student discounts", color = ShopInk, fontWeight = FontWeight.Medium)
-                SmallNote("Demo student mode · applies sample offers to groceries.")
+                Text("Explore student offers", color = ShopInk, fontWeight = FontWeight.Medium)
+                SmallNote("Illustrative offer scenario · adjusts grocery estimates.")
             }
             Switch(checked = vm.studentEligible, enabled = vm.canEditCheckout,
                 onCheckedChange = vm::changeStudentEligibility,
-                modifier = Modifier.semantics { contentDescription = "Apply demo student discounts" })
+                modifier = Modifier.semantics { contentDescription = "Apply illustrative student offers" })
         }
-        SmallNote("MVP offers only. Student status and retailer offers are not verified.")
+        SmallNote("These offers are examples, not verified retailer promotions. No student eligibility is checked.")
     }
 }
 
 @Composable
 private fun StudentOfferLabel(store: Store, eligible: Boolean) {
     val rate = store.studentDiscountBps / 100
-    SmallNote(if (rate == 0L) "No student offer in this demo"
-        else "$rate% student offer · demo" + if (eligible) " · applied" else " · enable student mode to apply")
+    SmallNote(if (rate == 0L) "No illustrative student offer"
+        else "$rate% illustrative student offer" + if (eligible) " · applied" else " · enable offer scenario to apply")
 }
 
 @Composable
 private fun StudentSavingsRow(quote: Quote) {
-    if (quote.studentDiscount > 0) AmountRow("Student discount · demo (${quote.store.studentDiscountBps / 100}%)", "−${money(quote.studentDiscount)}")
+    if (quote.studentDiscount > 0) AmountRow("Illustrative student offer (${quote.store.studentDiscountBps / 100}%)", "−${money(quote.studentDiscount)}")
 }

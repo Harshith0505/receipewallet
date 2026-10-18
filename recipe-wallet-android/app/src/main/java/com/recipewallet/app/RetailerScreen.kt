@@ -135,7 +135,7 @@ internal fun RetailerScreen(ingredients: List<RetailerNeed>, onBack: () -> Unit,
         }
         if (vm.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); SmallNote("Contacting Kroger…") }
         vm.error?.let { QuietCard { Text(it, color = ShopInk) } }
-        SmallNote("Retailer prices can change. This live basket is separate from the sample basket used for Stripe test checkout. Adding to a retailer cart does not place an order or payment. Final checkout happens with the retailer.")
+        SmallNote("Retailer prices can change. This live basket is separate from the estimated basket used for Stripe test checkout. Adding to a retailer cart does not place an order or payment. Complete your purchase with the retailer.")
     }
 }
 

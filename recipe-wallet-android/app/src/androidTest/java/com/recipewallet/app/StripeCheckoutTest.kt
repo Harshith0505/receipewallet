@@ -28,7 +28,7 @@ class StripeCheckoutTest {
    vm=ViewModelProvider(activity)[WalletViewModel::class.java]
    if(saved) {
     vm.choosePersonal(PersonalRecipe(java.util.UUID.randomUUID().toString(),"Saved test pasta",listOf("200 g pasta","100 g cheddar")))
-    vm.compare();vm.checkout(vm.storeId)
+    vm.changeStudentEligibility(true);vm.compare();vm.checkout(vm.storeId)
    } else {
     vm.agentPlan=fixture.getJSONObject("plan");vm.agentReply="Review this demo basket.";vm.approvePlan();vm.checkout(vm.storeId)
    }

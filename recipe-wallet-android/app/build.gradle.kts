@@ -20,7 +20,7 @@ android {
  compileSdk = 36
  defaultConfig {
   applicationId = if(providers.gradleProperty("previewInstall").orNull=="true") "com.recipewallet.app.preview" else "com.recipewallet.app"
-  manifestPlaceholders["appLabel"] = if(providers.gradleProperty("previewInstall").orNull=="true") "Recipe Wallet Preview" else "Recipe Wallet"
+  manifestPlaceholders["appLabel"] = "Recipe Wallet"
   buildConfigField("String", "SUPABASE_URL", quoteBuildString(cloudUrl))
   buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", quoteBuildString(cloudKey))
   minSdk = 26

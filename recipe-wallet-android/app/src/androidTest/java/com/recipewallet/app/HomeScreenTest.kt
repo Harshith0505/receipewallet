@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -75,7 +76,14 @@ class HomeScreenTest {
         compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
         compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().performClick()
         compose.onNodeWithText("Total charged today · test").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Approve & pay $14.87").performScrollTo().assertIsDisplayed()
+        var expectedCharge = 0L
+        compose.runOnIdle {
+            val vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            assertFalse(vm.studentEligible)
+            assertEquals(0L, vm.current.studentDiscount)
+            expectedCharge = vm.current.charge
+        }
+        compose.onNodeWithText("Approve & pay ${money(expectedCharge)}").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
         compose.onNodeWithText("No payment was made.").assertExists()
     }
