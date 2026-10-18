@@ -52,6 +52,10 @@ internal fun HomeScreen(vm: WalletViewModel) {
             keyboard?.hide()
         }
     }
+    if (libraryPage == "pantry") {
+        PantryScreen(onBack = { libraryPage = "home" })
+        return
+    }
     if (libraryPage != "home") {
         RecipeLibraryScreen(
             page = libraryPage,
@@ -110,6 +114,18 @@ internal fun HomeScreen(vm: WalletViewModel) {
                         fontWeight = FontWeight.Medium, modifier = Modifier.semantics { heading() })
                     Text("Plan a meal, compare shops, and choose your Visa card.",
                         color = HomeMuted, fontSize = 15.sp, lineHeight = 22.sp)
+                }
+                Row(Modifier.fillMaxWidth().border(1.dp, HomeLine, RoundedCornerShape(14.dp))
+                    .background(Color.White, RoundedCornerShape(14.dp))
+                    .clickable(enabled = !vm.aiBusy, role = Role.Button,
+                        onClick = { dismissKeyboard(); libraryPage = "pantry" }).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FridgeMark()
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("My pantry", color = HomeInk, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("Keep track of what’s already at home.", color = HomeMuted, fontSize = 12.sp)
+                    }
+                    Text("→", color = HomeInk, fontSize = 20.sp)
                 }
                 Row(
                     Modifier.fillMaxWidth().selectableGroup()

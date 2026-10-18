@@ -6,3 +6,7 @@ backend/.env
 *.apk
 
 .kotlin/
+
+supabase.properties
+
+supabase/tests/node_modules/
