@@ -38,7 +38,7 @@ internal val Good=Color(0xFF596139)
 internal val Warn=Color(0xFF95612D)
 internal val Danger=Color(0xFFA64451)
 
-@Composable internal fun StudioCard(tint:Color=Color.White,modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
+@Composable internal fun StudioCard(tint:Color=Color(0xFFFFFCF5),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
  Box(modifier.fillMaxWidth().padding(top=8.dp)) {
   Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawBehind {
    val random=Random(42)
@@ -46,7 +46,7 @@ internal val Danger=Color(0xFFA64451)
    val edge=Random(9);var x=0f
    while(x<size.width){drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,0f));drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,size.height));x+=4.dp.toPx()}
   }.padding(start=30.dp,end=22.dp,top=27.dp,bottom=22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
-  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFD0A8BF))
+  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFF3D58A))
  }
 }
 /** Secondary information opens on demand; its current summary stays visible. */
