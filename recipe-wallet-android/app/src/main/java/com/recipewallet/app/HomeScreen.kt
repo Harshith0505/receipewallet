@@ -57,6 +57,10 @@ internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) 
             keyboard?.hide()
         }
     }
+    if (libraryPage == "pantry") {
+        PantryScreen(onBack = { libraryPage = "home" })
+        return
+    }
     if (libraryPage == "account") {
         CloudAccountScreen(library, onBack = { libraryPage = accountReturnPage },
             backLabel = if (accountReturnPage == "home") "← Home" else "← Saved recipes")
@@ -129,6 +133,18 @@ internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) 
                 }
                 OutlinedButton(onClick = { dismissKeyboard(); onRetailerPrices() }, enabled = !vm.aiBusy,
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Check retailer prices", color = HomeInk) }
+                Row(Modifier.fillMaxWidth().border(1.dp, HomeLine, RoundedCornerShape(14.dp))
+                    .background(Color.White, RoundedCornerShape(14.dp))
+                    .clickable(enabled = !vm.aiBusy, role = Role.Button,
+                        onClick = { dismissKeyboard(); libraryPage = "pantry" }).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FridgeMark()
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("My pantry", color = HomeInk, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("Keep track of what’s already at home.", color = HomeMuted, fontSize = 12.sp)
+                    }
+                    Text("→", color = HomeInk, fontSize = 20.sp)
+                }
                 Row(
                     Modifier.fillMaxWidth().selectableGroup()
                         .background(Color(0xFFEEEFE9), RoundedCornerShape(12.dp)).padding(4.dp),

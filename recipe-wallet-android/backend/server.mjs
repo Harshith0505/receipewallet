@@ -10,6 +10,8 @@ import {createRetailer, RetailerFailure} from './retailer.mjs';
 import {createKrogerCart, krogerReturnHtml} from './kroger-cart.mjs';
 const retailer = createRetailer();
 const krogerCart = createKrogerCart({retailer});
+import {scanPantry,ScanError} from './pantry-scan.mjs';
+let activeScans=0;
 const secret=process.env.STRIPE_SECRET_KEY||'';
 const publishableKey=process.env.STRIPE_PUBLISHABLE_KEY||'';
 const configured=secret.startsWith('sk_test_')&&publishableKey.startsWith('pk_test_');
@@ -34,11 +36,12 @@ export async function handleRequest(req,res) {
   res.setHeader('Content-Security-Policy',"default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
   res.writeHead(200);res.end(krogerReturnHtml());return;
  }
- if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured,krogerCartConfigured:krogerCart.configured});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
+ if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured,krogerCartConfigured:krogerCart.configured,pantryScanConfigured:!!process.env.PERCEPTRON_API_KEY});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/pantry-scan','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
-  let body='';for await(const chunk of req) {body+=chunk;if(body.length>8192) return send(413,{error:'Request too large'});}
+  const limit=req.url==='/pantry-scan'?4_001_024:8192;
+  let body='',bodyBytes=0;for await(const chunk of req) {bodyBytes+=Buffer.byteLength(chunk);if(bodyBytes>limit) return send(413,{error:'Request too large'});body+=chunk;}
   let input;try {input=JSON.parse(body);} catch{return send(400,{error:'Invalid JSON'});}
   if(req.url.startsWith('/retailers/cart/')) {
    try { return send(200,await krogerCart[req.url.split('/').pop()](input)); }
@@ -47,6 +50,13 @@ export async function handleRequest(req,res) {
   if(req.url.startsWith('/retailers/')) {
    try { return send(200,await retailer[req.url.split('/').pop()](input)); }
    catch(e) {return send(e instanceof RetailerFailure?e.status:502,{error:e instanceof RetailerFailure?e.message:'Retailer search is unavailable. Please try again.'});}
+  }
+  if(req.url==='/pantry-scan') {
+   if(activeScans>=2) return send(429,{error:'Photo scanning is busy. Please try again shortly.'});
+   activeScans++;
+   try {return send(200,await scanPantry(input));}
+   catch(e) {return send(e instanceof ScanError?e.status:502,{error:e instanceof ScanError?e.message:'Couldn’t scan this photo. Please retry.'});}
+   finally {activeScans--;}
   }
   if(req.url==='/grocery-quotes') {
    try {return send(200,planGroceries(input,catalog));} catch(e) {return send(400,{error:e.message});}

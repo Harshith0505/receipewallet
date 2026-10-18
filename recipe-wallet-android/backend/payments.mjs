@@ -16,6 +16,7 @@ export function paymentBasket(input) {
    items:quote.groceryQuote.items
   } : {}),
   ...(quote.customItems ? {customItems:quote.customItems,fulfillment:quote.fulfillment,fees:quote.fees,tax:quote.tax} : {}),
+  studentEligible:quote.studentEligible,studentDiscount:quote.studentDiscount,discountedGroceries:quote.discountedGroceries,
   groceries:quote.groceries,amount:quote.amount,rewards:quote.rewards,currency:'usd'
  })).digest('hex');
  return {quote,fingerprint,attempt:input.attempt};

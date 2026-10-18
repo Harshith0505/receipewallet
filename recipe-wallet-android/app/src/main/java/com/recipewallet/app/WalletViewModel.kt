@@ -65,7 +65,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   aiBusy=true; aiError=null; agentPlan=null; generatedRecipe=null; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList()
   viewModelScope.launch {
    try {
-    val payload=JSONObject().put("message",message)
+    val payload=JSONObject().put("message",message).put("studentEligible",studentEligible)
     agentSession?.let { payload.put("sessionId",it) }
     val result=request("/plan",payload)
     val plan=result.optJSONObject("plan")
@@ -75,7 +75,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
      check(ids.isNotEmpty() && ids.all { id -> r.ingredients.any { it.id==id } }) { "The agent returned an invalid basket. Please retry." }
      val s=catalog.stores.first { it.id==plan.getString("storeId") }
      val c=catalog.cards.first { it.id==plan.getString("cardId") }
-     val q=packageQuote(r,ids,s,c,catalog.productOffers,plan.optInt("servings",2),plan.optString("fulfillment","pickup"),plan.optBoolean("organicOnly",false))
+     val q=packageQuote(r,ids,s,c,catalog.productOffers,plan.optInt("servings",2),plan.optString("fulfillment","pickup"),plan.optBoolean("organicOnly",false),plan.optBoolean("studentEligible",false))
      check(q.charge==plan.getLong("amount") && q.rewards==plan.getLong("rewards") && q.net==plan.getLong("net")) { "Prices changed. Please plan your shop again." }
     }
     val draft=result.optJSONObject("generatedRecipe")
@@ -98,7 +98,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  }
  val plannedRecipe get() = agentPlan?.let { p -> catalog.recipes.first { it.id==p.getString("recipeId") } }
  fun planIds(key: String): Set<String> = agentPlan?.getJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet()
- val plannedQuote get() = agentPlan?.let { p -> packageQuote(plannedRecipe!!,planIds("ingredientIds"),catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") },catalog.productOffers,p.optInt("servings",2),p.optString("fulfillment","pickup"),p.optBoolean("organicOnly",false)) }
+ val plannedQuote get() = agentPlan?.let { p -> packageQuote(plannedRecipe!!,planIds("ingredientIds"),catalog.stores.first { it.id==p.getString("storeId") },catalog.cards.first { it.id==p.getString("cardId") },catalog.productOffers,p.optInt("servings",2),p.optString("fulfillment","pickup"),p.optBoolean("organicOnly",false),p.optBoolean("studentEligible",false)) }
  val planWithinBudget get() = plannedQuote?.let { it.complete && (planBudget<0 || it.charge<=planBudget) } == true
  val planBudget get() = agentPlan?.getJSONObject("constraints")?.getLong("budgetCents") ?: personalBudget
  val planDiet get() = agentPlan?.getJSONObject("constraints")?.getString("diet") ?: "any"
@@ -108,6 +108,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   if(!planWithinBudget || aiBusy || !canEditCheckout) return
   clearPayment()
   servings=p.optInt("servings",2); fulfillment=p.optString("fulfillment","pickup"); organicOnly=p.optBoolean("organicOnly",false)
+  studentEligible=p.optBoolean("studentEligible",false)
   personalRecipe=null; recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; step=2
  }
@@ -160,15 +161,21 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   private set
  var organicOnly by mutableStateOf(false)
   private set
+ var studentEligible by mutableStateOf(true)
+  private set
+ fun changeStudentEligibility(value:Boolean) {
+  if(!canEditCheckout || value==studentEligible) return
+  clearPayment(); studentEligible=value; receipt=null
+ }
  val subtotal get() = if(isPersonal) recipe.ingredients.filter { it.id in selected }.sumOf { it.basePrice } else rankings.firstOrNull { it.complete }?.groceries ?: 0L
  fun groceryQuote(store:Store,card:RewardCard):Quote {
-  if(!isPersonal) return packageQuote(recipe,selected,store,card,catalog.productOffers,servings,fulfillment,organicOnly)
+  if(!isPersonal) return packageQuote(recipe,selected,store,card,catalog.productOffers,servings,fulfillment,organicOnly,studentEligible)
   if(!canCompare) return Quote(store,card,0,0,missing=listOf("Match every included ingredient to a product and choose no more than 20 packs."))
   val grouped=selected.groupBy { productMatches.getValue(it) }.map { (id,ids)->catalog.products.first { it.id==id } to ids.sumOf { packCounts[it] ?: 1 } }
-  return customQuote(grouped,store,card,fulfillment)
+  return customQuote(grouped,store,card,fulfillment,studentEligible)
  }
  val rankings get() = catalog.stores.map { s -> catalog.cards.map { groceryQuote(s,it) }.minWith(compareBy<Quote> { it.net }.thenBy { it.card.id }) }.sortedWith(compareBy<Quote> { !it.complete }.thenBy { it.net }.thenBy { it.store.id })
- val current get(): Quote { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).groceries) };return groceryQuote(s,c) }
+ val current get(): Quote { val s=catalog.stores.firstOrNull { it.id==storeId } ?: rankings.first().store;val c=catalog.cards.firstOrNull { it.id==cardId } ?: catalog.cards.maxBy { it.rewards(groceryQuote(s,it).discountedGroceries) };return groceryQuote(s,c) }
  val checkoutWithinBudget get() = planBudget<0 || current.charge<=planBudget
  fun settingsChanged() { if(!canEditCheckout) return; clearPayment(); storeId=""; cardId=""; receipt=null }
  fun changeServings(value:Int) { if(!canEditCheckout || value !in 1..12) return; servings=value; settingsChanged() }
@@ -201,7 +208,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   busy=true; error=null; pending=current
   pendingIngredients=recipe.ingredients.filter { it.id in selected }.toList()
   pendingRecipeName=recipe.name
-  val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt).put("pricingVersion","packages-v1").put("servings",servings).put("fulfillment",fulfillment).put("organicOnly",organicOnly)
+  val payload=JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",current.store.id).put("cardId",current.card.id).put("attempt",attempt).put("pricingVersion","packages-v1").put("servings",servings).put("fulfillment",fulfillment).put("organicOnly",organicOnly).put("studentEligible",studentEligible)
   if(isPersonal) payload.put("pricingVersion","custom-packages-v1").put("customBasket",customBasketJson())
   pendingPayload=payload
   viewModelScope.launch {

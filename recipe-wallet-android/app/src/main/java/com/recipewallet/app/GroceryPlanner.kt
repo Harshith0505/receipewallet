@@ -6,7 +6,7 @@ data class ProductOffer(val id:String,val ingredientId:String,val storeId:String
 data class GroceryLine(val ingredientId:String,val name:String,val quantity:Long,val unit:String,val product:ProductOffer,val packages:Long) {
  val cost get()=packages*product.priceCents
 }
-fun packageQuote(recipe:Recipe, selected:Set<String>, store:Store, card:RewardCard, offers:List<ProductOffer>, servings:Int, fulfillment:String, organicOnly:Boolean):Quote {
+fun packageQuote(recipe:Recipe, selected:Set<String>, store:Store, card:RewardCard, offers:List<ProductOffer>, servings:Int, fulfillment:String, organicOnly:Boolean,studentEligible:Boolean=false):Quote {
  require(servings in 1..12)
  val lines=mutableListOf<GroceryLine>(); val missing=mutableListOf<String>()
  for(i in recipe.ingredients.filter { it.id in selected }) {
@@ -18,6 +18,7 @@ fun packageQuote(recipe:Recipe, selected:Set<String>, store:Store, card:RewardCa
  if(fulfillment=="delivery"&&!store.deliveryEnabled) missing.add("Delivery unavailable in this demo")
  val groceries=lines.sumOf { it.cost }
  val fees=if(fulfillment=="pickup") store.pickupFee else store.packageDeliveryFee+store.serviceFee
- val tax=(groceries*store.taxBps+5000)/10000
- return Quote(store,card,groceries,card.rewards(groceries),fees,tax,lines,missing,fulfillment)
+ val discount=studentDiscount(groceries,store,studentEligible)
+ val tax=((groceries-discount)*store.taxBps+5000)/10000
+ return Quote(store,card,groceries,card.rewards(groceries-discount),fees,tax,lines,missing,fulfillment,studentDiscount=discount)
 }
