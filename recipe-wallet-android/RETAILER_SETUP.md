@@ -33,6 +33,6 @@ This feature requests real catalog data from the Kroger API. It covers Kroger-fa
 
 An actual configured search is still required before claiming live prices work. These credentials do not authorize grocery ordering or delivery.
 
-Implementation checks on October 17, 2026: 63 backend tests, seven Kotlin JVM tests, and nine native UI/routing checks passed. The running backend returned the expected missing-credentials message. No live Kroger search has been verified yet.
+Implementation checks on October 17, 2026: 63 backend tests, seven Kotlin JVM tests, and nine native UI/routing checks passed. The missing-credentials error was verified before setup. After local credentials were supplied, a live ZIP 98105 lookup returned five stores and a pasta search at University Village QFC returned ten products. The same store/product search was completed through the Android emulator UI, which displayed Kroger Penne Rigate, 16 oz, regular price $1.33, stock HIGH and sold by UNIT. This is a point-in-time catalog observation, not a guaranteed checkout price or a completed order. Local credentials remain ignored by Git.
 
 References: [Kroger developer reference](https://developer.kroger.com/reference/), [Kroger's public API workspace](https://www.postman.com/kroger/the-kroger-co-s-public-workspace/documentation/ki6utqb/kroger-public-apis).
