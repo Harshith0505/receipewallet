@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.sp
 
 internal val ShopInk = Color(0xFF503542)
 internal val ShopMuted = Color(0xFF78616A)
-internal val ShopPaper = Color(0xFFE5C9B9)
-internal val ShopLine = Color(0xFFE6D2C4)
+internal val ShopPaper = Color(0xFFEFC3BD)
+internal val ShopLine = Color(0xFFB98D9B)
 internal val ShopTint = Color(0xFFF5E1E5)
 
 @Composable

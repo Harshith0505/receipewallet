@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
  }
  LaunchedEffect(vm.studio.currentWeek,vm.studio.autoWeek){if(vm.studio.autoWeek&&vm.studio.weekDue)vm.studio.buildWeek()}
  Scaffold(containerColor=ShopPaper){padding->
-  BoxWithConstraints(Modifier.fillMaxSize().drawBehind {
+  BoxWithConstraints(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFF0BBB5),Color(0xFFE2C4E4),Color(0xFFF2D3A9),Color(0xFFE9BAC8)))).drawBehind {
    val gap=24.dp.toPx();var y=gap
    while(y<size.height){var x=gap;while(x<size.width){drawCircle(ShopLine.copy(alpha=.48f),.7.dp.toPx(),androidx.compose.ui.geometry.Offset(x,y));x+=gap};y+=gap}
   }.padding(padding),contentAlignment=Alignment.TopCenter){
