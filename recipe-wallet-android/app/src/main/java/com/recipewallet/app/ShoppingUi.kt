@@ -53,7 +53,7 @@ internal fun PageHeading(title: String, subtitle: String) {
 
 @Composable
 internal fun QuietCard(modifier: Modifier = Modifier, selected: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color(0xFFF6E6D1), RoundedCornerShape(22.dp))
+    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color.White, RoundedCornerShape(22.dp))
         .border(1.dp, if (selected) ShopInk else ShopLine, RoundedCornerShape(22.dp)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }

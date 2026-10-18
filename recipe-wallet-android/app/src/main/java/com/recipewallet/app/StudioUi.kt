@@ -38,7 +38,7 @@ internal val Good=Color(0xFF596139)
 internal val Warn=Color(0xFF95612D)
 internal val Danger=Color(0xFFA64451)
 
-@Composable internal fun StudioCard(tint:Color=Color(0xFFF8DED0),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
+@Composable internal fun StudioCard(tint:Color=Color.White,modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
  Box(modifier.fillMaxWidth().padding(top=8.dp)) {
   Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawBehind {
    val random=Random(42)

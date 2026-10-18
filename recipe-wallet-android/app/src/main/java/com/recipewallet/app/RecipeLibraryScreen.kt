@@ -54,7 +54,7 @@ internal fun RecipeLibraryScreen(
                             LibraryTitle(recipe.name)
                             Text("${recipe.ingredients.size} ingredients" + (recipe.prepMinutes?.let { " · $it min" } ?: ""), color = LibraryMuted)
                         }
-                        Column(Modifier.fillMaxWidth().background(ShopTint, RoundedCornerShape(14.dp))
+                        Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp))
                             .border(1.dp, LibraryLine, RoundedCornerShape(14.dp)).padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(18.dp)) {
                             Text("Ingredients", color = LibraryInk, fontSize = 18.sp, fontWeight = FontWeight.Medium)
@@ -80,7 +80,7 @@ internal fun RecipeLibraryScreen(
                                 Text("Add a name and your ingredients. No account needed.", color = LibraryMuted, fontSize = 14.sp, lineHeight = 21.sp)
                             }
                         } else {
-                            Column(Modifier.fillMaxWidth().background(ShopTint, RoundedCornerShape(14.dp))
+                            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp))
                                 .border(1.dp, LibraryLine, RoundedCornerShape(14.dp))) {
                                 recipes.forEachIndexed { index, item ->
                                     if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 18.dp), color = LibraryLine)
