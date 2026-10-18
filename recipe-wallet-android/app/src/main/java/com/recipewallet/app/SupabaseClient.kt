@@ -8,6 +8,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URLEncoder
+import java.net.URLDecoder
+import java.security.SecureRandom
 import java.net.URL
 import java.security.KeyStore
 import java.security.MessageDigest
@@ -31,10 +34,22 @@ internal data class SupabaseConfiguration(val url: String, val publishableKey: S
 internal data class CloudSession(val userId: String, val email: String, val accessToken: String, val refreshToken: String, val expiresAt: Long) {
     override fun toString() = "CloudSession(tokens=redacted)"
 }
+internal const val SignupCallback = "com.recipewallet.app://auth/confirmed"
+internal fun isSignupCallback(value: String): Boolean = runCatching {
+    val uri = URI(value)
+    uri.scheme == "com.recipewallet.app" && uri.host == "auth" && uri.path == "/confirmed" &&
+        uri.userInfo == null && uri.port == -1
+}.getOrDefault(false)
+internal data class PendingSignup(val email: String, val verifier: String) {
+    override fun toString() = "PendingSignup(verifier=redacted)"
+}
 internal interface SessionVault {
     fun read(): CloudSession?
     fun save(session: CloudSession)
     fun clear()
+    fun readSignup(): PendingSignup?
+    fun saveSignup(value: PendingSignup)
+    fun clearSignup()
 }
 
 /** Tokens are encrypted with a non-exportable Android Keystore key. Passwords are never persisted. */
@@ -49,26 +64,40 @@ internal class SecureSessionVault(context: Context, namespace: String) : Session
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
         }.generateKey()
     }
-    override fun read(): CloudSession? {
-        val value = preferences.getString("session", null) ?: return null
+    private fun readJson(name: String): JSONObject? {
+        val value = preferences.getString(name, null) ?: return null
         return runCatching {
             val parts = value.split(":", limit = 2)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)))
-            val json = JSONObject(String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8))
-            CloudSession(json.getString("userId"), json.getString("email"), json.getString("access"), json.getString("refresh"), json.getLong("expires"))
+            JSONObject(String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8))
         }.getOrNull()
     }
-    override fun save(session: CloudSession) {
-        val json = JSONObject().put("userId", session.userId).put("email", session.email).put("access", session.accessToken)
-            .put("refresh", session.refreshToken).put("expires", session.expiresAt)
+    private fun writeJson(name: String, json: JSONObject) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val value = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" +
             Base64.encodeToString(cipher.doFinal(json.toString().toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
-        check(preferences.edit().putString("session", value).commit()) { "Couldn’t save your sign-in on this device." }
+        check(preferences.edit().putString(name, value).commit()) { "Couldn’t save your sign-in on this device." }
     }
-    override fun clear() { check(preferences.edit().remove("session").commit()) }
+    override fun read(): CloudSession? = runCatching {
+        val json = readJson("session") ?: return null
+        CloudSession(json.getString("userId"), json.getString("email"), json.getString("access"), json.getString("refresh"), json.getLong("expires"))
+    }.getOrNull()
+    override fun save(session: CloudSession) {
+        writeJson("session", JSONObject().put("userId", session.userId).put("email", session.email).put("access", session.accessToken)
+            .put("refresh", session.refreshToken).put("expires", session.expiresAt))
+    }
+    override fun readSignup(): PendingSignup? = runCatching {
+        val json = readJson("pending-signup") ?: return null
+        PendingSignup(json.getString("email"), json.getString("verifier"))
+    }.getOrNull()
+    override fun saveSignup(value: PendingSignup) {
+        writeJson("pending-signup", JSONObject().put("email", value.email).put("verifier", value.verifier))
+    }
+    override fun clearSignup() { check(preferences.edit().remove("pending-signup").commit()) }
+    override fun clear() { check(preferences.edit().remove("session").remove("pending-signup").commit()) }
+
 }
 
 internal class CloudFailure(val status: Int, val code: String, message: String) : Exception(message)
@@ -97,7 +126,9 @@ internal class SupabaseHttpTransport(private val config: SupabaseConfiguration) 
                 val message = when {
                     status == 409 -> "This recipe changed on another device."
                     code == "invalid_credentials" -> "Email or password is incorrect."
-                    code == "email_not_confirmed" -> "Confirm your email, then sign in."
+                    code == "email_not_confirmed" -> "Open the confirmation email on this tablet, then return here to sign in."
+                    code in listOf("otp_expired", "flow_state_expired", "flow_state_not_found") -> "This confirmation link has expired or was already used. Try signing in."
+                    code == "bad_code_verifier" -> "Open the email on the tablet where you created the account, or sign in with your password."
                     code == "weak_password" -> "Choose a stronger password."
                     status == 429 -> "Too many attempts. Please wait and try again."
                     status == 401 || code == "refresh_token_not_found" -> "Please sign in again to sync your recipes."
@@ -123,13 +154,44 @@ internal class SupabaseClient(private val vault: SessionVault, private val trans
             json.optLong("expires_at", System.currentTimeMillis() / 1000 + json.optLong("expires_in", 3600)))
         vault.save(value); session = value
     }
+    val pendingSignupEmail get() = vault.readSignup()?.email
     fun signIn(email: String, password: String) {
         store(JSONObject(transport.request("POST", "/auth/v1/token?grant_type=password", JSONObject().put("email", email).put("password", password), null)))
+        vault.clearSignup()
     }
     fun signUp(email: String, password: String): Boolean {
-        val json = JSONObject(transport.request("POST", "/auth/v1/signup", JSONObject().put("email", email).put("password", password), null))
-        if (json.has("access_token") && !json.isNull("access_token")) { store(json); return true }
+        val random = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val encoder = java.util.Base64.getUrlEncoder().withoutPadding()
+        val verifier = encoder.encodeToString(random)
+        val challenge = encoder.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)))
+        val previous = vault.readSignup()
+        vault.saveSignup(PendingSignup(email, verifier))
+        val json = try {
+            JSONObject(transport.request("POST", "/auth/v1/signup?redirect_to=" + URLEncoder.encode(SignupCallback, "UTF-8"),
+                JSONObject().put("email", email).put("password", password).put("code_challenge", challenge).put("code_challenge_method", "s256"), null))
+        } catch (error: Exception) {
+            if (previous == null) vault.clearSignup() else vault.saveSignup(previous)
+            throw error
+        }
+        if (json.has("access_token") && !json.isNull("access_token")) { store(json); vault.clearSignup(); return true }
         return false
+    }
+    fun completeSignup(callback: String) {
+        require(isSignupCallback(callback)) { "This confirmation link doesn’t belong to Recipe Wallet." }
+        val uri = URI(callback)
+        require(uri.fragment == null) { "This is an older confirmation link. Return to the app and sign in with your password." }
+        val pairs = uri.rawQuery.orEmpty().split('&').filter { it.isNotEmpty() }.map {
+            val pair = it.split('=', limit = 2)
+            URLDecoder.decode(pair[0], "UTF-8") to URLDecoder.decode(pair.getOrElse(1) { "" }, "UTF-8")
+        }
+        require(pairs.none { it.first in listOf("error", "error_code") }) { "This confirmation link expired or was already used. Try signing in." }
+        val codes = pairs.filter { it.first == "code" }
+        require(codes.size == 1 && codes[0].second.isNotBlank() && codes[0].second.length <= 2048) { "Return to Recipe Wallet and sign in with your email and password." }
+        val pending = checkNotNull(vault.readSignup()) { "Your email may already be confirmed. Sign in with your email and password." }
+        val json = JSONObject(transport.request("POST", "/auth/v1/token?grant_type=pkce",
+            JSONObject().put("auth_code", codes[0].second).put("code_verifier", pending.verifier), null))
+        check(json.getJSONObject("user").getString("email").equals(pending.email, ignoreCase = true)) { "The confirmation belongs to another account. Sign in again." }
+        store(json); vault.clearSignup()
     }
     private fun refresh() {
         val previous = checkNotNull(session) { "Sign in to sync recipes." }

@@ -12,7 +12,11 @@ class CloudStorageTest {
     private class MemoryVault(var value: CloudSession? = null) : SessionVault {
         override fun read() = value
         override fun save(session: CloudSession) { value = session }
-        override fun clear() { value = null }
+        var signup: PendingSignup? = null
+        override fun clear() { value = null; signup = null }
+        override fun readSignup() = signup
+        override fun saveSignup(value: PendingSignup) { signup = value }
+        override fun clearSignup() { signup = null }
     }
     private fun session(expiry: Long = System.currentTimeMillis() / 1000 + 3600) =
         CloudSession(owner, "fixture@example.invalid", "access-fixture", "refresh-fixture", expiry)
@@ -30,6 +34,12 @@ class CloudStorageTest {
         try {
             val expected = session()
             vault.save(expected)
+            val signup = PendingSignup("fixture@example.invalid", "synthetic-private-verifier")
+            vault.saveSignup(signup)
+            val pendingRaw = context.getSharedPreferences("cloud-session-$namespace", 0).getString("pending-signup", "")!!
+            assertFalse(pendingRaw.contains(signup.verifier))
+            assertEquals(signup, SecureSessionVault(context, namespace).readSignup())
+            vault.clearSignup(); assertNull(vault.readSignup())
             val raw = context.getSharedPreferences("cloud-session-$namespace", 0).getString("session", "")!!
             assertFalse(raw.contains(expected.accessToken)); assertFalse(raw.contains(expected.refreshToken))
             assertFalse(raw.contains(expected.email))
@@ -96,4 +106,55 @@ class CloudStorageTest {
         val offline = SupabaseClient(vault, SupabaseTransport { _, _, _, _ -> throw java.io.IOException("Offline") })
         assertThrows(java.io.IOException::class.java) { offline.signOut() }; assertNull(vault.value); assertNull(offline.session)
     }
+    @Test fun confirmationUsesPkceAndOnlyTheSignupDeviceCanExchangeTheCode() {
+        val vault = MemoryVault()
+        var challenge = ""
+        var calls = 0
+        val transport = SupabaseTransport { method, path, body, token ->
+            calls++
+            assertEquals("POST", method); assertNull(token)
+            if (path.startsWith("/auth/v1/signup?")) {
+                assertTrue(path.contains("redirect_to=com.recipewallet.app%3A%2F%2Fauth%2Fconfirmed"))
+                assertEquals("s256", body!!.getString("code_challenge_method"))
+                challenge = body.getString("code_challenge")
+                assertFalse(body.has("code_verifier"))
+                "{\"id\":\"pending\"}"
+            } else {
+                assertEquals("/auth/v1/token?grant_type=pkce", path)
+                assertEquals("fixture-code", body!!.getString("auth_code"))
+                val verifier = body.getString("code_verifier")
+                assertEquals(vault.signup!!.verifier, verifier)
+                assertEquals(challenge, java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    java.security.MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII))))
+                response()
+            }
+        }
+        val signup = SupabaseClient(vault, transport)
+        assertFalse(signup.signUp("fixture@example.invalid", "synthetic-test-password"))
+        assertNotNull(vault.signup); assertNull(vault.value)
+        // A fresh client must recover the encrypted verifier after process restart.
+        val returning = SupabaseClient(vault, transport)
+        returning.completeSignup(SignupCallback + "?code=fixture-code")
+        assertEquals(owner, returning.session!!.userId); assertNull(vault.signup); assertEquals(2, calls)
+    }
+    @Test fun confirmationRejectsForeignUrlsImplicitTokensAndWrongAccounts() {
+        val vault = MemoryVault().apply { signup = PendingSignup("fixture@example.invalid", "synthetic-verifier") }
+        var calls = 0
+        val client = SupabaseClient(vault, SupabaseTransport { _, _, _, _ ->
+            calls++
+            JSONObject(response()).apply { getJSONObject("user").put("email", "different@example.invalid") }.toString()
+        })
+        listOf("https://example.invalid/confirmed?code=x", SignupCallback + "/extra?code=x",
+            SignupCallback + "#access_token=synthetic", SignupCallback + "?code=a&code=b",
+            SignupCallback + "?error_code=otp_expired").forEach { callback ->
+            assertThrows(IllegalArgumentException::class.java) { client.completeSignup(callback) }
+        }
+        assertEquals(0, calls)
+        assertThrows(IllegalStateException::class.java) { client.completeSignup(SignupCallback + "?code=x") }
+        assertNull(client.session); assertNull(vault.value); assertNotNull(vault.signup)
+        vault.clearSignup()
+        assertThrows(IllegalStateException::class.java) { client.completeSignup(SignupCallback + "?code=x") }
+        assertEquals(1, calls)
+    }
+
 }

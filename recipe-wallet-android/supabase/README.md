@@ -50,3 +50,14 @@ A real account’s email confirmation and signed-in tablet-to-cloud recipe sync 
 The configured build is installed on Samsung SM-T225. Account-page navigation and recipe save/edit checks pass. After the tablet was connected to internet, the opt-in live connection check passed on October 17, 2026: the tablet reached the hosted Auth settings endpoint, confirmed email sign-in and sign-up are enabled, and verified anonymous recipe reads are denied by the database. Real-user sign-in and recipe import remain the final end-to-end check.
 
 For email confirmation, Supabase’s default SMTP service sends only to project organization team addresses and currently limits sending to two emails per hour. Use an organization member’s email for the initial demo account, or configure custom SMTP before inviting other users. Keep email verification enabled. [Supabase SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp).
+
+
+## Android email-confirmation return
+
+The Android app registers the exact callback `com.recipewallet.app://auth/confirmed`. Set this as the Supabase Auth Site URL and add the same exact value to Redirect URLs; no wildcard is needed. New signups pass this callback explicitly and use an S256 PKCE challenge. The random verifier is encrypted with Android Keystore and survives a process restart. Only the device with that verifier can exchange the returned authorization code; the account email must match the pending signup. Callback authorization codes are not retained in the activity Intent, and callbacks never import bearer tokens from a URL fragment.
+
+Open a new confirmation email on the tablet to return to the account screen and finish sign-in. If an email is opened on another device, the account can still be confirmed; return to the tablet and sign in with the account’s password. Previously sent emails may still contain the old localhost redirect. A successful confirmation followed by a broken localhost page does not require creating the account again: use Sign in in Recipe Wallet.
+
+`ConfirmationRoutingTest` checks the exact Android callback route and handling of expired links without switching the current account. The PKCE tests in `CloudStorageTest` use synthetic data and do not send email or create accounts. Supabase’s default free email service requires custom SMTP or an eligible paid plan to customize email templates, so the app keeps the built-in confirmation-link email rather than relying on a custom code template.
+
+References: [mobile deep links](https://supabase.com/docs/guides/auth/native-mobile-deep-linking), [redirect configuration](https://supabase.com/docs/guides/auth/redirect-urls).

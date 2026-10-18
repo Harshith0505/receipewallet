@@ -47,6 +47,9 @@ internal fun HomeScreen(vm: WalletViewModel) {
     val keyboard = LocalSoftwareKeyboardController.current
     val dismissKeyboard: () -> Unit = { focusManager.clearFocus(force = true); keyboard?.hide() }
 
+    LaunchedEffect(library.confirmationRequests) {
+        if (library.confirmationRequests > 0) { libraryPage = "account"; library.consumeConfirmationRequest() }
+    }
     LaunchedEffect(manual, libraryPage) {
         if (manual || libraryPage != "home") {
             focusManager.clearFocus(force = true)

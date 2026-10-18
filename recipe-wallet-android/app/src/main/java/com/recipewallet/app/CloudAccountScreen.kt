@@ -30,6 +30,9 @@ internal fun CloudAccountScreen(vm: RecipeCloudViewModel, onBack: () -> Unit) {
     // Passwords intentionally stay in memory only and are cleared after submission.
     var password by remember { mutableStateOf("") }
     var creating by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(vm.state.pendingEmail) {
+        if (email.isBlank()) email = vm.state.pendingEmail.orEmpty()
+    }
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -54,6 +57,7 @@ internal fun CloudAccountScreen(vm: RecipeCloudViewModel, onBack: () -> Unit) {
                     TextButton(onClick = { scope.launch { vm.signOut() } }, enabled = !vm.busy) { Text("Sign out", color = ink) }
                 } else {
                     Text("Keep your recipes across devices. Your existing device recipes stay available without an account.", color = muted)
+                    if (vm.state.pendingEmail != null) Text("Check your email. Open the confirmation link on this tablet, or sign in here after confirming it on another device.", color = muted, fontSize = 13.sp)
                     OutlinedTextField(email, { email = it }, label = { Text("Email") }, singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), enabled = !vm.busy,
                         shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
@@ -64,12 +68,15 @@ internal fun CloudAccountScreen(vm: RecipeCloudViewModel, onBack: () -> Unit) {
                         enabled = !vm.busy && email.isNotBlank() && password.isNotEmpty(), onClick = {
                             focus.clearFocus(); keyboard?.hide()
                             val submitted = password; password = ""
-                            scope.launch { if (creating) vm.signUp(email, submitted) else vm.signIn(email, submitted) }
+                            scope.launch {
+                                if (creating) { if (vm.signUp(email, submitted) == null) creating = false }
+                                else vm.signIn(email, submitted)
+                            }
                         })
                     TextButton(onClick = { creating = !creating }, enabled = !vm.busy) {
                         Text(if (creating) "Already have an account? Sign in" else "New here? Create an account", color = ink)
                     }
-                    if (creating) Text("Use a strong password. Check your email to confirm your account before signing in.", color = muted, fontSize = 13.sp)
+                    if (creating) Text("Use a strong password. Open the confirmation email on this tablet to return to the app.", color = muted, fontSize = 13.sp)
                 }
                 if (vm.busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = ink)
                 vm.status?.let { Text(it, color = muted, fontSize = 13.sp, lineHeight = 19.sp) }

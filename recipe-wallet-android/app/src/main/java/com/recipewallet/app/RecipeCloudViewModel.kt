@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -39,7 +40,7 @@ internal class CloudRecipeCache(context: Context, namespace: String) {
     }
 }
 
-internal data class RecipeLibraryState(val recipes: List<PersonalRecipe>, val email: String?, val pending: Int, val importable: Int)
+internal data class RecipeLibraryState(val recipes: List<PersonalRecipe>, val email: String?, val pending: Int, val importable: Int, val pendingEmail: String? = null)
 
 internal class RecipeCloudViewModel(app: Application) : AndroidViewModel(app) {
     private val config = SupabaseConfiguration(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY)
@@ -49,6 +50,8 @@ internal class RecipeCloudViewModel(app: Application) : AndroidViewModel(app) {
     val configured get() = config.configured
     var state by mutableStateOf(RecipeLibraryState(guest.read(), null, 0, 0))
         private set
+    var confirmationRequests by mutableIntStateOf(0)
+        private set
     var busy by mutableStateOf(false)
         private set
     var status by mutableStateOf<String?>(null)
@@ -57,13 +60,14 @@ internal class RecipeCloudViewModel(app: Application) : AndroidViewModel(app) {
     init { refresh() }
     private fun cache(): CloudRecipeCache = CloudRecipeCache(getApplication(), "${config.namespace}-${checkNotNull(client.session).userId}")
     private fun snapshot(): RecipeLibraryState {
-        val session = client.session ?: return RecipeLibraryState(guest.read(), null, 0, 0)
+        val session = client.session ?: return RecipeLibraryState(guest.read(), null, 0, 0, client.pendingSignupEmail)
         val cached = cache().read()
         val ids = cached.map { it.recipe.id }.toSet()
         return RecipeLibraryState(cached.sortedByDescending { it.modifiedAt }.map { it.recipe }, session.email,
             cached.count { it.dirty }, guest.read().count { it.id !in ids })
     }
-    private suspend fun perform(action: () -> String): String? {
+    private suspend fun perform(waitForCurrent: Boolean = false, action: () -> String): String? {
+        if (waitForCurrent) while (busy) delay(25)
         if (busy) return "Please wait for the current sync to finish."
         busy = true
         val result = runCatching { withContext(Dispatchers.IO) { mutex.withLock { action() to snapshot() } } }
@@ -96,7 +100,15 @@ internal class RecipeCloudViewModel(app: Application) : AndroidViewModel(app) {
     }
     suspend fun signUp(email: String, password: String): String? = perform {
         config.validate()
-        if (client.signUp(email.trim(), password)) safeSync() else "Confirm your email, then return here to sign in."
+        if (client.signUp(email.trim(), password)) safeSync() else "Open the confirmation email on this tablet to return to Recipe Wallet. If you open it elsewhere, return here and sign in with your password."
+    }
+    fun consumeConfirmationRequest() { confirmationRequests = 0 }
+    fun confirmFromLink(callback: String) {
+        if (!isSignupCallback(callback)) return
+        confirmationRequests++
+        viewModelScope.launch { perform(waitForCurrent = true) {
+            config.validate(); client.completeSignup(callback); safeSync()
+        } }
     }
     fun importLocalRecipes() { viewModelScope.launch { perform {
         val values = cache().read().associateBy { it.recipe.id }.toMutableMap()
