@@ -14,12 +14,16 @@ import java.time.LocalDate
 import java.time.DayOfWeek
 import java.time.temporal.TemporalAdjusters
 
-internal data class MealMood(val name:String,val emoji:String,val subtitle:String,val prompt:String)
+internal data class MealMood(val name:String,val emoji:String,val subtitle:String,val prompt:String,val color:Long=0xFFF0D2BB,val recipeId:String="pasta")
 internal val mealMoods=listOf(
- MealMood("Cozy","🍞","A little comfort on a long day","comforting and familiar"),
- MealMood("Fresh","🥑","Bright flavors. A fresh start.","fresh vegetable-forward food"),
- MealMood("Adventure","🌶️","Try a different favorite tonight","bold, spicy flavors"),
- MealMood("Low effort","⚡","Less prep. More time for you.","the quickest easy meal"))
+ MealMood("Cozy","","A little comfort on a long day","comforting and familiar",0xFFF1C8AE,"pasta"),
+ MealMood("Fresh","","Bright flavors. A fresh start.","fresh vegetable-forward food",0xFFC9DDAD,"bowl"),
+ MealMood("Adventure","","Try a different favorite tonight","bold, spicy flavors",0xFFE6B6CB,"noodles"),
+ MealMood("Low effort","","Less prep. More time for you.","the quickest easy meal",0xFFD2C5E7,"chickpea-salad"),
+ MealMood("Spice craving","","Warm spices, big flavor","a warmly spiced dinner",0xFFE7B5A2,"chana"),
+ MealMood("Sunshine","","Colorful, bright and zesty","a bright citrusy meal",0xFFF1D795,"mexican-rice"),
+ MealMood("Cool & crisp","","Something refreshing tonight","a chilled crunchy meal",0xFFBED2E4,"sesame-noodles"),
+ MealMood("Pantry hero","","Make the most of what is here","a meal using as many pantry ingredients as possible",0xFFD4D1B0,"chickpea-salad"))
 
 internal class MealStudioState(private val context:Context,private val catalog:Catalog,private val scope:CoroutineScope,private val request:suspend(String,JSONObject)->JSONObject) {
  private val saved=context.getSharedPreferences("meal-studio-v1",Context.MODE_PRIVATE)
@@ -31,7 +35,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  fun updateCuisine(value:String){cuisine=value;saved.edit().putString("cuisine",value).apply()}
  var avoid by mutableStateOf(saved.getString("avoid","")?:"");private set
  var faith by mutableStateOf(saved.getString("faith","None")?:"None");private set
- var pickedMood by mutableIntStateOf(saved.getInt("pickedMood",0));private set
+ var pickedMood by mutableIntStateOf(saved.getInt("pickedMood",0).coerceIn(0,mealMoods.lastIndex));private set
  fun chooseMood(){pickedMood=mood;saved.edit().putInt("pickedMood",mood).apply()}
  fun updateAvoid(value:String){avoid=value.take(180);saved.edit().putString("avoid",avoid).apply()}
  fun updateFaith(value:String){faith=value;saved.edit().putString("faith",value).apply()}
@@ -39,7 +43,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  fun fits(recipe:Recipe)=conflicts(recipe).isEmpty()
  var history by mutableStateOf(ids("history").filter { id->catalog.recipes.any { it.id==id } });private set
  var owned by mutableStateOf(ids("owned").filter { id->ingredients.any { it.id==id } }.toSet());private set
- var mood by mutableIntStateOf(saved.getInt("mood",0).coerceIn(0,3));private set
+ var mood by mutableIntStateOf(saved.getInt("mood",0).coerceIn(0,mealMoods.lastIndex));private set
  var minutes by mutableFloatStateOf(saved.getFloat("minutes",35f).coerceIn(15f,45f));private set
  var people by mutableIntStateOf(saved.getInt("people",2).coerceIn(1,12));private set
  var vegetarian by mutableStateOf(saved.getBoolean("vegetarian",false));private set
@@ -97,7 +101,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  fun buildWeek(){
   if(weekBusy)return;weekBusy=true;weekError=null
   scope.launch {try {
-   val result=request("/weekly-plan",JSONObject().put("preferences",prompt()).put("history",JSONArray(history)).put("pantryIds",JSONArray(owned.toList())).put("vegetarian",vegetarian).put("maxMinutes",minutes.toInt()))
+   val result=request("/weekly-plan",JSONObject().put("preferences",prompt()).put("history",JSONArray(history)).put("pantryIds",JSONArray(owned.toList())).put("vegetarian",vegetarian).put("cuisine",cuisine).put("maxMinutes",minutes.toInt()))
    val a=result.getJSONArray("recipeIds");val ids=List(a.length()){a.getString(it)}
    check(ids.size==5&&ids.all { id->catalog.recipes.any { it.id==id && (cuisine=="Any"||recipeCuisine(it.id)==cuisine) && fits(it) && (!vegetarian||it.id!="pasta") } }) { "Unsupported weekly plan. Try again." }
    weeklyIds=ids;weekSource=result.getString("source");weekStamp=currentWeek;saveWeek()
@@ -109,7 +113,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  }
  fun swapDay(index:Int){val options=rankedRecipes();if(index !in weeklyIds.indices||options.isEmpty())return;val next=options[(options.indexOfFirst { it.id==weeklyIds[index] }+1)%options.size];weeklyIds=weeklyIds.toMutableList().apply { set(index,next.id) };saveWeek()}
  private fun saveWeek(){if(autoCart)prepareWeeklyCart();saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
- fun rankedRecipes()=catalog.recipes.filter { (cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(when(pickedMood){0->if(r.id=="pasta")4 else 0;1->if(r.id=="bowl")4 else 0;2->if(r.id=="noodles")4 else 0;else->45-r.prepTime}) }
+ fun rankedRecipes()=catalog.recipes.filter { (cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(if(r.id==mealMoods[pickedMood].recipeId)4 else if(pickedMood==3)45-r.prepTime else 0) }
  fun estimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
  fun prompt():String=buildString {
   append("I want ${mealMoods[pickedMood].prompt}, for $people people, under $${budget.toInt()}, at most ${minutes.toInt()} minutes.")

@@ -19,3 +19,9 @@ test('weekly Gemini results cannot introduce invented recipes',async()=>{
  const result=await weeklyPlan({preferences:'noodles',pantryIds:[]},{apiKey:'test',fetchImpl:mock({recipeIds:Array(5).fill('noodles')})});
  assert.equal(result.source,'gemini');assert.equal(result.recipeIds[0],'noodles');
 });
+
+test('weekly cuisine filtering never mixes in other catalog cuisines',async()=>{
+ const result=await weeklyPlan({preferences:'Indian meals',pantryIds:[],cuisine:'Indian'},{apiKey:''});
+ assert.deepEqual(result.recipeIds,Array(5).fill('chana'));
+ await assert.rejects(weeklyPlan({preferences:'test',pantryIds:[],cuisine:'invented'},{apiKey:''}),/Unknown cuisine/);
+});

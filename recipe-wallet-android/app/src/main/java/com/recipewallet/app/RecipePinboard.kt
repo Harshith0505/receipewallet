@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
  Column(modifier.height(315.dp).shadow(2.dp,RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(Color.White).clickable{vm.choose(recipe.id)}){
   Box(Modifier.fillMaxWidth().height(175.dp)){
    FoodSticker(recipe.id,Modifier.fillMaxSize())
-   Text(if(recipe.id=="pasta")"Italian-inspired"else "◉ Vegetarian",fontSize=11.sp,color=ShopInk,modifier=Modifier.align(Alignment.TopStart).padding(8.dp).background(Citrus,RoundedCornerShape(20.dp)).padding(horizontal=9.dp,vertical=6.dp))
+   Text(recipeCuisine(recipe.id)+"-inspired",fontSize=11.sp,color=ShopInk,modifier=Modifier.align(Alignment.TopStart).padding(8.dp).background(Citrus,RoundedCornerShape(20.dp)).padding(horizontal=9.dp,vertical=6.dp))
    IconToggleButton(checked=pinned,onCheckedChange={vm.studio.togglePin(recipe.id)},modifier=Modifier.align(Alignment.TopEnd).padding(5.dp).background(Mint,RoundedCornerShape(24.dp)).semantics{contentDescription=if(pinned)"Unpin ${recipe.name}"else "Pin ${recipe.name}"}){Text(if(pinned)"♥"else "♡",color=ShopInk,fontSize=25.sp)}
   }
   Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -50,6 +50,6 @@ import androidx.compose.ui.unit.sp
 @Composable internal fun CuisinePicker(state:MealStudioState){
  Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
   Text("Cuisine · ${state.cuisine}",fontWeight=FontWeight.SemiBold,color=ShopInk)
-  listOf(listOf("Any","Italian"),listOf("Asian","Mediterranean")).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{choice->FilterChip(selected=state.cuisine==choice,onClick={state.updateCuisine(choice)},modifier=Modifier.weight(1f),label={Text((if(state.cuisine==choice)"✓ "else "")+choice)})}}}
+  cuisineChoices.chunked(2).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{choice->FilterChip(selected=state.cuisine==choice,onClick={state.updateCuisine(choice)},colors=FilterChipDefaults.filterChipColors(containerColor=Color.White,selectedContainerColor=ShopInk,selectedLabelColor=Color.White),modifier=Modifier.weight(1f),label={Text((if(state.cuisine==choice)"✓ "else "")+choice)})}}}
  }
 }

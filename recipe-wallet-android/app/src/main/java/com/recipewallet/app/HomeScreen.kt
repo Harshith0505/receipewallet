@@ -53,8 +53,10 @@ import androidx.compose.ui.unit.sp
     }
     JournalNavigation(listOf("Build with AI","Build manually","My pantry","My week"),mode,!vm.aiBusy){dismiss();mode=it}
     if(mode in 0..1)JourneySteps(0)
-    if(vm.studio.avoid.isNotBlank())Signal("Avoiding: ${vm.studio.avoid}",Warn)
-    if(vm.studio.faith!="None")Signal("${vm.studio.faith} · verify product certification",Warn)
+    Column(Modifier.fillMaxWidth().background(Color(0xFFFFE6CE),RoundedCornerShape(10.dp)).border(1.dp,Warn.copy(alpha=.5f),RoundedCornerShape(10.dp)).padding(horizontal=12.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){
+     Text("! Dietary safety",color=ShopInk,fontWeight=FontWeight.Bold,fontSize=14.sp)
+     Text((if(vm.studio.avoid.isBlank())"No exclusions set"else "Avoiding: ${vm.studio.avoid}")+(if(vm.studio.faith!="None")" · ${vm.studio.faith}: verify certification"else " · Check product labels"),color=ShopInk,fontSize=12.sp)
+    }
     when(mode){
      0->{
       if(vm.agentReply.isNotBlank())AgentPlanReview(vm)

@@ -3,7 +3,7 @@
     {
       "id": "noodles",
       "name": "Spicy garlic noodles",
-      "emoji": "\ud83c\udf5c",
+      "emoji": "🍜",
       "description": "Big flavor. A little heat. Dinner sorted.",
       "prepTime": 20,
       "ingredients": [
@@ -56,12 +56,13 @@
           "unit": "each"
         }
       ],
-      "baseServings": 2
+      "baseServings": 2,
+      "cuisine": "Asian"
     },
     {
       "id": "bowl",
       "name": "Green goddess bowl",
-      "emoji": "\ud83e\udd51",
+      "emoji": "🥑",
       "description": "Fresh greens meet a creamy avocado finish.",
       "prepTime": 15,
       "ingredients": [
@@ -106,12 +107,13 @@
           "unit": "each"
         }
       ],
-      "baseServings": 2
+      "baseServings": 2,
+      "cuisine": "Mediterranean"
     },
     {
       "id": "pasta",
       "name": "Tomato basil pasta",
-      "emoji": "\ud83c\udf5d",
+      "emoji": "🍝",
       "description": "Your weeknight classic, with a smarter basket.",
       "prepTime": 25,
       "ingredients": [
@@ -156,13 +158,266 @@
           "unit": "g"
         }
       ],
-      "baseServings": 2
+      "baseServings": 2,
+      "cuisine": "Italian"
+    },
+    {
+      "id": "chana",
+      "name": "Chana masala",
+      "emoji": "",
+      "description": "Chickpeas simmered with tomato, garlic and warming spices.",
+      "prepTime": 30,
+      "baseServings": 2,
+      "ingredients": [
+        {
+          "id": "chickpeas",
+          "name": "Chickpeas",
+          "qty": "1 can",
+          "basePrice": 140,
+          "quantity": 400,
+          "unit": "g"
+        },
+        {
+          "id": "tomato",
+          "name": "Cherry tomatoes",
+          "qty": "1 pint",
+          "basePrice": 300,
+          "quantity": 283,
+          "unit": "g"
+        },
+        {
+          "id": "garlic",
+          "name": "Garlic",
+          "qty": "1 bulb",
+          "basePrice": 75,
+          "quantity": 1,
+          "unit": "each"
+        },
+        {
+          "id": "cumin",
+          "name": "Ground cumin",
+          "qty": "1 tsp",
+          "basePrice": 20,
+          "quantity": 2,
+          "unit": "g"
+        },
+        {
+          "id": "masala",
+          "name": "Garam masala",
+          "qty": "2 tsp",
+          "basePrice": 35,
+          "quantity": 5,
+          "unit": "g"
+        },
+        {
+          "id": "oil",
+          "name": "Olive oil",
+          "qty": "2 tbsp",
+          "basePrice": 75,
+          "quantity": 30,
+          "unit": "ml"
+        },
+        {
+          "id": "lemon",
+          "name": "Lemon",
+          "qty": "1 whole",
+          "basePrice": 65,
+          "quantity": 1,
+          "unit": "each"
+        }
+      ],
+      "cuisine": "Indian"
+    },
+    {
+      "id": "mexican-rice",
+      "name": "Avocado tomato rice",
+      "emoji": "",
+      "description": "A Mexican-inspired rice bowl with cumin, tomatoes and avocado.",
+      "prepTime": 30,
+      "baseServings": 2,
+      "ingredients": [
+        {
+          "id": "rice",
+          "name": "Brown rice",
+          "qty": "1 cup",
+          "basePrice": 150,
+          "quantity": 190,
+          "unit": "g"
+        },
+        {
+          "id": "tomato",
+          "name": "Cherry tomatoes",
+          "qty": "1 pint",
+          "basePrice": 300,
+          "quantity": 283,
+          "unit": "g"
+        },
+        {
+          "id": "avo",
+          "name": "Avocado",
+          "qty": "1 whole",
+          "basePrice": 180,
+          "quantity": 1,
+          "unit": "each"
+        },
+        {
+          "id": "cumin",
+          "name": "Ground cumin",
+          "qty": "1 tsp",
+          "basePrice": 20,
+          "quantity": 2,
+          "unit": "g"
+        },
+        {
+          "id": "chili",
+          "name": "Chili flakes",
+          "qty": "1 tsp",
+          "basePrice": 40,
+          "quantity": 2,
+          "unit": "g"
+        },
+        {
+          "id": "oil",
+          "name": "Olive oil",
+          "qty": "2 tbsp",
+          "basePrice": 75,
+          "quantity": 30,
+          "unit": "ml"
+        },
+        {
+          "id": "lemon",
+          "name": "Lemon",
+          "qty": "1 whole",
+          "basePrice": 65,
+          "quantity": 1,
+          "unit": "each"
+        }
+      ],
+      "cuisine": "Mexican"
+    },
+    {
+      "id": "sesame-noodles",
+      "name": "Chilled sesame noodles",
+      "emoji": "",
+      "description": "Japanese-inspired chilled noodles with crisp cucumber and sesame dressing.",
+      "prepTime": 20,
+      "baseServings": 2,
+      "ingredients": [
+        {
+          "id": "noodles",
+          "name": "Wheat noodles",
+          "qty": "8 oz",
+          "basePrice": 300,
+          "quantity": 227,
+          "unit": "g"
+        },
+        {
+          "id": "cucumber",
+          "name": "Cucumber",
+          "qty": "1 whole",
+          "basePrice": 99,
+          "quantity": 1,
+          "unit": "each"
+        },
+        {
+          "id": "soy",
+          "name": "Soy sauce",
+          "qty": "2 tbsp",
+          "basePrice": 80,
+          "quantity": 30,
+          "unit": "ml"
+        },
+        {
+          "id": "sesame",
+          "name": "Sesame oil",
+          "qty": "1 tbsp",
+          "basePrice": 65,
+          "quantity": 15,
+          "unit": "ml"
+        },
+        {
+          "id": "onion",
+          "name": "Green onions",
+          "qty": "1 bunch",
+          "basePrice": 125,
+          "quantity": 1,
+          "unit": "each"
+        },
+        {
+          "id": "lemon",
+          "name": "Lemon",
+          "qty": "1 whole",
+          "basePrice": 65,
+          "quantity": 1,
+          "unit": "each"
+        }
+      ],
+      "cuisine": "Japanese"
+    },
+    {
+      "id": "chickpea-salad",
+      "name": "Lemony chickpea salad",
+      "emoji": "",
+      "description": "A Middle Eastern-inspired chopped cucumber, tomato and chickpea salad.",
+      "prepTime": 15,
+      "baseServings": 2,
+      "ingredients": [
+        {
+          "id": "chickpeas",
+          "name": "Chickpeas",
+          "qty": "1 can",
+          "basePrice": 140,
+          "quantity": 400,
+          "unit": "g"
+        },
+        {
+          "id": "cucumber",
+          "name": "Cucumber",
+          "qty": "1 whole",
+          "basePrice": 99,
+          "quantity": 1,
+          "unit": "each"
+        },
+        {
+          "id": "tomato",
+          "name": "Cherry tomatoes",
+          "qty": "1 pint",
+          "basePrice": 300,
+          "quantity": 283,
+          "unit": "g"
+        },
+        {
+          "id": "lemon",
+          "name": "Lemon",
+          "qty": "1 whole",
+          "basePrice": 65,
+          "quantity": 1,
+          "unit": "each"
+        },
+        {
+          "id": "oil",
+          "name": "Olive oil",
+          "qty": "2 tbsp",
+          "basePrice": 75,
+          "quantity": 30,
+          "unit": "ml"
+        },
+        {
+          "id": "cumin",
+          "name": "Ground cumin",
+          "qty": "1 tsp",
+          "basePrice": 20,
+          "quantity": 2,
+          "unit": "g"
+        }
+      ],
+      "cuisine": "Middle Eastern"
     }
   ],
   "stores": [
     {
       "id": "market",
-      "name": "QFC \u00b7 University Village",
+      "name": "QFC · University Village",
       "rating": 4.7,
       "distanceMiles": 0.8,
       "deliveryFee": 199,
@@ -177,7 +432,7 @@
     },
     {
       "id": "fresh",
-      "name": "Trader Joe\u2019s \u00b7 U District",
+      "name": "Trader Joe’s · U District",
       "rating": 4.8,
       "distanceMiles": 1.2,
       "deliveryFee": 149,
@@ -192,7 +447,7 @@
     },
     {
       "id": "pantry",
-      "name": "Whole Foods \u00b7 Roosevelt Square",
+      "name": "Whole Foods · Roosevelt Square",
       "rating": 4.5,
       "distanceMiles": 2.1,
       "deliveryFee": 299,
@@ -221,7 +476,7 @@
       "rate": 3,
       "rewardType": "points",
       "pointsValue": 0.01,
-      "notes": "Illustrative 3 points per $1, redeemed at 1\u00a2 per point. Assumes this purchase qualifies. Fees earn no rewards."
+      "notes": "Illustrative 3 points per $1, redeemed at 1¢ per point. Assumes this purchase qualifies. Fees earn no rewards."
     },
     {
       "id": "black",
@@ -1371,6 +1626,114 @@
       "stockPackages": 12,
       "tags": [
         "organic"
+      ]
+    },
+    {
+      "id": "market-cumin-pack",
+      "ingredientId": "cumin",
+      "storeId": "market",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 299,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-masala-pack",
+      "ingredientId": "masala",
+      "storeId": "market",
+      "packageQuantity": 50,
+      "unit": "g",
+      "priceCents": 399,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "market-cucumber-pack",
+      "ingredientId": "cucumber",
+      "storeId": "market",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 99,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "fresh-cumin-pack",
+      "ingredientId": "cumin",
+      "storeId": "fresh",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 344,
+      "stockPackages": 20,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-masala-pack",
+      "ingredientId": "masala",
+      "storeId": "fresh",
+      "packageQuantity": 50,
+      "unit": "g",
+      "priceCents": 459,
+      "stockPackages": 20,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "fresh-cucumber-pack",
+      "ingredientId": "cucumber",
+      "storeId": "fresh",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 114,
+      "stockPackages": 20,
+      "tags": [
+        "organic"
+      ]
+    },
+    {
+      "id": "pantry-cumin-pack",
+      "ingredientId": "cumin",
+      "storeId": "pantry",
+      "packageQuantity": 40,
+      "unit": "g",
+      "priceCents": 269,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-masala-pack",
+      "ingredientId": "masala",
+      "storeId": "pantry",
+      "packageQuantity": 50,
+      "unit": "g",
+      "priceCents": 359,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
+      ]
+    },
+    {
+      "id": "pantry-cucumber-pack",
+      "ingredientId": "cucumber",
+      "storeId": "pantry",
+      "packageQuantity": 1,
+      "unit": "each",
+      "priceCents": 89,
+      "stockPackages": 20,
+      "tags": [
+        "conventional"
       ]
     }
   ],

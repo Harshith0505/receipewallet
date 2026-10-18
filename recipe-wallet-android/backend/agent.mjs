@@ -32,7 +32,7 @@ export function createToolRunner() {
     // Parmesan's rennet is unspecified in this fixture, so pasta is not certified vegetarian.
     candidates=catalog.recipes.filter(r=>(args.diet==='any'||r.id!=='pasta')&&(!args.maxPrepMinutes||r.prepTime<=args.maxPrepMinutes));
     options=[];prepared=null;
-    const result={constraints,recipes:candidates,limitation:'Three demo recipes only. Pasta cheese suitability is unspecified. Whole packages are priced for the requested servings with pickup and a configured 0% demo tax. No allergy-safety guarantees.'};
+    const result={constraints,recipes:candidates,limitation:'A limited demo recipe catalog. Pasta cheese suitability is unspecified. Whole packages are priced for the requested servings with pickup and a configured 0% demo tax. No allergy-safety guarantees.'};
     trace.push({tool:name,summary:`Found ${candidates.length} catalog recipes matching diet and time constraints.`});
     return result;
    }

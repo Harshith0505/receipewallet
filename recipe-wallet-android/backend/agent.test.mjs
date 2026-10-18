@@ -1,12 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createToolRunner,planShop,diffPlans} from './agent.mjs';
+import {catalog} from './pricing.mjs';
 
 const constraints={mealPreference:'noodle dinner',diet:'vegetarian',maxPrepMinutes:0,budgetCents:3000,pantryIds:['garlic']};
 test('pantry exclusion, diet filtering and pricing are grounded in catalog tools',()=>{
  const r=createToolRunner();
  const found=r.run('find_recipes',constraints);
- assert.deepEqual(found.recipes.map(x=>x.id),['noodles','bowl']);
+ assert.deepEqual(found.recipes.map(x=>x.id),catalog.recipes.filter(r=>r.id!=='pasta').map(r=>r.id));
  const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
  assert.equal(options[0].amount,1580);
  assert.equal(options[0].rewards,79);

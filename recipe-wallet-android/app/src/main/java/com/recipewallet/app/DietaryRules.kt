@@ -7,4 +7,6 @@ internal fun excludedIngredientNames(names:List<String>,avoid:String):List<Strin
  return names.filter{name->terms.any{term->(aliases[term]?:listOf(term)).any{name.lowercase(java.util.Locale.ROOT).contains(it)}}}
 }
 
-internal fun recipeCuisine(id:String)=when(id){"pasta"->"Italian";"noodles"->"Asian";"bowl"->"Mediterranean";else->"Other"}
+internal fun recipeCuisine(id:String)=when(id){"pasta"->"Italian";"noodles"->"Asian";"bowl"->"Mediterranean";"chana"->"Indian";"mexican-rice"->"Mexican";"sesame-noodles"->"Japanese";"chickpea-salad"->"Middle Eastern";else->"Other"}
+
+internal val cuisineChoices=listOf("Any","Italian","Asian","Mediterranean","Indian","Mexican","Japanese","Middle Eastern")

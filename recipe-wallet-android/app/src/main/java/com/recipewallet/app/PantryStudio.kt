@@ -5,6 +5,14 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -83,6 +91,8 @@ import kotlinx.coroutines.withContext
 
 @Composable internal fun WeeklyStudio(vm:WalletViewModel){
  val state=vm.studio
+ var selectedDay by rememberSaveable(state.currentWeek){mutableIntStateOf((java.time.LocalDate.now().dayOfWeek.value-1).coerceIn(0,4))}
+ WeekCalendar(state,selectedDay){selectedDay=it}
  StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Your weekly ritual · week of ${state.currentWeek}")
   StudioTitle(if(state.weekDue)"Plan your week"else "Your weekly plan")
@@ -109,17 +119,21 @@ import kotlinx.coroutines.withContext
   SmallNote("Includes pantry items until you confirm enough stock for the whole week. This draft is saved on this tablet. Shop individual dinners below.")
  }}
  if(state.weeklyIds.isNotEmpty()){
-  Signal(if(state.weekSource=="gemini")"✨ AI arranged · edited by you"else "Local catalog plan · no AI used",if(state.weekSource=="gemini")Good else Warn)
+  if(state.weekSource=="gemini")SmallNote("AI arranged · edited by you")
   state.weeklyIds.forEachIndexed{index,id->
+   if(index==selectedDay){
    val recipe=vm.catalog.recipes.first{it.id==id}
    StudioCard(tint=androidx.compose.ui.graphics.Color.White){
     Eyebrow(listOf("Monday","Tuesday","Wednesday","Thursday","Friday")[index])
-    Text("${recipe.emoji}  ${recipe.name}",fontSize=21.sp,color=ShopInk)
+    FoodSticker(recipe.id,Modifier.fillMaxWidth().height(190.dp))
+    Text(recipe.name,fontSize=21.sp,fontWeight=FontWeight.Bold,color=ShopInk)
+    SmallNote("${recipe.prepTime} min · ${recipeCuisine(recipe.id)}-inspired")
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
      TextButton(onClick={state.swapDay(index)}){Text("↻ Swap dinner")}
      TextButton(onClick={vm.choose(recipe.id)}){Text("Shop this meal →")}
     }
    }
+  }
   }
   val recipe=state.weeklyRecipe()!!
   StudioCard{
@@ -136,5 +150,25 @@ import kotlinx.coroutines.withContext
    if(quote!=null){Signal("Combined package estimate · ${quote.store.name}");Text(money(quote.charge),fontSize=32.sp,color=ShopInk);SmallNote("Whole packages, pickup fees and demo tax. Before pantry deductions and future rewards. Shop each dinner above; combined weekly checkout is not available.")}
    else SmallNote("No single demo store can supply the full week. Shop each meal separately.")
   }
+ }
+}
+
+@Composable private fun WeekCalendar(state:MealStudioState,selected:Int,onSelect:(Int)->Unit){
+ val start=java.time.LocalDate.parse(state.currentWeek)
+ StudioCard{
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+   Text("Your dinner calendar",fontWeight=FontWeight.Bold,color=ShopInk,fontSize=18.sp)
+   SmallNote(start.format(java.time.format.DateTimeFormatter.ofPattern("MMM d"))+" – "+start.plusDays(6).format(java.time.format.DateTimeFormatter.ofPattern("MMM d")))
+  }
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+   repeat(7){i->val day=start.plusDays(i.toLong());val active=i==selected;val planned=i<state.weeklyIds.size
+    Column(Modifier.weight(1f).background(if(active)ShopInk else if(i<5)ShopTint else Color(0xFFF2ECE8),RoundedCornerShape(10.dp)).clickable(enabled=i<5){onSelect(i)}.semantics{this.selected=active;contentDescription=day.toString()+if(planned)" dinner planned"else if(i<5)" no dinner planned"else " weekend"}.padding(vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
+     Text(listOf("M","T","W","T","F","S","S")[i],fontSize=11.sp,color=if(active)Color.White else ShopMuted)
+     Text(day.dayOfMonth.toString(),fontWeight=FontWeight.Bold,color=if(active)Color.White else ShopInk)
+     Text(if(planned)"•"else "–",fontSize=12.sp,color=if(active)Color.White else ShopMuted)
+    }
+   }
+  }
+  SmallNote(if(state.weeklyIds.isEmpty())"Plan your week to fill five dinner spots."else "Tap a weekday to see, swap or shop its dinner.")
  }
 }

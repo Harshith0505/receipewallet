@@ -17,6 +17,10 @@ class GroceryPlannerTest {
    }
   }
  }
+ @Test fun everyCuisineHasACompleteCheckoutBasket(){
+  assertEquals(cuisineChoices.filter{it!="Any"}.toSet(),catalog.recipes.map{recipeCuisine(it.id)}.toSet())
+  for(recipe in catalog.recipes)assertTrue(recipe.name,catalog.stores.any{store->packageQuote(recipe,recipe.ingredients.map{it.id}.toSet(),store,catalog.cards.first(),catalog.productOffers,2,"pickup",false).complete})
+ }
  @Test fun servingsIncreasePackagesAndPantryRemovesWholePurchases() {
   val r=catalog.recipes.first { it.id=="pasta" };val s=catalog.stores.first();val c=catalog.cards.first()
   val two=packageQuote(r,setOf("pasta"),s,c,catalog.productOffers,2,"pickup",false)

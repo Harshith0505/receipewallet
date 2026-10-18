@@ -56,7 +56,7 @@ private val FoodLeaf = Color(0xFF9AA36A)
 @Composable
 internal fun FoodSticker(kind: String, modifier: Modifier = Modifier) {
     val context=LocalContext.current
-    val file=when(kind){"noodles","bread"->"noodles";"pasta","tomato","berry"->"pasta";else->"bowl"}
+    val file=when(kind){"chana","mexican-rice","sesame-noodles","chickpea-salad"->kind;"noodles","bread"->"noodles";"pasta","tomato","berry"->"pasta";else->"bowl"}
     val photo=remember(file){FoodPhotoCache.load(context,file)}
     Image(photo,contentDescription="$file recipe inspiration photograph",modifier=modifier,contentScale=ContentScale.Crop)
 

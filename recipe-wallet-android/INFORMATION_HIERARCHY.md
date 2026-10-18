@@ -17,3 +17,5 @@ Four destinations appear in a horizontal scrolling tab bar with a clear selected
 Pattern reference: Nielsen Norman Group, Progressive Disclosure: https://www.nngroup.com/articles/progressive-disclosure/
 
 Main content cards and the scrolling tab bar use white surfaces against the peach background. Serif navigation labels distinguish destinations from body text.
+
+Discovery includes eight colored mood choices and seven cuisine categories, with a supported recipe for each. Cuisine chips are white when unselected and plum when selected. A compact dietary-safety strip keeps current exclusions visible. My week uses a seven-day calendar with five selectable dinner days and one photo-led meal detail at a time. The local-plan status badge is removed; AI attribution appears only for actual Gemini plans.

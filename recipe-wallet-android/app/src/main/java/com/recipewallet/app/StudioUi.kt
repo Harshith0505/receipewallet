@@ -74,11 +74,11 @@ internal val Danger=Color(0xFFA64451)
  var drag by remember { mutableFloatStateOf(0f) }
  val movement by animateFloatAsState(drag, spring(),label="Mood card motion")
  val mood=mealMoods[state.mood]
- val tint=listOf(Peach,Mint,Lilac,Citrus)[state.mood]
+ val tint=Color(mood.color)
  StudioCard(tint=tint,modifier=Modifier.graphicsLayer { translationX=movement;rotationZ=movement/24f }.pointerInput(enabled,state.mood){if(enabled)detectHorizontalDragGestures(onDragStart={drag=0f},onDragEnd={if(kotlin.math.abs(drag)>100){if(drag>0)state.chooseMood();state.updateMood(state.mood+1)};drag=0f},onDragCancel={drag=0f}){change,delta->change.consume();drag+=delta}}){
-  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){Eyebrow("The flavor of your day");Text("${state.mood+1} / 4",fontSize=12.sp,color=ShopMuted)}
+  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){Eyebrow("The flavor of your day");Text("${state.mood+1} / ${mealMoods.size}",fontSize=12.sp,color=ShopMuted)}
   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)){
-   FoodSticker(when(state.mood){0->"bread";1->"avo";2->"tomato";else->"lemon"},Modifier.size(145.dp))
+   FoodSticker(mood.recipeId,Modifier.size(145.dp))
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){StudioTitle(mood.name);Text(mood.subtitle,color=ShopInk,fontSize=14.sp)}
   }
   if(kotlin.math.abs(drag)>35)Signal(if(drag>0)"LOVE THIS ♥" else "PASS ↶",if(drag>0)Good else Warn)
@@ -105,7 +105,10 @@ internal val Danger=Color(0xFFA64451)
   Text("Meal budget · $${state.budget.toInt()}",fontWeight=FontWeight.Medium,color=ShopInk)
   Slider(modifier=Modifier.semantics { contentDescription="Meal budget in dollars" },value=state.budget,onValueChange={state.updateBudget(it)},valueRange=10f..80f,steps=13,enabled=enabled)
   CuisinePicker(state)
-  Text("Dietary preferences",fontWeight=FontWeight.Bold,color=ShopInk)
+  Column(Modifier.fillMaxWidth().background(Color(0xFFFFE6CE),RoundedCornerShape(12.dp)).border(1.dp,Warn,RoundedCornerShape(12.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+   Text("! Dietary safety",fontWeight=FontWeight.Bold,color=ShopInk,fontSize=17.sp)
+   Text("Set exclusions below. Check product labels, cross-contact and any halal or kosher certification.",color=ShopInk,fontSize=12.sp)
+  }
   OutlinedTextField(value=state.avoid,onValueChange={state.updateAvoid(it)},enabled=enabled,label={Text("Allergens / ingredients to avoid")},placeholder={Text("milk, wheat, sesame, peanuts")},supportingText={Text("Comma-separated. Matches named ingredients; labels and cross-contact still need review.")},modifier=Modifier.fillMaxWidth())
   Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("None","Halal","Kosher").forEach{choice->FilterChip(selected=state.faith==choice,onClick={state.updateFaith(choice)},enabled=enabled,label={Text(choice)})}}
   if(state.faith!="None")Signal("${state.faith} · certification must be checked",Warn)

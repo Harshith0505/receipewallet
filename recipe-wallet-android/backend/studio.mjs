@@ -20,8 +20,9 @@ export async function weeklyPlan(input,options={}) {
  if(typeof input?.preferences!=='string'||input.preferences.length>1200) throw new Error('Invalid preferences');
  if(input.vegetarian!==undefined&&typeof input.vegetarian!=='boolean') throw new Error('Invalid vegetarian filter');
  if(input.maxMinutes!==undefined&&(!Number.isInteger(input.maxMinutes)||input.maxMinutes<0||input.maxMinutes>240)) throw new Error('Invalid time filter');
+ if(input.cuisine!==undefined&&input.cuisine!=='Any'&&!catalog.recipes.some(r=>r.cuisine===input.cuisine)) throw new Error('Unknown cuisine');
  const history=Array.isArray(input.history)?input.history.slice(-12).filter(id=>catalog.recipes.some(r=>r.id===id)):[];
- const eligible=catalog.recipes.filter(r=>!input.vegetarian||r.id!=='pasta').filter(r=>!input.maxMinutes||r.prepTime<=input.maxMinutes);
+ const eligible=catalog.recipes.filter(r=>!input.cuisine||input.cuisine==='Any'||r.cuisine===input.cuisine).filter(r=>!input.vegetarian||r.id!=='pasta').filter(r=>!input.maxMinutes||r.prepTime<=input.maxMinutes);
  if(!eligible.length) throw new Error('No catalog recipes match. Increase your time limit.');
  let ids=Array.from({length:5},(_,i)=>eligible[i%eligible.length].id),source='local';
  if(options.apiKey??process.env.GEMINI_API_KEY) {
