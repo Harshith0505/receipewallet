@@ -17,6 +17,7 @@ class MealStudioTest {
  @org.junit.Before fun resetLocalProfile() {
   InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("meal-studio-v1",android.content.Context.MODE_PRIVATE).edit().clear().commit()
   compose.activityRule.scenario.recreate()
+  compose.runOnIdle{val s=vm().studio;s.updateCuisine("Any");s.updateAvoid("");s.updateFaith("None");s.updateVegetarian(false);s.updateMinutes(35f);s.updateAutoCart(false);s.updateAutoWeek(false)}
  }
  @Test fun profileAndPantryCarryIntoBasketAndSurviveRecreation(){
   compose.runOnIdle {vm().studio.updateMood(1);vm().studio.updatePeople(4);if("garlic" !in vm().studio.owned)vm().studio.toggleOwned("garlic")}

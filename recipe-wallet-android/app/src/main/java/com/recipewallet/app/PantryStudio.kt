@@ -100,7 +100,20 @@ import kotlinx.coroutines.withContext
 @Composable internal fun WeeklyStudio(vm:WalletViewModel){
  val state=vm.studio
  var selectedDay by rememberSaveable(state.currentWeek){mutableIntStateOf((java.time.LocalDate.now().dayOfWeek.value-1).coerceIn(0,4))}
- WeekCalendar(state,selectedDay){selectedDay=it}
+ var swappingDay by remember{mutableStateOf<Int?>(null)}
+ var otherCuisines by remember{mutableStateOf(false)}
+ swappingDay?.let{day->
+  val choices=state.swapCandidates(day,otherCuisines)
+  AlertDialog(onDismissRequest={swappingDay=null},title={Text("Choose a different dinner")},text={
+   Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    SmallNote(if(otherCuisines)"Other cuisines for this dinner only. Your saved cuisine, dietary exclusions, vegetarian preference and time limit are preserved."else "No different dinner fits your current ${state.cuisine} cuisine and meal filters.")
+    if(choices.isEmpty())SmallNote("No other recipe matches your dietary and time limits. You can adjust preferences in Build with AI.")
+    choices.forEach{recipe->ShopButton("Choose ${recipe.name}",outlined=true,enabled=!state.weekBusy,onClick={if(state.chooseDinner(day,recipe.id,otherCuisines))swappingDay=null})}
+    if(!otherCuisines&&state.cuisine!="Any"&&state.swapCandidates(day,true).isNotEmpty())ShopButton("Show other cuisines for this dinner",enabled=!state.weekBusy,onClick={otherCuisines=true})
+   }
+  },confirmButton={TextButton(onClick={swappingDay=null}){Text("Keep current dinner")}})
+ }
+ WeekCalendar(state,selectedDay){selectedDay=it;state.clearSwapNotice()}
  StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Your weekly ritual · week of ${state.currentWeek}")
   StudioTitle(if(state.weekDue)"Plan your week"else "Your weekly plan")
@@ -136,8 +149,10 @@ import kotlinx.coroutines.withContext
     FoodSticker(recipe.id,Modifier.fillMaxWidth().height(190.dp))
     Text(recipe.name,fontSize=21.sp,fontWeight=FontWeight.Bold,color=ShopInk)
     SmallNote("${recipe.prepTime} min · ${recipeCuisine(recipe.id)}-inspired")
+    if(state.cuisine!="Any"&&recipeCuisine(recipe.id)!=state.cuisine)SmallNote("Cuisine exception for this dinner · saved preference: ${state.cuisine}")
+    state.swapNotice?.let{Signal(it)}
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-     TextButton(onClick={state.swapDay(index)}){Text("↻ Swap dinner")}
+     TextButton(enabled=!state.weekBusy,onClick={if(!state.swapDay(index)){otherCuisines=false;swappingDay=index}}){Text("↻ Swap dinner")}
      TextButton(onClick={vm.choose(recipe.id)}){Text("Shop this meal →")}
     }
    }

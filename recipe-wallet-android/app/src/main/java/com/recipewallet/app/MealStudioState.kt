@@ -66,6 +66,8 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  fun prepareWeeklyCart(){if(weeklyIds.isEmpty())return;if(weeklyIds.any{id->!fits(catalog.recipes.first{it.id==id})}){weekError="Your plan contains excluded ingredients. Rebuild it with your current filters.";return};cartIds=weeklyIds.toList();cartPeople=people;saved.edit().putString("cartIds",JSONArray(cartIds).toString()).putInt("cartPeople",cartPeople).apply()}
  fun updateAutoCart(value:Boolean){autoCart=value;saved.edit().putBoolean("autoCart",value).apply();if(value)prepareWeeklyCart()}
  val groceryCart get()=weeklyRecipe(cartIds,cartPeople)
+ var swapNotice by mutableStateOf<String?>(null);private set
+ fun clearSwapNotice(){swapNotice=null}
  var weekBusy by mutableStateOf(false);private set
  var weekError by mutableStateOf<String?>(null);private set
  val currentWeek get()=LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toString()
@@ -134,16 +136,34 @@ internal class MealStudioState(private val context:Context,private val catalog:C
    val result=request("/weekly-plan",JSONObject().put("preferences",prompt()).put("history",JSONArray(history)).put("pantryIds",JSONArray(owned.toList())).put("vegetarian",vegetarian).put("cuisine",cuisine).put("avoid",avoid).put("maxMinutes",minutes.toInt()))
    val a=result.getJSONArray("recipeIds");val ids=List(a.length()){a.getString(it)}
    check(ids.size==5&&ids.all { id->catalog.recipes.any { it.id==id && (cuisine=="Any"||recipeCuisine(it.id)==cuisine) && fits(it) && (!vegetarian||it.id!="pasta") } }) { "Unsupported weekly plan. Try again." }
-   weeklyIds=ids;weekSource=result.getString("source");weekStamp=currentWeek;saveWeek()
+   swapNotice=null;weeklyIds=ids;weekSource=result.getString("source");weekStamp=currentWeek;saveWeek()
   }catch(e:Exception){weekError=e.message?:"Connect the backend to build your week."}finally{weekBusy=false}}
  }
  fun buildLocalWeek(){
   val recipes=rankedRecipes();if(recipes.isEmpty()){weekError="No catalog recipe matches these exclusions. Revise your filters.";return}
-  weeklyIds=List(5){recipes[it%recipes.size].id};weekSource="local";weekStamp=currentWeek;weekError=null;saveWeek()
+  swapNotice=null;weeklyIds=List(5){recipes[it%recipes.size].id};weekSource="local";weekStamp=currentWeek;weekError=null;saveWeek()
  }
- fun swapDay(index:Int){val options=rankedRecipes();if(index !in weeklyIds.indices||options.isEmpty())return;val next=options[(options.indexOfFirst { it.id==weeklyIds[index] }+1)%options.size];weeklyIds=weeklyIds.toMutableList().apply { set(index,next.id) };saveWeek()}
+ fun swapCandidates(index:Int,otherCuisines:Boolean=false):List<Recipe>{
+  if(index !in weeklyIds.indices)return emptyList()
+  return rankedRecipes(otherCuisines).filter{it.id!=weeklyIds[index]}.sortedBy{if(it.id in weeklyIds)1 else 0}
+ }
+ fun swapDay(index:Int):Boolean {
+  if(weekBusy)return false
+  val next=swapCandidates(index).firstOrNull()
+  if(next==null){swapNotice="No different dinner matches your current cuisine, dietary and time filters.";return false}
+  return chooseDinner(index,next.id)
+ }
+ fun chooseDinner(index:Int,id:String,otherCuisines:Boolean=false):Boolean {
+  if(weekBusy)return false
+  val next=swapCandidates(index,otherCuisines).firstOrNull{it.id==id}
+  if(next==null){swapNotice="That dinner is no longer available under these filters. Review your choices.";return false}
+  weeklyIds=weeklyIds.toMutableList().apply{set(index,next.id)}
+  weekError=null
+  swapNotice="${listOf("Monday","Tuesday","Wednesday","Thursday","Friday")[index]} dinner changed to ${next.name}."+(if(otherCuisines&&cuisine!="Any"&&recipeCuisine(next.id)!=cuisine)" Your saved cuisine preference is unchanged."else "")
+  saveWeek();return true
+ }
  private fun saveWeek(){if(autoCart)prepareWeeklyCart();saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
- fun rankedRecipes()=catalog.recipes.filter { (cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(if(r.id==mealMoods[pickedMood].recipeId)4 else if(pickedMood==3)45-r.prepTime else 0) }
+ fun rankedRecipes(otherCuisines:Boolean=false)=catalog.recipes.filter { (otherCuisines||cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(if(r.id==mealMoods[pickedMood].recipeId)4 else if(pickedMood==3)45-r.prepTime else 0) }
  fun estimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
  fun prompt():String=buildString {
   append("I want ${mealMoods[pickedMood].prompt}, for $people people, under $${budget.toInt()}, at most ${minutes.toInt()} minutes.")
