@@ -71,7 +71,13 @@ export async function handleRequest(req,res) {
    try {return send(200,planGroceries(input,catalog));} catch(e) {return send(400,{error:e.message});}
   }
   if(req.url==='/plan') {
-   try {const out=await sessionPlan(input);return send(200,{...out,ownedHints:validUser(input.userId)?await ownedHints(await purchaseMemory(),input.userId,out.plan).catch(()=>[]):[]});} catch(e) {return send(503,{error:e.message});}
+   if(!input||typeof input!=='object'||Array.isArray(input)) return send(400,{error:'Invalid planning request'});
+   const message=input.message??input.prompt;
+   if((input.message!==undefined&&input.prompt!==undefined&&input.message!==input.prompt)||
+      ((message!==undefined||!input.revision)&&(typeof message!=='string'||!message.trim()||message.length>2400))) {
+    return send(400,{error:'Describe your shop in 1–2400 characters using message or prompt.'});
+   }
+   try {const out=await sessionPlan({...input,message});return send(200,{...out,ownedHints:validUser(input.userId)?await ownedHints(await purchaseMemory(),input.userId,out.plan).catch(()=>[]):[]});} catch(e) {return send(e.status===429?429:503,{error:e.message});}
   }
   if(req.url==='/memory') return send(200,{likelyOwned:await likelyOwned(await purchaseMemory(),input.userId).catch(()=>[])});
   if(req.url==='/used-up') {try {await markUsedUp(await purchaseMemory(),input.userId,input.ingredientId);return send(200,{ok:true});} catch(e) {return send(400,{error:e.message});}}
