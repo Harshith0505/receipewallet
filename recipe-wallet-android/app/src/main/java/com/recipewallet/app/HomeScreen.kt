@@ -97,7 +97,7 @@ import androidx.compose.ui.unit.sp
  }
 }
 @Composable private fun HistorySuggestions(vm:WalletViewModel){
- StudioCard(tint=Mint){Eyebrow("Made for your rhythm")
+ StudioCard(tint=androidx.compose.ui.graphics.Color.White){Eyebrow("Made for your rhythm")
   val favorite=vm.studio.favorite
   StudioTitle(if(favorite==null)"Your story starts here."else "Back to a favorite?")
   Text(if(favorite==null)"Choose a few meals and this space will learn from your choices on this device."else "${favorite.name} appears most often in your recent choices.",fontSize=14.sp,color=ShopInk)

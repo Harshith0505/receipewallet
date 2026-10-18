@@ -21,7 +21,7 @@ private val storeCoordinates=mapOf("market" to (47.6615 to -122.2985),"fresh" to
  val onPick by rememberUpdatedState(onSelect)
  val data=JSONArray(quotes.mapIndexed{index,q->val coords=storeCoordinates[q.store.id]?:when(index){0->47.6615 to -122.2985;1->47.6615 to -122.3179;else->47.6752 to -122.3263};JSONObject().put("id",q.store.id).put("name",q.store.name).put("lat",coords.first).put("lng",coords.second).put("price",if(q.complete)money(q.charge)else "Unavailable").put("complete",q.complete)})
  var ready by remember{mutableStateOf(false)}
- StudioCard(tint=Mint){
+ StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Explore your basket's neighborhood")
   StudioTitle("A good meal starts nearby.")
   SmallNote("Use two fingers to pan or pinch; tap a price pin. Approximate Seattle demo pins; prices and distances are sample data, not your current location.")

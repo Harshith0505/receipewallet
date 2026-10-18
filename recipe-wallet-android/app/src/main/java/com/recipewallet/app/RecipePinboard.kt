@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 }
 @Composable private fun RecipeCard(vm:WalletViewModel,recipe:Recipe,modifier:Modifier){
  val pinned=recipe.id in vm.studio.pinnedIds;val estimate=vm.studio.estimate(recipe)
- Column(modifier.height(315.dp).shadow(2.dp,RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(when(recipe.id){"pasta"->Peach;"noodles"->Lilac;else->Mint}).clickable{vm.choose(recipe.id)}){
+ Column(modifier.height(315.dp).shadow(2.dp,RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(Color.White).clickable{vm.choose(recipe.id)}){
   Box(Modifier.fillMaxWidth().height(175.dp)){
    FoodSticker(recipe.id,Modifier.fillMaxSize())
    Text(if(recipe.id=="pasta")"Italian-inspired"else "◉ Vegetarian",fontSize=11.sp,color=ShopInk,modifier=Modifier.align(Alignment.TopStart).padding(8.dp).background(Citrus,RoundedCornerShape(20.dp)).padding(horizontal=9.dp,vertical=6.dp))

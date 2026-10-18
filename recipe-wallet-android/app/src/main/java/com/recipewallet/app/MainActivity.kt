@@ -250,7 +250,7 @@ private fun ReceiptPage(vm:WalletViewModel) {
 
 @Composable
 internal fun AgentPlanReview(vm: WalletViewModel) {
-    StudioCard(tint=Mint) {
+    StudioCard(tint=Color.White) {
         Eyebrow("Your meal · ready for your touch")
         StudioTitle(vm.plannedRecipe?.name ?: "Let's fine-tune your request")
         val recipe=vm.plannedRecipe

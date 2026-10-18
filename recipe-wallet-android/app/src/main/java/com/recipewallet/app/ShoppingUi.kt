@@ -96,21 +96,14 @@ internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 
 }
 
 @Composable internal fun JournalNavigation(labels:List<String>,selected:Int,enabled:Boolean,onSelect:(Int)->Unit){
- ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=ShopTint,contentColor=ShopInk){
-  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,text={Text(label,fontSize=17.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
+ ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=Color.White,contentColor=ShopInk){
+  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
  }
 }
 
 @Composable internal fun BrandWordmark(modifier:Modifier=Modifier){
  Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)){
-  androidx.compose.foundation.Canvas(Modifier.size(40.dp)){
-   val w=size.width;val h=size.height
-   drawRoundRect(ShopInk,topLeft=androidx.compose.ui.geometry.Offset(w*.08f,h*.32f),size=androidx.compose.ui.geometry.Size(w*.84f,h*.59f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.12f))
-   drawRoundRect(Color(0xFFF0BAA9),topLeft=androidx.compose.ui.geometry.Offset(w*.58f,h*.5f),size=androidx.compose.ui.geometry.Size(w*.37f,h*.23f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.06f))
-   drawCircle(ShopInk,w*.035f,androidx.compose.ui.geometry.Offset(w*.72f,h*.615f))
-   drawOval(Color(0xFF71805B),topLeft=androidx.compose.ui.geometry.Offset(w*.19f,0f),size=androidx.compose.ui.geometry.Size(w*.33f,h*.26f))
-   drawOval(Color(0xFF879461),topLeft=androidx.compose.ui.geometry.Offset(w*.49f,h*.05f),size=androidx.compose.ui.geometry.Size(w*.28f,h*.22f))
-  }
+  androidx.compose.foundation.Image(painter=androidx.compose.ui.res.painterResource(R.drawable.ic_wallet),contentDescription="Recipe Wallet logo",modifier=Modifier.size(40.dp))
   Text("Recipe Wallet",color=ShopInk,fontFamily=androidx.compose.ui.text.font.FontFamily.SansSerif,fontWeight=FontWeight.ExtraBold,fontSize=26.sp,letterSpacing=(-1).sp,lineHeight=29.sp)
  }
 }

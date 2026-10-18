@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
    };state.scan(bitmap)
   }catch(e:Exception){localError=e.message?:"Choose another photo."}finally{pendingPhoto=null}}
  }
- StudioCard(tint=Mint){
+ StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Pantry lens")
   StudioTitle("Add pantry items")
   Text("Snap your fridge or pantry. Review what Gemini sees, then decide what belongs in your pantry.",color=ShopInk,fontSize=15.sp)
@@ -53,7 +53,7 @@ import kotlinx.coroutines.withContext
   if(state.scanBusy){LinearProgressIndicator(Modifier.fillMaxWidth());Text("Looking for familiar ingredients…",color=ShopInk)}
   state.scanError?.let{Text(it,color=Danger,fontSize=13.sp)}
  }
- if(state.scanIds.isNotEmpty())StudioCard(tint=Peach){
+ if(state.scanIds.isNotEmpty())StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Signal("? Photo suggestions · not confirmed",Warn)
   StudioTitle("Did we get these right?")
   SmallNote("Tap to exclude mistakes. Photos cannot establish how much you have, food safety, or freshness.")
@@ -83,7 +83,7 @@ import kotlinx.coroutines.withContext
 
 @Composable internal fun WeeklyStudio(vm:WalletViewModel){
  val state=vm.studio
- StudioCard(tint=Lilac){
+ StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Your weekly ritual · week of ${state.currentWeek}")
   StudioTitle(if(state.weekDue)"Plan your week"else "Your weekly plan")
   Text("Plan five dinners using your preferences and pantry.",color=ShopInk,fontSize=14.sp)
@@ -100,7 +100,7 @@ import kotlinx.coroutines.withContext
   }
  }
  if(state.weeklyIds.isNotEmpty())ShopButton("Prepare weekly grocery cart",onClick={state.prepareWeeklyCart()})
- state.groceryCart?.let{cart->StudioCard(tint=Peach){
+ state.groceryCart?.let{cart->StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Saved shopping cart · ${state.cartPeople} people")
   StudioTitle("Groceries, planned ahead")
   InfoDisclosure("View cart ingredients","${cart.ingredients.size} grocery items"){
@@ -112,7 +112,7 @@ import kotlinx.coroutines.withContext
   Signal(if(state.weekSource=="gemini")"✨ AI arranged · edited by you"else "Local catalog plan · no AI used",if(state.weekSource=="gemini")Good else Warn)
   state.weeklyIds.forEachIndexed{index,id->
    val recipe=vm.catalog.recipes.first{it.id==id}
-   StudioCard(tint=if(index%2==0)Mint else Peach){
+   StudioCard(tint=androidx.compose.ui.graphics.Color.White){
     Eyebrow(listOf("Monday","Tuesday","Wednesday","Thursday","Friday")[index])
     Text("${recipe.emoji}  ${recipe.name}",fontSize=21.sp,color=ShopInk)
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){

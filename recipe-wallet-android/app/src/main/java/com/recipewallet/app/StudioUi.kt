@@ -114,7 +114,7 @@ internal val Danger=Color(0xFFA64451)
 }
 @Composable internal fun RecipeTile(recipe:Recipe,studio:MealStudioState,index:Int,onClick:()->Unit){
  val have=recipe.ingredients.count { it.id in studio.owned }
- StudioCard(tint=listOf(Mint,Peach,Lilac)[index%3],modifier=Modifier.clickable(onClick=onClick)){
+ StudioCard(tint=androidx.compose.ui.graphics.Color.White,modifier=Modifier.clickable(onClick=onClick)){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){
    FoodSticker(recipe.id,Modifier.size(78.dp))
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){
