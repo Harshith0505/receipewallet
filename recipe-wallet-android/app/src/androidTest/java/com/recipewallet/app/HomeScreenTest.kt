@@ -75,4 +75,19 @@ class HomeScreenTest {
         compose.onNodeWithText("Build manually").assertIsSelected()
         compose.onNodeWithText("Choose a recipe").assertIsDisplayed()
     }
+
+    @Test fun retailerLookupReturnsToTheEditedIngredientBasket() {
+        compose.onNodeWithText("Build manually").performClick()
+        compose.onNodeWithText("Spicy garlic noodles").performScrollTo().performClick()
+        compose.onNodeWithText("Garlic").performScrollTo().performClick()
+        compose.onNodeWithText("Look up retailer prices").performScrollTo().performClick()
+        compose.onNodeWithText("US ZIP code").assertExists()
+        compose.onNodeWithText("← Back").performScrollTo().performClick()
+        compose.runOnIdle {
+            val vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            assertEquals(1, vm.step)
+            assertEquals(false, "garlic" in vm.selected)
+        }
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().assertIsEnabled()
+    }
 }

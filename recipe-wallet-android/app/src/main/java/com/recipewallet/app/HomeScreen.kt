@@ -35,7 +35,7 @@ private val HomePaper = Color(0xFFFAFAF7)
 private val HomeLine = Color(0xFFE1E3DC)
 
 @Composable
-internal fun HomeScreen(vm: WalletViewModel) {
+internal fun HomeScreen(vm: WalletViewModel, onRetailerPrices: () -> Unit = {}) {
     var manual by rememberSaveable { mutableStateOf(false) }
     var libraryPage by rememberSaveable { mutableStateOf(if (vm.isPersonal) "saved" else "home") }
     var selectedRecipeId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -107,6 +107,7 @@ internal fun HomeScreen(vm: WalletViewModel) {
                                 }
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(text = { Text("Retailer prices") }, onClick = { menuOpen = false; onRetailerPrices() })
                                 DropdownMenuItem(text = { Text("About this demo") }, onClick = { menuOpen = false; about = true })
                             }
                         }
@@ -119,6 +120,8 @@ internal fun HomeScreen(vm: WalletViewModel) {
                     Text("Plan a meal, compare shops, and choose your Visa card.",
                         color = HomeMuted, fontSize = 15.sp, lineHeight = 22.sp)
                 }
+                OutlinedButton(onClick = { dismissKeyboard(); onRetailerPrices() }, enabled = !vm.aiBusy,
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Check retailer prices", color = HomeInk) }
                 Row(
                     Modifier.fillMaxWidth().selectableGroup()
                         .background(Color(0xFFEEEFE9), RoundedCornerShape(12.dp)).padding(4.dp),

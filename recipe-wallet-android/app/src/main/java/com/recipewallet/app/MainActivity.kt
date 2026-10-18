@@ -15,6 +15,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -75,13 +76,20 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
+    var retailerPrices by rememberSaveable { mutableStateOf(false) }
+    if (retailerPrices) {
+        RetailerScreen(if (vm.step == 1) vm.recipe.ingredients.filter { it.id in vm.selected }.map { it.name } else emptyList(),
+            onBack = { retailerPrices = false })
+        return
+    }
+    val openRetailerPrices: () -> Unit = { if (vm.canEditCheckout) retailerPrices = true }
     val back: () -> Unit = { if (vm.step == 4) vm.restart() else vm.back() }
     BackHandler(enabled = vm.step in 1..4, onBack = back)
-    if (vm.step == 0) { HomeScreen(vm); return }
+    if (vm.step == 0) { HomeScreen(vm, openRetailerPrices); return }
     key(vm.step) {
         ShoppingPage(vm.step, onBack = back, backEnabled = vm.canEditCheckout) {
             when (vm.step) {
-                1 -> IngredientPage(vm)
+                1 -> IngredientPage(vm, openRetailerPrices)
                 2 -> ShopComparison(vm)
                 3 -> CheckoutPage(vm, pay)
                 4 -> ReceiptPage(vm)
@@ -91,7 +99,7 @@ private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
 }
 
 @Composable
-private fun IngredientPage(vm: WalletViewModel) {
+private fun IngredientPage(vm: WalletViewModel, onRetailerPrices: () -> Unit) {
     PageHeading("Ingredients", vm.recipe.name)
     SmallNote(if(vm.isPersonal) "Confirm the suggested products and pack counts against your saved recipe. Uncheck pantry items." else "Unchecked ingredients are already in your pantry. Purchases use whole packages.")
     ShoppingControls(vm)
@@ -118,6 +126,7 @@ private fun IngredientPage(vm: WalletViewModel) {
     }
     if(vm.selected.isEmpty()) SmallNote("Your pantry covers this recipe. No grocery purchase is needed.")
     if(vm.canCompare&&vm.rankings.none { it.complete }) SmallNote("No store can supply this selection. Review the organic or fulfillment preference.")
+    ShopButton("Look up retailer prices", outlined = true, enabled = vm.canEditCheckout, onClick = onRetailerPrices)
     ShopButton("Compare complete baskets →",enabled=vm.canEditCheckout&&vm.canCompare&&vm.rankings.any { it.complete },onClick={vm.compare()})
     vm.error?.let { SmallNote(it) }
     SmallNote("Demo package prices · Configured tax 0% · No real grocery order")

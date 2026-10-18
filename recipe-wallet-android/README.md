@@ -12,6 +12,10 @@ Kotlin + Jetpack Compose, API 26+, JDK 17 and Android SDK 36. This version combi
 
 See [Grocery planner](GROCERY_PLANNER.md) and [Tablet setup](TABLET_SETUP.md) for details. Saved personal recipes stay on the device and can be shopped after the user confirms product matches and pack counts.
 
+## Retailer price lookup
+
+**Check retailer prices** on the home screen and **Look up retailer prices** on the ingredient screen search Kroger-family stores by ZIP and fetch product prices for the selected location. Requires backend-only Kroger client credentials; see [Kroger setup](RETAILER_SETUP.md). Missing prices/stock remain unknown, and no sample prices are used as fallback. Lookup has provider/timestamp labels and store directions. Recipe recommendations and Stripe test baskets still use sample catalog prices; retailer ordering and real rewards are not enabled by this lookup.
+
 ## Planning and pricing
 
 Gemini defaults to `gemini-3.5-flash-lite` through the Interactions API. `find_recipes`, `compare_baskets` and `prepare_basket` ground its choices in catalog data; the model cannot order or pay. Follow-ups retain the latest constraints and four recent requests in local sessions that expire after 20 minutes. The app shows actual tool summaries and validates returned totals. Requests use `store: false`, which disables stored Interaction objects, rather than changing the provider's broader data policies. Payment credentials are never sent to Gemini.
