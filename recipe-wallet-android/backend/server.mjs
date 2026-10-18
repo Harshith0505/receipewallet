@@ -6,6 +6,8 @@ import {planGroceries} from './grocery.mjs';
 import {recommend} from './recommend.mjs';
 import {sessionPlan} from './agent.mjs';
 import {suggestFromPantry} from './pantry.mjs';
+import {scanPantry,ScanError} from './pantry-scan.mjs';
+let activeScans=0;
 const secret=process.env.STRIPE_SECRET_KEY||'';
 const publishableKey=process.env.STRIPE_PUBLISHABLE_KEY||'';
 const configured=secret.startsWith('sk_test_')&&publishableKey.startsWith('pk_test_');
@@ -19,12 +21,20 @@ async function stripe(path,body,idempotencyKey) {
 export async function handleRequest(req,res) {
  res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
  const send=(status,data)=>{res.writeHead(status);res.end(JSON.stringify(data));};
- if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest'].includes(req.url)) return send(404,{error:'Not found'});
+ if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,pantryScanConfigured:!!process.env.PERCEPTRON_API_KEY});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/pantry-scan'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
-  let body='';for await(const chunk of req) {body+=chunk;if(body.length>8192) return send(413,{error:'Request too large'});}
+  const limit=req.url==='/pantry-scan'?4_001_024:8192;
+  let body='',bodyBytes=0;for await(const chunk of req) {bodyBytes+=Buffer.byteLength(chunk);if(bodyBytes>limit) return send(413,{error:'Request too large'});body+=chunk;}
   let input;try {input=JSON.parse(body);} catch{return send(400,{error:'Invalid JSON'});}
+  if(req.url==='/pantry-scan') {
+   if(activeScans>=2) return send(429,{error:'Photo scanning is busy. Please try again shortly.'});
+   activeScans++;
+   try {return send(200,await scanPantry(input));}
+   catch(e) {return send(e instanceof ScanError?e.status:502,{error:e instanceof ScanError?e.message:'Couldn’t scan this photo. Please retry.'});}
+   finally {activeScans--;}
+  }
   if(req.url==='/grocery-quotes') {
    try {return send(200,planGroceries(input,catalog));} catch(e) {return send(400,{error:e.message});}
   }

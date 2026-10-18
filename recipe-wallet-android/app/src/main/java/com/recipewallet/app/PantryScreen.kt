@@ -1,8 +1,7 @@
 package com.recipewallet.app
 
 import android.content.ActivityNotFoundException
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,9 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.File
 import java.util.UUID
 
@@ -40,43 +37,26 @@ import java.util.UUID
 internal fun PantryScreen(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
-    val store = remember { PantryStore(context) }
-    val initial = remember { runCatching { store.read() } }
-    var items by remember { mutableStateOf(initial.getOrDefault(emptyList())) }
-    var error by remember { mutableStateOf(if (initial.isFailure) "Couldn’t open your pantry. Please reopen this page." else null) }
+    val pantry: PantryViewModel = viewModel()
+    val items = pantry.items
+    val photo = pantry.photo
+    val loading = pantry.busy
+    val error = pantry.error
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
-    var previewPath by rememberSaveable { mutableStateOf<String?>(null) }
-    var photo by remember { mutableStateOf<Bitmap?>(null) }
-    var loading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        val existing = previewPath
-        if (existing != null) photo = withContext(Dispatchers.IO) { BitmapFactory.decodeFile(existing) }
-    }
-    fun usePhoto(load: () -> Bitmap) {
-        scope.launch {
-            loading = true; error = null
-            val result = runCatching { withContext(Dispatchers.IO) {
-                val bitmap = load()
-                bitmap to PantryPhoto.save(context, bitmap)
-            } }
-            result.onSuccess { (bitmap, path) ->
-                PantryPhoto.remove(context, previewPath)
-                photo = bitmap; previewPath = path
-            }.onFailure { error = "Couldn’t open this photo. Please try another." }
-            loading = false
-        }
-    }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { result ->
-        if (result != null) usePhoto { result }
+    var editingReview by rememberSaveable { mutableStateOf(false) }
+    var cameraPath by rememberSaveable { mutableStateOf<String?>(null) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val path = cameraPath
+        cameraPath = null
+        if (success && path != null) pantry.loadPhoto {
+            try { PantryPhoto.read(context, Uri.fromFile(File(path))) }
+            finally { PantryPhoto.removeCapture(context, path) }
+        } else PantryPhoto.removeCapture(context, path)
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) usePhoto { PantryPhoto.read(context, uri) }
+        if (uri != null) pantry.loadPhoto { PantryPhoto.read(context, uri) }
     }
-    fun save(values: List<PantryItem>): Boolean = runCatching { store.write(values) }
-        .onSuccess { items = values; error = null }
-        .onFailure { error = it.message ?: "Couldn’t save your pantry. Please try again." }.isSuccess
 
     ShoppingPage(step = 0, onBack = onBack) {
         PageHeading("My pantry", "Keep the ingredients you already have in one place.")
@@ -92,36 +72,68 @@ internal fun PantryScreen(onBack: () -> Unit) {
             val preview = photo
             if (preview != null) {
                 Image(preview.asImageBitmap(), contentDescription = "Selected pantry photo",
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 260.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = if (pantry.detections == null) 160.dp else 90.dp, max = if (pantry.detections == null) 260.dp else 112.dp)
                         .clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Fit)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text("Photo ready", color = ShopInk, fontSize = 13.sp)
-                    TextButton(onClick = { PantryPhoto.remove(context, previewPath); previewPath = null; photo = null }) {
+                    Text(if (pantry.detections == null) "Photo ready" else "Photo scanned", color = ShopInk, fontSize = 13.sp)
+                    TextButton(enabled = !loading, onClick = pantry::removePhoto) {
                         Text("Remove photo", color = ShopMuted)
                     }
                 }
             }
-            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShopInk)
-            ShopButton(if (photo == null) "Take a photo" else "Retake photo", enabled = !loading) {
-                try { camera.launch(null) }
-                catch (_: ActivityNotFoundException) { error = "No camera app is available. Choose a photo instead." }
-                catch (_: SecurityException) { error = "Camera access is unavailable. Choose a photo instead." }
+            if (loading) {
+                LinearProgressIndicator(Modifier.fillMaxWidth(), color = ShopInk)
+                SmallNote(if (pantry.scanning) "Looking for ingredients…" else "Opening your photo…")
             }
-            ShopButton(if (photo == null) "Choose a photo" else "Choose another photo", outlined = true, enabled = !loading) {
+            if (photo != null && pantry.detections == null) {
+                ShopButton(if (pantry.scanning) "Scanning…" else "Scan ingredients", enabled = !loading, onClick = pantry::scan)
+                SmallNote("Sends this photo to Perceptron to identify ingredients. You’ll review the results before saving.")
+            }
+            val takePhoto: () -> Unit = {
+                try {
+                    PantryPhoto.removeCapture(context, cameraPath)
+                    val file = PantryPhoto.cameraFile(context)
+                    cameraPath = file.absolutePath
+                    camera.launch(PantryPhoto.cameraUri(context, file))
+                } catch (_: ActivityNotFoundException) {
+                    PantryPhoto.removeCapture(context, cameraPath); cameraPath = null
+                    pantry.showError("No camera app is available. Choose a photo instead.")
+                } catch (_: Exception) {
+                    PantryPhoto.removeCapture(context, cameraPath); cameraPath = null
+                    pantry.showError("Camera access is unavailable. Choose a photo instead.")
+                }
+            }
+            val choosePhoto: () -> Unit = {
                 try { picker.launch("image/*") }
-                catch (_: ActivityNotFoundException) { error = "No photo picker is available on this device." }
+                catch (_: ActivityNotFoundException) { pantry.showError("No photo picker is available on this device.") }
             }
-            SmallNote("Photo preview only for now. Ingredient recognition comes next.")
+            if (photo == null) {
+                ShopButton("Take a photo", enabled = !loading, onClick = takePhoto)
+                ShopButton("Choose a photo", outlined = true, enabled = !loading, onClick = choosePhoto)
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) { ShopButton("Retake photo", outlined = true, enabled = !loading, onClick = takePhoto) }
+                    Column(Modifier.weight(1f)) { ShopButton("Choose another", outlined = true, enabled = !loading, onClick = choosePhoto) }
+                }
+                if (pantry.detections != null) TextButton(enabled = !loading, onClick = pantry::scan) { Text("Scan again", color = ShopInk) }
+            }
+
         }
         error?.let { Text(it, color = androidx.compose.ui.graphics.Color(0xFF9A3A28), fontSize = 13.sp) }
+        pantry.notice?.let { SmallNote(it) }
+        pantry.detections?.let { detected ->
+            PantryReview(detected, enabled = pantry.writable && !loading,
+                onSelect = pantry::select, onEdit = { id -> editingReview = true; editingId = id; editorOpen = true },
+                onSave = pantry::saveReviewed, onDismiss = pantry::dismissReview)
+        }
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Your ingredients", color = ShopInk, fontSize = 18.sp, fontWeight = FontWeight.Medium)
                     SmallNote(if (items.isEmpty()) "Nothing added yet" else "${items.size} ${if (items.size == 1) "ingredient" else "ingredients"}")
                 }
-                TextButton(enabled = initial.isSuccess, onClick = { editingId = null; editorOpen = true }) {
+                TextButton(enabled = pantry.writable, onClick = { editingReview = false; editingId = null; editorOpen = true }) {
                     Text("+ Add manually", color = ShopInk)
                 }
             }
@@ -133,12 +145,12 @@ internal fun PantryScreen(onBack: () -> Unit) {
                     if (index > 0) HorizontalDivider(color = ShopLine)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).clickable(role = Role.Button,
-                            onClick = { editingId = item.id; editorOpen = true }).padding(vertical = 6.dp),
+                            onClick = { editingReview = false; editingId = item.id; editorOpen = true }).padding(vertical = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(item.name, color = ShopInk, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                             SmallNote(item.amount.ifBlank { "Amount not set" })
                         }
-                        TextButton(onClick = { save(items.filterNot { it.id == item.id }) },
+                        TextButton(onClick = { pantry.save(items.filterNot { it.id == item.id }) },
                             modifier = Modifier.semantics { contentDescription = "Remove ${item.name}" }) {
                             Text("Remove", color = ShopMuted, fontSize = 12.sp)
                         }
@@ -149,17 +161,18 @@ internal fun PantryScreen(onBack: () -> Unit) {
         }
     }
     if (editorOpen) {
-        val current = items.firstOrNull { it.id == editingId }
+        val current = if (editingReview) pantry.detections?.firstOrNull { it.item.id == editingId }?.item else items.firstOrNull { it.id == editingId }
         PantryItemEditor(current, onDismiss = { editorOpen = false }, onSave = { name, amount ->
             val item = PantryItem(current?.id ?: UUID.randomUUID().toString(), name, amount)
             val updated = if (current == null) items + item else items.map { if (it.id == item.id) item else it }
-            if (save(updated)) editorOpen = false
+            if (editingReview) { pantry.editDetection(item); editorOpen = false }
+            else if (pantry.save(updated)) editorOpen = false
         }, error = error)
     }
 }
 
 @Composable
-private fun PantryItemEditor(item: PantryItem?, onDismiss: () -> Unit, onSave: (String, String) -> Unit, error: String?) {
+internal fun PantryItemEditor(item: PantryItem?, onDismiss: () -> Unit, onSave: (String, String) -> Unit, error: String?) {
     var name by rememberSaveable(item?.id) { mutableStateOf(item?.name.orEmpty()) }
     var amount by rememberSaveable(item?.id) { mutableStateOf(item?.amount.orEmpty()) }
     AlertDialog(onDismissRequest = onDismiss, shape = RoundedCornerShape(16.dp),

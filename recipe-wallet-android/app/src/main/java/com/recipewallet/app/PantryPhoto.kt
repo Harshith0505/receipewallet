@@ -9,8 +9,21 @@ import android.net.Uri
 import java.io.File
 import java.util.UUID
 
-/** A bounded, on-device preview. Photos are never uploaded by the pantry page. */
+/** Bounded, orientation-corrected JPEGs. Upload happens only when the user chooses Scan. */
 internal object PantryPhoto {
+    fun cameraFile(context: Context): File {
+        val directory = File(context.cacheDir, "pantry-camera").apply { mkdirs() }
+        return File.createTempFile("capture-", ".jpg", directory)
+    }
+    fun cameraUri(context: Context, file: File): Uri = androidx.core.content.FileProvider.getUriForFile(
+        context, "${context.packageName}.pantry-files", file
+    )
+    fun removeCapture(context: Context, path: String?) {
+        if (path == null) return
+        val directory = File(context.cacheDir, "pantry-camera").canonicalFile
+        val file = File(path).canonicalFile
+        if (file.parentFile == directory) file.delete()
+    }
     fun read(context: Context, uri: Uri): Bitmap {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, options) }
