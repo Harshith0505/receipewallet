@@ -111,10 +111,12 @@ private fun IngredientPage(vm: WalletViewModel) {
     if(vm.studio.faith!="None")Signal("${vm.studio.faith}: verify product certification and preparation.",Warn)
     SmallNote("Review ingredient quantities and uncheck what you already have. Current retailer products are matched in the next step.")
     ShoppingControls(vm)
-    Signal("${vm.selected.size} to buy · ${vm.recipe.ingredients.size-vm.selected.size} already owned")
+    val activeIngredients=vm.recipe.ingredients.filter{it.id !in vm.omittedIngredientIds}
+    Signal("${vm.selected.size} to buy · ${activeIngredients.size-vm.selected.size} already owned")
+    if(vm.omittedIngredientIds.isNotEmpty())SmallNote("Left out of recipe: "+vm.recipe.ingredients.filter{it.id in vm.omittedIngredientIds}.joinToString{it.name})
     SmallNote("Uncheck an ingredient to keep it out of this purchase. Confirm you have enough; this is a meal-only choice.")
     QuietCard {
-        vm.recipe.ingredients.forEachIndexed { index, ingredient ->
+        activeIngredients.forEachIndexed { index, ingredient ->
             if(index>0) HorizontalDivider(color=ShopLine)
             val included=ingredient.id in vm.selected
             Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -321,7 +323,9 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
                 vm.agentChanges.forEach { Text("• $it",color=ShopInk,fontSize=15.sp) }
             }
         }
-            ReviewSection("01  To buy", "Whole packages in your next basket", Peach) {
+            val toBuy=recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }
+            ReviewSection("01  To buy", if(toBuy.isEmpty())"Nothing to buy · your pantry covers this meal"else "${toBuy.size} ingredients · "+toBuy.joinToString{it.name}, Peach) {
+                if(toBuy.isEmpty())SmallNote("Nothing to buy. Check that your pantry quantities cover this meal.")
                 recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.forEach { Text("+ "+it.name,color=ShopInk) }
             }
             ReviewSection("02  Already owned", "Confirmed pantry and items from this conversation", Mint) {
@@ -330,14 +334,23 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
                 owned.forEach { Text("✓ ${it.name} · "+if(it.id in vm.studio.owned)"My pantry"else "This meal only",color=ShopInk) }
                 SmallNote("My pantry is saved on your device. Meal-only items came from your request. Check you have enough for the recipe.")
             }
-            ReviewSection("03  Ingredient remix", "Change the vibe, then let the agent revise", Lilac) {
-                ChipRail(listOf("Mild · remove chili","Spicy · include chili","Use my pantry"),enabled=!vm.aiBusy){i->
-                    vm.preference=when(i){0->"Remove chili from this recipe to make it mild. Keep all other constraints.";1->"Include chili if this recipe supports it. Keep my other constraints.";else->"I already have "+vm.studio.ingredients.filter { it.id in vm.studio.owned }.joinToString { it.name }+". Revise this meal, keeping my constraints."}
-                    vm.suggest()
+            ReviewSection("03  Ingredient remix", "Include or leave out ingredients; the shopping list updates here", Lilac) {
+                if(vm.aiBusy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Updating your shopping list…")}
+                if(recipe.ingredients.any{it.id=="chili"}) {
+                    ShopButton("Mild · remove chili",outlined=true,enabled=!vm.aiBusy,onClick={vm.remix("omit","chili")})
+                    ShopButton("Spicy · include chili",outlined=true,enabled=!vm.aiBusy,onClick={vm.remix("include","chili")})
+                }
+                ShopButton("Use my pantry",outlined=true,enabled=!vm.aiBusy,onClick={vm.remix("pantry")})
+                val omitted=vm.planIds("omittedIngredientIds")
+                recipe.ingredients.forEach { ingredient ->
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Checkbox(checked=ingredient.id !in omitted,enabled=!vm.aiBusy,onCheckedChange={include->vm.remix(if(include)"include"else "omit",ingredient.id)},modifier=Modifier.semantics{contentDescription="Include ${ingredient.name} in recipe"})
+                        Column { Text(ingredient.name,color=ShopInk);SmallNote(if(ingredient.id in omitted)"Left out of recipe"else if(ingredient.id in vm.planIds("ownedIngredientIds"))"Already owned · no purchase"else "Included · to buy") }
+                    }
                 }
                 val omissions=vm.agentPlan?.optJSONArray("omittedIngredientIds")
                 if(omissions!=null&&omissions.length()>0) SmallNote("Left out of the recipe: "+(0 until omissions.length()).map { omissions.getString(it) }.mapNotNull { id->recipe.ingredients.firstOrNull { it.id==id }?.name }.joinToString())
-                SmallNote("Only supported catalog ingredients can change. Review the result before approving.")
+                SmallNote("These controls change this recipe. Leaving an ingredient out does not mark it as owned. Review the updated shopping list before approving.")
             }
 
         }
