@@ -8,6 +8,12 @@
     <category android:name="android.intent.category.BROWSABLE" />
     <data android:scheme="com.recipewallet.app" android:host="auth" android:path="/confirmed" />
    </intent-filter>
+   <intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="com.recipewallet.app" android:host="kroger" android:path="/return" />
+   </intent-filter>
   </activity>
  </application>
 </manifest>

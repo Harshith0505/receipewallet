@@ -1,3 +1,4 @@
+import {randomBytes, createHmac, timingSafeEqual} from 'node:crypto';
 // Official Kroger catalog access. Credentials and OAuth tokens stay on the server.
 export class RetailerFailure extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -19,6 +20,7 @@ export function normalizeProducts(rows) {
     if (!product?.productId || !product.description || !Array.isArray(product.items)) return [];
     return product.items.flat().filter(item => item?.itemId).map(item => ({
       productId: String(product.productId), itemId: String(item.itemId),
+      upc: typeof product.upc === 'string' ? product.upc : null,
       name: product.description, brand: product.brand || null, packageSize: item.size || null,
       regularPriceCents: cents(item.price?.regular), promotionalPriceCents: cents(item.price?.promo),
       // Missing inventory is unknown, never interpreted as in stock.
@@ -33,6 +35,7 @@ export function normalizeProducts(rows) {
 export function createRetailer({clientId = process.env.KROGER_CLIENT_ID || '',
   clientSecret = process.env.KROGER_CLIENT_SECRET || '', fetcher = fetch, now = Date.now} = {}) {
   let token = null, expires = 0, pendingToken = null;
+  const quoteKey = randomBytes(32);
   const configured = Boolean(clientId.trim() && clientSecret.trim());
   async function checkedFetch(path, options) {
     try {
@@ -86,6 +89,17 @@ export function createRetailer({clientId = process.env.KROGER_CLIENT_ID || '',
   }
   return {
     configured,
+    readQuote(value) {
+      if (typeof value !== 'string' || value.length > 7000) throw new RetailerFailure(400, 'Refresh and review your basket before transferring it.');
+      const [payload, signature, extra] = value.split('.');
+      const expected = createHmac('sha256', quoteKey).update(payload || '').digest('base64url');
+      if (extra !== undefined || !signature || !/^[A-Za-z0-9_-]{43}$/.test(signature) || signature.length !== expected.length ||
+          !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) throw new RetailerFailure(400, 'The reviewed basket is invalid. Refresh its prices.');
+      let quote;
+      try { quote = JSON.parse(Buffer.from(payload, 'base64url')); } catch { throw new RetailerFailure(400, 'Refresh the reviewed basket.'); }
+      if (quote.expiresAt <= now()) throw new RetailerFailure(409, 'The reviewed prices expired. Refresh and review the basket again.');
+      return quote;
+    },
     async stores(input) {
       const postalCode = inputText(input?.postalCode, /^\d{5}$/, 'Enter a five-digit US ZIP code.');
       const rows = await get('locations', {'filter.zipCode.near': postalCode, 'filter.radiusInMiles': '10', 'filter.limit': '5'});
@@ -140,7 +154,13 @@ export function createRetailer({clientId = process.env.KROGER_CLIENT_ID || '',
         if (!Number.isSafeInteger(lineSubtotalCents) || !Number.isSafeInteger(subtotalCents)) throw new RetailerFailure(502, 'The retailer price is outside the supported range.');
         return {...product, quantity: selection.quantity, lineSubtotalCents};
       });
-      return {provider: 'kroger', demo: false, storeId, currency: 'usd', fetchedAt: new Date(now()).toISOString(),
+      const expiresAt = now() + 10 * 60 * 1000;
+      const payload = Buffer.from(JSON.stringify({storeId, expiresAt, subtotalCents, items: items.map(item => ({
+        productId: item.productId, itemId: item.itemId, upc: item.upc, quantity: item.quantity, price: item.regularPriceCents,
+        pickupAvailable: item.pickupAvailable, deliveryAvailable: item.deliveryAvailable
+      }))})).toString('base64url');
+      const quoteToken = `${payload}.${createHmac('sha256', quoteKey).update(payload).digest('base64url')}`;
+      return {provider: 'kroger', demo: false, storeId, currency: 'usd', fetchedAt: new Date(now()).toISOString(), quoteToken, expiresAt,
         pricingScope: 'item-subtotal-only', subtotalCents, items, taxCents: null, feesCents: null,
         finalChargeCents: null, rewardsCents: null, orderPlaced: false, stockQuantitiesVerified: false};
     }

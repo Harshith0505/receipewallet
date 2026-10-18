@@ -31,6 +31,7 @@ import com.stripe.android.paymentsheet.PaymentSheetResult
 class MainActivity : ComponentActivity() {
     private val vm: WalletViewModel by viewModels()
     private val library: RecipeCloudViewModel by viewModels()
+    private val retailer: RetailerViewModel by viewModels()
     private lateinit var sheet: PaymentSheet
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +60,11 @@ class MainActivity : ComponentActivity() {
     }
     private fun receiveConfirmation(incoming: Intent?) {
         val callback = incoming?.data?.toString() ?: return
+        if (isKrogerCartReturn(callback)) {
+            setIntent(Intent(incoming).apply { data = null })
+            retailer.checkCartConnection()
+            return
+        }
         if (!isSignupCallback(callback)) return
         // The callback is handled in memory; never retain authorization codes in the activity intent.
         setIntent(Intent(incoming).apply { data = null })

@@ -18,6 +18,8 @@ See [Grocery planner](GROCERY_PLANNER.md) and [Tablet setup](TABLET_SETUP.md) fo
 
 ## Planning and pricing
 
+The live basket also has an optional **Kroger cart handoff** with customer browser sign-in and explicit transfer approval. It rechecks a signed reviewed quote before sending exact UPC/package counts, prevents duplicate submission of successful attempts, and blocks automatic retries when the result is uncertain. This requires additional Cart API permission and callback registration; see [Cart setup](KROGER_CART_SETUP.md). Final shopping location, prices, fees and payment are reviewed at the retailer. This does not change the Stripe test checkout or place grocery orders automatically. Real shopper consent/cart transfer has not yet been verified.
+
 Gemini defaults to `gemini-3.5-flash-lite` through the Interactions API. `find_recipes`, `compare_baskets` and `prepare_basket` ground its choices in catalog data; the model cannot order or pay. Follow-ups retain the latest constraints and four recent requests in local sessions that expire after 20 minutes. The app shows actual tool summaries and validates returned totals. Requests use `store: false`, which disables stored Interaction objects, rather than changing the provider's broader data policies. Payment credentials are never sent to Gemini.
 
 AI initially compares two-serving pickup baskets. The store screen supports 1–12 servings, pantry exclusions, organic-only offers and pickup/delivery. The app purchases enough whole packages, handles store-specific stock and fees, and excludes incomplete baskets from checkout. Android and Node share a 288-scenario calculation matrix. Money uses integer cents; configured demo tax is 0%. Rewards exclude fulfillment fees and tax.

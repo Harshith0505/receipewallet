@@ -7,7 +7,9 @@ import {recommend} from './recommend.mjs';
 import {sessionPlan} from './agent.mjs';
 import {suggestFromPantry} from './pantry.mjs';
 import {createRetailer, RetailerFailure} from './retailer.mjs';
+import {createKrogerCart, krogerReturnHtml} from './kroger-cart.mjs';
 const retailer = createRetailer();
+const krogerCart = createKrogerCart({retailer});
 const secret=process.env.STRIPE_SECRET_KEY||'';
 const publishableKey=process.env.STRIPE_PUBLISHABLE_KEY||'';
 const configured=secret.startsWith('sk_test_')&&publishableKey.startsWith('pk_test_');
@@ -21,12 +23,27 @@ async function stripe(path,body,idempotencyKey) {
 export async function handleRequest(req,res) {
  res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
  const send=(status,data)=>{res.writeHead(status);res.end(JSON.stringify(data));};
- if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/retailers/stores','/retailers/products','/retailers/basket'].includes(req.url)) return send(404,{error:'Not found'});
+ let url;try {url=new URL(req.url,'http://127.0.0.1');} catch {return send(400,{error:'Invalid request URL'});}
+ if(req.method==='GET'&&url.pathname==='/kroger/callback') {
+  try { await krogerCart.callback(url.searchParams); } catch { /* The app checks its own connection. Never return authorization codes or provider errors to the browser. */ }
+  res.setHeader('Referrer-Policy','no-referrer');
+  res.writeHead(303,{Location:'/kroger/return'});res.end();return;
+ }
+ if(req.method==='GET'&&url.pathname==='/kroger/return') {
+  res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Referrer-Policy','no-referrer');
+  res.setHeader('Content-Security-Policy',"default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
+  res.writeHead(200);res.end(krogerReturnHtml());return;
+ }
+ if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured,krogerCartConfigured:krogerCart.configured});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
   let body='';for await(const chunk of req) {body+=chunk;if(body.length>8192) return send(413,{error:'Request too large'});}
   let input;try {input=JSON.parse(body);} catch{return send(400,{error:'Invalid JSON'});}
+  if(req.url.startsWith('/retailers/cart/')) {
+   try { return send(200,await krogerCart[req.url.split('/').pop()](input)); }
+   catch(e) {return send(e instanceof RetailerFailure?e.status:502,{error:e instanceof RetailerFailure?e.message:'Kroger cart service is unavailable.',...(e.transferStatus?{transferStatus:e.transferStatus}:{})});}
+  }
   if(req.url.startsWith('/retailers/')) {
    try { return send(200,await retailer[req.url.split('/').pop()](input)); }
    catch(e) {return send(e instanceof RetailerFailure?e.status:502,{error:e instanceof RetailerFailure?e.message:'Retailer search is unavailable. Please try again.'});}
