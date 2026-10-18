@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.sp
 
 internal val ShopInk = Color(0xFF503542)
 internal val ShopMuted = Color(0xFF78616A)
-internal val ShopPaper = Color(0xFFEFC3BD)
-internal val ShopLine = Color(0xFFB98D9B)
-internal val ShopTint = Color(0xFFF5E1E5)
+internal val ShopPaper = Color(0xFFFFF7E9)
+internal val ShopLine = Color(0xFFE6D2C4)
+internal val ShopTint = Color(0xFFF3E3D9)
 
 @Composable
 internal fun ShoppingPage(step: Int, onBack: () -> Unit, backEnabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
@@ -97,7 +97,7 @@ internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 
 
 @Composable internal fun JournalNavigation(labels:List<String>,selected:Int,enabled:Boolean,onSelect:(Int)->Unit){
  ScrollableTabRow(selectedTabIndex=selected,edgePadding=0.dp,containerColor=Color.White,contentColor=ShopInk){
-  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
+  labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},enabled=enabled,selectedContentColor=ShopInk,unselectedContentColor=ShopInk,text={Text(label,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,fontWeight=if(selected==i)FontWeight.Bold else FontWeight.Medium)})}
  }
 }
 

@@ -12,7 +12,10 @@ import org.junit.Test
 
 class FrontendIntegrationTest {
  @get:Rule val compose=createAndroidComposeRule<MainActivity>()
- @org.junit.Before fun keepTabletAwake(){compose.runOnUiThread{compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)}}
+ @org.junit.Before fun keepTabletAwake(){
+  compose.runOnUiThread{compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)}
+  compose.waitUntil(25000){runCatching{compose.onAllNodesWithText("Build with AI").fetchSemanticsNodes().isNotEmpty()}.getOrDefault(false)}
+ }
  @Test fun detailedPantryAndRecipeChecksShareConfirmedOwnership(){
   val store=PantryStore(InstrumentationRegistry.getInstrumentation().targetContext)
   val initial=store.read()
@@ -27,6 +30,20 @@ class FrontendIntegrationTest {
     state.importSavedPantry();assertFalse("rice" in state.owned)
    }
   } finally {store.write(initial);compose.runOnIdle{state.replaceOwned(oldOwned)}}
+ }
+ @Test fun comparisonOpensTheLiveBasketWithPantryExclusions(){
+  lateinit var vm:WalletViewModel
+  compose.runOnIdle{
+   vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+   vm.studio.updateAvoid("");vm.choose("noodles");vm.selected=vm.selected-"garlic";vm.compare()
+   assertEquals(2,vm.step)
+  }
+  compose.onNodeWithText("Check live retailer prices").performScrollTo().performClick()
+  compose.onNodeWithText("US ZIP code").assertExists()
+  compose.runOnIdle{
+   val retailer=ViewModelProvider(compose.activity)[RetailerViewModel::class.java]
+   assertEquals(vm.selected,retailer.needs.map{it.id}.toSet());assertFalse(retailer.needs.any{it.id=="garlic"})
+  }
  }
  @Test fun liveStudioPhotoUsesBackendAndOnlyConfirmedSuggestionsAffectThePantry(){
   assumeTrue(InstrumentationRegistry.getArguments().getString("liveStudio")=="true")

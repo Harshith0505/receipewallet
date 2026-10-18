@@ -38,7 +38,7 @@ internal val Good=Color(0xFF596139)
 internal val Warn=Color(0xFF95612D)
 internal val Danger=Color(0xFFA64451)
 
-@Composable internal fun StudioCard(tint:Color=Color.White,modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
+@Composable internal fun StudioCard(tint:Color=Color(0xFFFFFCF5),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
  Box(modifier.fillMaxWidth().padding(top=8.dp)) {
   Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawBehind {
    val random=Random(42)
@@ -46,7 +46,7 @@ internal val Danger=Color(0xFFA64451)
    val edge=Random(9);var x=0f
    while(x<size.width){drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,0f));drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,size.height));x+=4.dp.toPx()}
   }.padding(start=30.dp,end=22.dp,top=27.dp,bottom=22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
-  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFD0A8BF))
+  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFF3D58A))
  }
 }
 /** Secondary information opens on demand; its current summary stays visible. */
@@ -68,7 +68,7 @@ internal val Danger=Color(0xFFA64451)
 @Composable internal fun StudioTitle(text:String){Text(text,fontSize=25.sp,lineHeight=31.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.SemiBold,color=ShopInk,modifier=Modifier.semantics { heading() })}
 @Composable internal fun Signal(text:String,color:Color=Good){Text(text,color=color,fontSize=12.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.background(color.copy(alpha=.09f),RoundedCornerShape(50)).padding(horizontal=12.dp,vertical=8.dp))}
 @Composable internal fun ChipRail(labels:List<String>,enabled:Boolean=true,onSelect:(Int)->Unit){
- Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {labels.forEachIndexed { i,s->SuggestionChip(onClick={onSelect(i)},enabled=enabled,colors=SuggestionChipDefaults.suggestionChipColors(containerColor=listOf(Peach,Lilac,Mint,Citrus)[i%4],labelColor=ShopInk),border=BorderStroke(1.dp,ShopInk.copy(alpha=.4f)),label={Text(s,fontWeight=FontWeight.SemiBold)})}}
+ Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {labels.forEachIndexed { i,s->SuggestionChip(onClick={onSelect(i)},enabled=enabled,label={Text(s)})}}
 }
 @Composable internal fun MoodDeck(state:MealStudioState,enabled:Boolean=true){
  var drag by remember { mutableFloatStateOf(0f) }

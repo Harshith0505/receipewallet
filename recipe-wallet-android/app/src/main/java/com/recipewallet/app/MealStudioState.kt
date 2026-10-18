@@ -16,14 +16,14 @@ import java.time.temporal.TemporalAdjusters
 
 internal data class MealMood(val name:String,val emoji:String,val subtitle:String,val prompt:String,val color:Long=0xFFF0D2BB,val recipeId:String="pasta")
 internal val mealMoods=listOf(
- MealMood("Cozy","","A little comfort on a long day","comforting and familiar",0xFFF1C8AE,"pasta"),
- MealMood("Fresh","","Bright flavors. A fresh start.","fresh vegetable-forward food",0xFFC9DDAD,"bowl"),
- MealMood("Adventure","","Try a different favorite tonight","bold, spicy flavors",0xFFE6B6CB,"noodles"),
- MealMood("Low effort","","Less prep. More time for you.","the quickest easy meal",0xFFD2C5E7,"chickpea-salad"),
- MealMood("Spice craving","","Warm spices, big flavor","a warmly spiced dinner",0xFFE7B5A2,"chana"),
- MealMood("Sunshine","","Colorful, bright and zesty","a bright citrusy meal",0xFFF1D795,"mexican-rice"),
- MealMood("Cool & crisp","","Something refreshing tonight","a chilled crunchy meal",0xFFBED2E4,"sesame-noodles"),
- MealMood("Pantry hero","","Make the most of what is here","a meal using as many pantry ingredients as possible",0xFFD4D1B0,"chickpea-salad"))
+ MealMood("Cozy","","A little comfort on a long day","comforting and familiar",0xFFF6D2B7,"pasta"),
+ MealMood("Fresh","","Bright flavors. A fresh start.","fresh vegetable-forward food",0xFFDDE5C2,"bowl"),
+ MealMood("Adventure","","Try a different favorite tonight","bold, spicy flavors",0xFFF1D8DF,"noodles"),
+ MealMood("Low effort","","Less prep. More time for you.","the quickest easy meal",0xFFE6DDF2,"chickpea-salad"),
+ MealMood("Spice craving","","Warm spices, big flavor","a warmly spiced dinner",0xFFF0C3AF,"chana"),
+ MealMood("Sunshine","","Colorful, bright and zesty","a bright citrusy meal",0xFFF3DFA8,"mexican-rice"),
+ MealMood("Cool & crisp","","Something refreshing tonight","a chilled crunchy meal",0xFFD9E2EC,"sesame-noodles"),
+ MealMood("Pantry hero","","Make the most of what is here","a meal using as many pantry ingredients as possible",0xFFE6E1C6,"chickpea-salad"))
 
 internal class MealStudioState(private val context:Context,private val catalog:Catalog,private val scope:CoroutineScope,private val request:suspend(String,JSONObject)->JSONObject) {
  private val saved=context.getSharedPreferences("meal-studio-v1",Context.MODE_PRIVATE)

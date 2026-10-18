@@ -86,10 +86,10 @@ class MainActivity : ComponentActivity() {
 private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
     var retailerPrices by rememberSaveable { mutableStateOf(false) }
     if (retailerPrices) {
-        RetailerScreen(if (vm.step == 1) vm.recipe.ingredients.filter { it.id in vm.selected }.map {
+        RetailerScreen(if (vm.step in 1..3) vm.recipe.ingredients.filter { it.id in vm.selected }.map {
             RetailerNeed(it.id, it.name, if (vm.isPersonal) "Review the saved recipe amount and choose sufficient packages."
                 else "${kotlin.math.ceil(it.quantity.toDouble() * vm.servings / vm.recipe.baseServings).toLong()} ${it.unit} needed for ${vm.servings} servings")
-        } else emptyList(), onBack = { retailerPrices = false }, contextId = if (vm.step == 1) vm.recipeId else "browse")
+        } else emptyList(), onBack = { retailerPrices = false }, contextId = if (vm.step in 1..3) vm.recipeId else "browse")
         return
     }
     val openRetailerPrices: () -> Unit = { if (vm.canEditCheckout) retailerPrices = true }
@@ -100,7 +100,7 @@ private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
         ShoppingPage(vm.step, onBack = back, backEnabled = vm.canEditCheckout) {
             when (vm.step) {
                 1 -> IngredientPage(vm, openRetailerPrices)
-                2 -> ShopComparison(vm)
+                2 -> ShopComparison(vm, openRetailerPrices)
                 3 -> CheckoutPage(vm, pay)
                 4 -> ReceiptPage(vm)
             }
@@ -175,8 +175,10 @@ private fun ProductChoice(vm: WalletViewModel, ingredient: Ingredient) {
 }
 
 @Composable
-private fun ShopComparison(vm: WalletViewModel) {
+private fun ShopComparison(vm: WalletViewModel,onRetailerPrices:()->Unit) {
     PageHeading("Find your basket", "${vm.recipe.name} · compare the whole picture")
+    ShopButton("Check live retailer prices",outlined=true,enabled=vm.canEditCheckout,onClick=onRetailerPrices)
+    SmallNote("Review real Kroger products through live lookup. The map and store estimates below use demo prices.")
     ShoppingControls(vm)
     StudentDiscountControl(vm)
     val quotes=vm.rankings
