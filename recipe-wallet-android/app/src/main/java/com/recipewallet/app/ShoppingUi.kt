@@ -34,16 +34,7 @@ internal fun ShoppingPage(step: Int, onBack: () -> Unit, backEnabled: Boolean = 
                         letterSpacing = (-0.6).sp, fontWeight = FontWeight.SemiBold)
                     TextButton(onClick = onBack, enabled = backEnabled) { Text("← Back", color = ShopInk) }
                 }
-                if (step in 1..3) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    listOf("Ingredients", "Shops", "Checkout").forEachIndexed { index, label ->
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Text("${index + 1}  $label", color = if (index + 1 == step) ShopInk else ShopMuted,
-                                fontSize = 12.sp, fontWeight = if (index + 1 == step) FontWeight.SemiBold else FontWeight.Normal)
-                            HorizontalDivider(color = if (index + 1 == step) ShopInk else ShopLine,
-                                thickness = if (index + 1 == step) 2.dp else 1.dp)
-                        }
-                    }
-                }
+                if(step in 1..3)JourneySteps(step)
                 content()
                 Spacer(Modifier.height(12.dp))
             }
@@ -62,7 +53,7 @@ internal fun PageHeading(title: String, subtitle: String) {
 
 @Composable
 internal fun QuietCard(modifier: Modifier = Modifier, selected: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color.White, RoundedCornerShape(22.dp))
+    Column(modifier.fillMaxWidth().background(if (selected) ShopTint else Color(0xFFF6E6D1), RoundedCornerShape(22.dp))
         .border(1.dp, if (selected) ShopInk else ShopLine, RoundedCornerShape(22.dp)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }
@@ -90,3 +81,17 @@ internal fun ShopButton(text: String, enabled: Boolean = true, outlined: Boolean
 
 @Composable
 internal fun SmallNote(text: String) { Text(text, color = ShopMuted, fontSize = 13.sp, lineHeight = 19.sp) }
+
+@Composable internal fun JourneySteps(current:Int){
+ Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+   listOf("Meal","Basket","Store","Checkout").forEachIndexed{i,label->
+    Column(Modifier.weight(1f).background(if(i==current)ShopInk else if(i<current)Color(0xFFE6D2A9)else ShopTint,RoundedCornerShape(10.dp)).padding(horizontal=6.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+     Text(if(i<current)"✓ Done"else if(i==current)"● Now"else if(i==current+1)"${i+1} Next"else "${i+1} Later",color=if(i==current)ShopPaper else ShopMuted,fontSize=10.sp)
+     Text(label,color=if(i==current)ShopPaper else ShopInk,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+    }
+   }
+  }
+  Text(when(current){0->"Choose a meal to get started";1->"Next: compare stores for your basket";2->"Next: review your card and checkout";else->"Review the total before confirming"},color=ShopMuted,fontSize=12.sp)
+ }
+}

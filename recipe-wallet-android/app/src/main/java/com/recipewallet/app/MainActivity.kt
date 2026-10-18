@@ -41,12 +41,12 @@ class MainActivity : ComponentActivity() {
         } }
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(primary = ShopInk, background = ShopPaper,
-                surface = androidx.compose.ui.graphics.Color.White, secondary = ShopInk,
+                surface = ShopTint, secondary = ShopInk,
                 onSurface = ShopInk, onSurfaceVariant = ShopMuted, onBackground = ShopInk,
                 outline = ShopLine, outlineVariant = ShopLine, surfaceTint = ShopInk,
-                surfaceContainer = androidx.compose.ui.graphics.Color.White,
-                surfaceContainerLow = androidx.compose.ui.graphics.Color.White,
-                surfaceContainerHigh = androidx.compose.ui.graphics.Color.White,
+                surfaceContainer = ShopTint,
+                surfaceContainerLow = ShopPaper,
+                surfaceContainerHigh = ShopTint,
                 surfaceContainerHighest = ShopTint)) {
                 Wallet(vm) { startTestCheckout() }
             }

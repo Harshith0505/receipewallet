@@ -1,6 +1,6 @@
 # Information hierarchy
 
-The recipe selector has not changed in this pass.
+Recipe discovery uses aligned photo cards with one, two, or three columns based on available width. Each card shows the meal name, preparation time, servings and pickup estimate. Cuisine chips filter the catalog and guide AI suggestions.
 
 | Level | Purpose | Visible information |
 | --- | --- | --- |
@@ -12,6 +12,6 @@ Initial AI view leads with the meal request. A suggested meal leads with its nam
 
 Expandable sections have descriptive labels, current-value summaries, a plus/minus affordance and accessibility expansion state. Price breakdowns open on demand; future rewards remain separate from today’s charge. Weekly automation and local fallback planning sit under Planning options, with their on/off state summarized outside. Long grocery lists open on demand.
 
-Prioritize next: consistent primary actions across checkout; quick comparison of two or three store choices; concise weekly summary before individual days. Revisit recipe-selector layout separately after this structure is reviewed.
+Four visible pastel navigation tiles replace the horizontal scroller. Wrap-up navigation has been removed; saved nutrition data is preserved. A consistent Meal → Basket → Store → Checkout indicator distinguishes completed, current and upcoming steps. Preference sliders group their labels, current values and endpoints in tinted panels.
 
 Pattern reference: Nielsen Norman Group, Progressive Disclosure: https://www.nngroup.com/articles/progressive-disclosure/

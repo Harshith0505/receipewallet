@@ -27,6 +27,8 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  val ingredients=catalog.recipes.flatMap { it.ingredients }.distinctBy { it.id }
  var pinnedIds by mutableStateOf(ids("pins").toSet());private set
  fun togglePin(id:String){pinnedIds=if(id in pinnedIds)pinnedIds-id else pinnedIds+id;saved.edit().putString("pins",JSONArray(pinnedIds.toList()).toString()).apply()}
+ var cuisine by mutableStateOf(saved.getString("cuisine","Any")?:"Any");private set
+ fun updateCuisine(value:String){cuisine=value;saved.edit().putString("cuisine",value).apply()}
  var avoid by mutableStateOf(saved.getString("avoid","")?:"");private set
  var faith by mutableStateOf(saved.getString("faith","None")?:"None");private set
  var pickedMood by mutableIntStateOf(saved.getInt("pickedMood",0));private set
@@ -97,7 +99,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
   scope.launch {try {
    val result=request("/weekly-plan",JSONObject().put("preferences",prompt()).put("history",JSONArray(history)).put("pantryIds",JSONArray(owned.toList())).put("vegetarian",vegetarian).put("maxMinutes",minutes.toInt()))
    val a=result.getJSONArray("recipeIds");val ids=List(a.length()){a.getString(it)}
-   check(ids.size==5&&ids.all { id->catalog.recipes.any { it.id==id && fits(it) && (!vegetarian||it.id!="pasta") } }) { "Unsupported weekly plan. Try again." }
+   check(ids.size==5&&ids.all { id->catalog.recipes.any { it.id==id && (cuisine=="Any"||recipeCuisine(it.id)==cuisine) && fits(it) && (!vegetarian||it.id!="pasta") } }) { "Unsupported weekly plan. Try again." }
    weeklyIds=ids;weekSource=result.getString("source");weekStamp=currentWeek;saveWeek()
   }catch(e:Exception){weekError=e.message?:"Connect the backend to build your week."}finally{weekBusy=false}}
  }
@@ -107,11 +109,12 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  }
  fun swapDay(index:Int){val options=rankedRecipes();if(index !in weeklyIds.indices||options.isEmpty())return;val next=options[(options.indexOfFirst { it.id==weeklyIds[index] }+1)%options.size];weeklyIds=weeklyIds.toMutableList().apply { set(index,next.id) };saveWeek()}
  private fun saveWeek(){if(autoCart)prepareWeeklyCart();saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
- fun rankedRecipes()=catalog.recipes.filter { fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(when(pickedMood){0->if(r.id=="pasta")4 else 0;1->if(r.id=="bowl")4 else 0;2->if(r.id=="noodles")4 else 0;else->45-r.prepTime}) }
+ fun rankedRecipes()=catalog.recipes.filter { (cuisine=="Any"||recipeCuisine(it.id)==cuisine)&&fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(when(pickedMood){0->if(r.id=="pasta")4 else 0;1->if(r.id=="bowl")4 else 0;2->if(r.id=="noodles")4 else 0;else->45-r.prepTime}) }
  fun estimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
  fun prompt():String=buildString {
   append("I want ${mealMoods[pickedMood].prompt}, for $people people, under $${budget.toInt()}, at most ${minutes.toInt()} minutes.")
   append(if(novelty>.65f)" I want something different from my recent choices." else " Familiar flavors are welcome.")
+  if(cuisine!="Any")append(" Prefer $cuisine-inspired recipes.")
   if(avoid.isNotBlank())append(" Exclude these allergens or ingredients: $avoid. Check product labels and cross-contact separately.")
   if(faith!="None")append(" $faith preferences: flag ingredients requiring certification review; do not claim certification.")
   if(vegetarian)append(" Vegetarian only.")

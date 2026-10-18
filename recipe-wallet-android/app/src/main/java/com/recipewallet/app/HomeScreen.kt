@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 @Composable internal fun HomeScreen(vm:WalletViewModel){
  var mode by rememberSaveable { mutableIntStateOf(0) }
  var libraryPage by rememberSaveable { mutableStateOf(if(vm.isPersonal)"saved" else "home") }
+ LaunchedEffect(mode){if(mode !in 0..3)mode=0}
  var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
  val context=LocalContext.current;val saved=remember{PersonalRecipeStore(context)}
  var recipes by remember{mutableStateOf(saved.read())}
@@ -50,11 +51,20 @@ import androidx.compose.ui.unit.sp
      Column{Text("recipe wallet",fontSize=28.sp,fontFamily=FontFamily.Serif,fontWeight=FontWeight.Bold,color=ShopInk,letterSpacing=(-1).sp);Eyebrow("a little kitchen journal")}
      TextButton(enabled=!vm.aiBusy,onClick={dismiss();recipes=saved.read();libraryPage="saved"}){Text("Saved recipes ↗")}
     }
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup().background(Color(0xFFF3E3D9),RoundedCornerShape(16.dp)).padding(5.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-     listOf("Build with AI","Build manually","My pantry","My week","My wrap-up").forEachIndexed{i,label->
-      Box(Modifier.defaultMinSize(minWidth=130.dp,minHeight=48.dp).background(if(mode==i)ShopInk else listOf(Peach,Citrus,Mint,Lilac,Peach)[i].copy(alpha=.45f),RoundedCornerShape(9.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(horizontal=14.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,color=if(mode==i)Color.White else ShopInk,fontWeight=FontWeight.SemiBold)}
-     }
+    val sections=listOf("Build with AI","Build manually","My pantry","My week")
+    val columns=if(wide)4 else 2
+    Column(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.selectableGroup()){
+     sections.chunked(columns).forEachIndexed{row,labels->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+      labels.forEachIndexed{col,label->val i=row*columns+col
+       val tint=listOf(Peach,Lilac,Mint,Citrus)[i]
+       Column(Modifier.weight(1f).background(if(mode==i)ShopInk else tint,RoundedCornerShape(16.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+        Text(listOf("✦ CREATE","▦ DISCOVER","✓ PANTRY","▤ PLAN")[i],color=if(mode==i)Citrus else ShopMuted,fontSize=11.sp,fontWeight=FontWeight.Bold)
+        Text((if(mode==i)"● "else "")+label,color=if(mode==i)Color(0xFFFFF0DC)else ShopInk,fontSize=14.sp,fontWeight=FontWeight.SemiBold)
+       }
+      }
+     }}
     }
+    if(mode in 0..1)JourneySteps(0)
     if(vm.studio.avoid.isNotBlank())Signal("Avoiding: ${vm.studio.avoid}",Warn)
     if(vm.studio.faith!="None")Signal("${vm.studio.faith} · verify product certification",Warn)
     when(mode){
@@ -69,11 +79,12 @@ import androidx.compose.ui.unit.sp
      1->{
       InfoDisclosure("Preferences & dietary needs","${vm.studio.people} people · $${vm.studio.budget.toInt()} budget · ${vm.studio.minutes.toInt()} min"){TasteControls(vm.studio)}
       InfoDisclosure("Choose a mood",mealMoods[vm.studio.pickedMood].name){MoodDeck(vm.studio)}
+      CuisinePicker(vm.studio)
       ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}
      }
      2->PantryStudio(vm)
      3->WeeklyStudio(vm)
-     4->WeeklyWrapScreen(vm)
+
     }
     SmallNote("Demo prices & rewards · No real grocery order")
     InfoDisclosure("About this demo & privacy"){SmallNote("Preferences and pantry stay on this device. AI requests send the details you submit; photos are sent only when you choose to scan.")}

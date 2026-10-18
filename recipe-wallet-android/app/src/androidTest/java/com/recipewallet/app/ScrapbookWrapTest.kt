@@ -11,6 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
+@org.junit.Ignore("Wrap-up navigation was removed from the product")
 class ScrapbookWrapTest {
  @get:Rule val compose=createAndroidComposeRule<MainActivity>()
  @Before fun resetJournal(){

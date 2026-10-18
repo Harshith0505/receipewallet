@@ -61,7 +61,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private var agentSession: String? = null
  fun suggest() {
   if(aiBusy || preference.isBlank()) return
-  val message=preference.take(800)+if(studio.avoid.isNotBlank()||studio.faith!="None") "\nDietary constraints: avoid ${studio.avoid}. ${studio.faith} preferences require product certification review." else ""
+  val message=preference.take(800)+if(studio.avoid.isNotBlank()||studio.faith!="None"||studio.cuisine!="Any") "\nCuisine preference: ${studio.cuisine}. Dietary constraints: avoid ${studio.avoid}. ${studio.faith} preferences require product certification review." else ""
   aiBusy=true; aiError=null
   viewModelScope.launch {
    try {
@@ -71,7 +71,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
     val plan=result.optJSONObject("plan")
     if(plan!=null) {
      val r=catalog.recipes.first { it.id==plan.getString("recipeId") }
-     check(studio.fits(r)) { "The suggested recipe conflicts with your ingredient exclusions. Try another recipe." }
+     check(studio.fits(r)&&(studio.cuisine=="Any"||recipeCuisine(r.id)==studio.cuisine)) { "The suggested recipe does not match your cuisine or ingredient filters. Try another recipe." }
      val ids=plan.getJSONArray("ingredientIds").let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
      check(ids.isNotEmpty() && ids.all { id -> r.ingredients.any { it.id==id } }) { "The agent returned an invalid basket. Please retry." }
      val s=catalog.stores.first { it.id==plan.getString("storeId") }

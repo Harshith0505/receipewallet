@@ -6,12 +6,13 @@ import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
-class RecipeGardenTest {
+class MealDiscoveryTest {
  @get:Rule val compose=createAndroidComposeRule<MainActivity>()
- @Test fun moodChoiceAndDietaryFiltersDriveTheGarden(){
+ @Test fun moodChoiceAndDietaryFiltersDriveRecipeCards(){
   val vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java];val state=vm.studio
-  val oldMinutes=state.minutes;val oldAvoid=state.avoid;val oldFaith=state.faith;val oldMood=state.mood;val oldPicked=state.pickedMood
+  val oldCuisine=state.cuisine;val oldMinutes=state.minutes;val oldAvoid=state.avoid;val oldFaith=state.faith;val oldMood=state.mood;val oldPicked=state.pickedMood
   try {
+   compose.runOnIdle{state.updateCuisine("Any")}
    compose.onNodeWithText("Build manually").performScrollTo().performClick()
    compose.onNodeWithText("Choose a mood").performScrollTo().performClick()
    val shown=state.mood
@@ -22,7 +23,7 @@ class RecipeGardenTest {
    compose.onNodeWithText("Kosher").performSemanticsAction(SemanticsActions.OnClick){it()}
    compose.runOnIdle{assertEquals("Kosher",state.faith)}
    compose.onNodeWithText("Choose a recipe").performScrollTo().assertIsDisplayed()
-   compose.onNodeWithText("Recenter recipe garden ↺").performScrollTo().performClick()
-  } finally {compose.runOnIdle{state.updateMinutes(oldMinutes);state.updateAvoid(oldAvoid);state.updateFaith(oldFaith);state.updateMood(oldPicked);state.chooseMood();state.updateMood(oldMood)}}
+   compose.onNodeWithText(vm.catalog.recipes.first{it.id=="bowl"}.name).assertExists()
+  } finally {compose.runOnIdle{state.updateCuisine(oldCuisine);state.updateMinutes(oldMinutes);state.updateAvoid(oldAvoid);state.updateFaith(oldFaith);state.updateMood(oldPicked);state.chooseMood();state.updateMood(oldMood)}}
  }
 }
