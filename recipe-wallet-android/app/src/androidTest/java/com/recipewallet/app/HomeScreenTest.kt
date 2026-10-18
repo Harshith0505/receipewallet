@@ -74,18 +74,22 @@ class HomeScreenTest {
         }
         compose.onNodeWithText("Garlic").performScrollTo().performClick()
         compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
-        compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().performClick()
-        compose.onNodeWithText("Total charged today · test").performScrollTo().assertIsDisplayed()
-        var expectedCharge = 0L
-        compose.runOnIdle {
-            val vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
-            assertFalse(vm.studentEligible)
-            assertEquals(0L, vm.current.studentDiscount)
-            expectedCharge = vm.current.charge
-        }
-        compose.onNodeWithText("Approve & pay ${money(expectedCharge)}").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Preview confirmation without payment").performScrollTo().performClick()
-        compose.onNodeWithText("No payment was made.").assertExists()
+        compose.onNodeWithText("Your shopping basket").assertExists()
+        compose.onNodeWithText("Check live retailer prices").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(2, ViewModelProvider(compose.activity)[WalletViewModel::class.java].step) }
+    }
+
+    @Test fun mealShortcutsUseDistinctGoalsAndTypingReturnsToTheMealRequest() {
+        lateinit var vm:WalletViewModel
+        compose.runOnIdle { vm=ViewModelProvider(compose.activity)[WalletViewModel::class.java] }
+        compose.onNodeWithText("Use my taste profile ✨").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("profile",vm.planningGoal) }
+        compose.onNodeWithText("Use what I have 🥬").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("pantry",vm.planningGoal) }
+        compose.onNodeWithText("Surprise me").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("surprise",vm.planningGoal) }
+        compose.onNode(hasSetTextAction()).performScrollTo().performTextReplacement("Homemade pizza")
+        compose.runOnIdle { assertEquals("balanced",vm.planningGoal);assertEquals("Homemade pizza",vm.preference) }
     }
 
     @Test fun failedPlanningOffersAWorkingManualAlternative() {
@@ -101,8 +105,8 @@ class HomeScreenTest {
         compose.onNodeWithText("Build manually").performClick()
         compose.onNodeWithText("Spicy garlic noodles").performScrollTo().performClick()
         compose.onNodeWithText("Garlic").performScrollTo().performClick()
-        compose.onNodeWithText("Look up retailer prices").performScrollTo().performClick()
-        compose.onNodeWithText("US ZIP code").assertExists()
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+        compose.onNodeWithText("Your shopping basket").assertExists()
         compose.onNodeWithText("← Back").performScrollTo().performClick()
         compose.runOnIdle {
             val vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
@@ -141,10 +145,11 @@ class HomeScreenTest {
             assertEquals("Homemade pizza", vm.recipe.name)
             assertEquals(setOf("line-1"), vm.selected)
             assertEquals(3000L, vm.planBudget)
+            assertEquals(4, vm.servings)
             assertEquals(1, vm.step)
         }
-        compose.onNodeWithText("Look up retailer prices").performScrollTo().performClick()
-        compose.onNodeWithText("US ZIP code").assertExists()
+        compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+        compose.onNodeWithText("Your shopping basket").assertExists()
     }
 
     @Test fun pantrySuggestionReplacesAPersonalRecipeWithOnlyMissingCatalogItems() {

@@ -16,7 +16,7 @@ export async function scanPantry(input,options={}) {
  return {ingredientIds:ids,requiresConfirmation:true,note:'Visual suggestions only. Confirm identity and enough quantity before marking items as owned.'};
 }
 const exclusionAliases={milk:['parmesan','cheese','milk'],dairy:['parmesan','cheese','milk'],wheat:['noodles','rigatoni','soy sauce'],gluten:['noodles','rigatoni','soy sauce'],soy:['soy sauce'],sesame:['sesame'],peanuts:['peanut','groundnut'],'tree nuts':['almond','cashew','walnut','pecan','pistachio','hazelnut','macadamia'],eggs:['egg']};
-const matchesExclusion=(recipe,avoid)=>avoid.toLowerCase().split(',').map(s=>s.trim()).filter(Boolean).some(term=>recipe.ingredients.some(i=>(exclusionAliases[term]??[term]).some(alias=>i.name.toLowerCase().includes(alias))));
+export const matchesExclusion=(recipe,avoid)=>avoid.toLowerCase().split(',').map(s=>s.trim()).filter(Boolean).some(term=>recipe.ingredients.some(i=>(exclusionAliases[term]??[term]).some(alias=>i.name.toLowerCase().includes(alias))));
 export async function weeklyPlan(input,options={}) {
  const pantryIds=validatePantry(input?.pantryIds??[]);
  if(typeof input?.preferences!=='string'||input.preferences.length>1200) throw new Error('Invalid preferences');

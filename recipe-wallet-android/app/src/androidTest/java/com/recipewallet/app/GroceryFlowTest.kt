@@ -16,11 +16,12 @@ class GroceryFlowTest {
   InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("meal-studio-v1",android.content.Context.MODE_PRIVATE).edit().clear().commit()
   compose.activityRule.scenario.recreate()
  }
- @Test fun manualPackageShoppingAndPreviewNeedNoBackend() {
+ @Test fun illustrativePackageShoppingAndPreviewNeedNoPayment() {
   compose.onNodeWithText("Build manually").performClick()
   compose.onNodeWithText("Tomato basil pasta").performScrollTo().performClick()
   compose.onNodeWithText("2 servings").assertExists()
   compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+        compose.runOnIdle { ViewModelProvider(compose.activity)[WalletViewModel::class.java].illustrativeComparison=true }
   compose.onNodeWithText("Find your basket").assertExists()
   lateinit var vm:WalletViewModel
   compose.runOnIdle {

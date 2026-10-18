@@ -18,6 +18,7 @@ class StudentDiscountFlowTest {
         compose.onNodeWithText("Build manually").performScrollTo().performClick()
         compose.onNodeWithText("Tomato basil pasta").performScrollTo().performClick()
         compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+        compose.runOnIdle { ViewModelProvider(compose.activity)[WalletViewModel::class.java].illustrativeComparison=true }
         compose.onNodeWithContentDescription("Apply illustrative student offers").performScrollTo().performClick()
         compose.onNodeWithText("10% illustrative student offer · applied").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("5% illustrative student offer · applied").performScrollTo().assertIsDisplayed()

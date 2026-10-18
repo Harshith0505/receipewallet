@@ -17,7 +17,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -70,7 +69,7 @@ class MainActivity : ComponentActivity() {
         if (!isSignupCallback(callback)) return
         // The callback is handled in memory; never retain authorization codes in the activity intent.
         setIntent(Intent(incoming).apply { data = null })
-        if(vm.canEditCheckout) vm.step = 0
+        if(vm.canEditCheckout&&!retailer.editingBlocked) vm.step = 0
         library.confirmFromLink(callback)
     }
     fun startTestCheckout() {
@@ -84,23 +83,20 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
-    var retailerPrices by rememberSaveable { mutableStateOf(false) }
-    if (retailerPrices) {
-        RetailerScreen(if (vm.step in 1..3) vm.recipe.ingredients.filter { it.id in vm.selected }.map {
-            RetailerNeed(it.id, it.name, if (vm.isPersonal) "Review the saved recipe amount and choose sufficient packages."
-                else "${kotlin.math.ceil(it.quantity.toDouble() * vm.servings / vm.recipe.baseServings).toLong()} ${it.unit} needed for ${vm.servings} servings")
-        } else emptyList(), onBack = { retailerPrices = false }, contextId = if (vm.step in 1..3) vm.recipeId else "browse")
+    val retailer:RetailerViewModel=androidx.lifecycle.viewmodel.compose.viewModel()
+    if(vm.step==2&&!vm.illustrativeComparison){
+        val needs=vm.recipe.ingredients.filter{it.id in vm.selected}.map{retailerNeed(it,vm.servings,vm.recipe.baseServings,vm.isPersonal).let{need->if(vm.organicOnly)need.copy(name="Organic "+need.name)else need}}
+        LiveShoppingScreen(vm.recipeId,vm.recipe.name,needs,vm.catalog.cards,vm.planBudget,onBack={vm.back()},onIllustrativeComparison={vm.illustrativeComparison=true},vm=retailer)
         return
     }
-    val openRetailerPrices: () -> Unit = { if (vm.canEditCheckout) retailerPrices = true }
     val back: () -> Unit = { if (vm.step == 4) vm.restart() else vm.back() }
     BackHandler(enabled = vm.step in 1..4, onBack = back)
-    if (vm.step == 0) { HomeScreen(vm, openRetailerPrices); return }
+    if (vm.step == 0) { HomeScreen(vm); return }
     key(vm.step) {
         ShoppingPage(vm.step, onBack = back, backEnabled = vm.canEditCheckout) {
             when (vm.step) {
-                1 -> IngredientPage(vm, openRetailerPrices)
-                2 -> ShopComparison(vm, openRetailerPrices)
+                1 -> IngredientPage(vm)
+                2 -> ShopComparison(vm)
                 3 -> CheckoutPage(vm, pay)
                 4 -> ReceiptPage(vm)
             }
@@ -109,11 +105,11 @@ private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
 }
 
 @Composable
-private fun IngredientPage(vm: WalletViewModel, onRetailerPrices: () -> Unit) {
+private fun IngredientPage(vm: WalletViewModel) {
     PageHeading("Ingredients", vm.recipe.name)
     if(!vm.studio.fits(vm.recipe))Signal("Excluded ingredients: "+vm.studio.conflicts(vm.recipe).joinToString()+". Choose another recipe or revise your exclusions.",Danger)
     if(vm.studio.faith!="None")Signal("${vm.studio.faith}: verify product certification and preparation.",Warn)
-    SmallNote(if(vm.isPersonal) "Confirm the suggested products and pack counts against your saved recipe. Uncheck pantry items." else "Unchecked ingredients are already in your pantry. Purchases use whole packages.")
+    SmallNote("Review ingredient quantities and uncheck what you already have. Current retailer products are matched in the next step.")
     ShoppingControls(vm)
     Signal("${vm.selected.size} to buy · ${vm.recipe.ingredients.size-vm.selected.size} already owned")
     SmallNote("Uncheck an ingredient to keep it out of this purchase. Confirm you have enough; this is a meal-only choice.")
@@ -129,21 +125,20 @@ private fun IngredientPage(vm: WalletViewModel, onRetailerPrices: () -> Unit) {
                         if(!vm.isPersonal) SmallNote("${kotlin.math.ceil(ingredient.quantity.toDouble()*vm.servings/vm.recipe.baseServings).toLong()} ${ingredient.unit} needed"+if(!included) " · already owned" else "")
                     }
                 }
-                if(vm.isPersonal&&included) ProductChoice(vm,ingredient)
+                if(vm.isPersonal&&included&&vm.illustrativeComparison) ProductChoice(vm,ingredient)
             }
         }
     }
-    if(vm.isPersonal) {
+    if(vm.isPersonal&&vm.illustrativeComparison) {
         if(!vm.canCompare&&vm.selected.isNotEmpty()) SmallNote("Match every included ingredient and choose at most 20 packs per product.")
         AmountRow("Selected package base estimate",money(vm.subtotal),prominent=true)
         SmallNote("Review package counts: recipe quantities are not automatically converted. These illustrative product prices and attributes are unverified; use retailer lookup for current products.")
     }
     if(vm.selected.isEmpty()) SmallNote("Your pantry covers this recipe. No grocery purchase is needed.")
-    if(vm.canCompare&&vm.rankings.none { it.complete }) SmallNote("No store can supply this selection. Review the organic or fulfillment preference.")
-    ShopButton("Look up retailer prices", outlined = true, enabled = vm.canEditCheckout, onClick = onRetailerPrices)
-    ShopButton("Compare complete baskets →",enabled=vm.canEditCheckout&&vm.canCompare&&vm.rankings.any { it.complete },onClick={vm.compare()})
+    if(vm.illustrativeComparison&&vm.canCompare&&vm.rankings.none { it.complete }) SmallNote("No store can supply this selection. Review the organic or fulfillment preference.")
+    ShopButton("Compare complete baskets →",enabled=vm.canEditCheckout&&vm.selected.isNotEmpty()&&vm.studio.fits(vm.recipe),onClick={vm.compare()})
     vm.error?.let { SmallNote(it) }
-    SmallNote("Illustrative package estimates · Tax not included · No grocery order placed")
+    SmallNote("Current retailer products and prices load next. Check package sizes before approving.")
 }
 
 @Composable
@@ -175,10 +170,10 @@ private fun ProductChoice(vm: WalletViewModel, ingredient: Ingredient) {
 }
 
 @Composable
-private fun ShopComparison(vm: WalletViewModel,onRetailerPrices:()->Unit) {
+private fun ShopComparison(vm: WalletViewModel) {
     PageHeading("Find your basket", "${vm.recipe.name} · compare the whole picture")
-    ShopButton("Check live retailer prices",outlined=true,enabled=vm.canEditCheckout,onClick=onRetailerPrices)
-    SmallNote("Use live lookup for current Kroger products. Comparisons below use illustrative prices, availability and fees.")
+    SmallNote("Illustrative store comparison · Prices, availability and fees are examples.")
+    ShopButton("Return to retailer basket",outlined=true,onClick={vm.illustrativeComparison=false})
     ShoppingControls(vm)
     StudentDiscountControl(vm)
     val quotes=vm.rankings
@@ -318,8 +313,8 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
         if(recipe==null||quote==null)Text(vm.agentReply,color=ShopInk,fontSize=14.sp)
         if(recipe!=null&&quote!=null) {
             Signal("${recipe.prepTime} min · ${vm.agentPlan?.optInt("servings",2)} servings · ${vm.planDiet} · ${if(vm.planBudget>=0)money(vm.planBudget)+" budget"else "No budget set"}")
-            PriceTicket(quote,budget=vm.planBudget)
-            ShopButton("Review basket →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
+            SmallNote("Review your ingredients, then choose current retailer products. Your shopping total is calculated from the packages you select.")
+            ShopButton("Review basket →",enabled=!vm.aiBusy,onClick={vm.approvePlan()})
         InfoDisclosure("AI meal summary",vm.agentReply.take(100)+if(vm.agentReply.length>100)"…"else ""){Text(vm.agentReply,color=ShopInk,fontSize=14.sp)}
         if(vm.agentChanges.isNotEmpty()) {
             InfoDisclosure("What changed","${vm.agentChanges.size} updates to your meal") {
@@ -371,7 +366,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
    Switch(enabled=vm.canEditCheckout,checked=vm.organicOnly,onCheckedChange={vm.changeOrganicOnly(it)})
    Text("Organic products only",modifier=Modifier.padding(start=12.dp),color=ShopInk)
   }
-  if(!vm.isPersonal) Text("Organic filtering uses illustrative product labels. Verify certification with the retailer.",fontSize=11.sp,color=ShopMuted)
+  if(!vm.isPersonal) Text("Verify organic certification on the selected retailer product.",fontSize=11.sp,color=ShopMuted)
  }
 }
 

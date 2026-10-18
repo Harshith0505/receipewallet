@@ -52,6 +52,17 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   return JSONObject().put("items",JSONArray(quantities.map { (id,count) -> JSONObject().put("productId",id).put("quantity",count) }))
  }
  var preference by mutableStateOf("")
+ var planningGoal by mutableStateOf("balanced")
+ private var suggestedRecipeIds = emptyList<String>()
+ fun chooseMealShortcut(index:Int) {
+  planningGoal=when(index){1->"pantry";2->"surprise";else->"profile"}
+  preference=studio.prompt()+when(index){
+   1->" Prioritize the meal with the highest coverage of my confirmed pantry ingredients, rather than the cheapest meal. If none are saved, say so."
+   2->" Choose a different meal from my recent suggestions and recent choices. Variety is the goal, not the cheapest meal."
+   else->" Prioritize my taste profile and chosen mood, not the cheapest meal."
+  }
+ }
+ var illustrativeComparison by mutableStateOf(false)
  var aiBusy by mutableStateOf(false)
  var generatedRecipe by mutableStateOf<JSONObject?>(null)
  private var personalBudget by mutableLongStateOf(-1L)
@@ -66,11 +77,14 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   val profileContext=if(studio.avoid.isNotBlank()||studio.faith!="None"||studio.cuisine!="Any") "\nCuisine preference: ${studio.cuisine}. Dietary constraints: avoid ${studio.avoid}. ${studio.faith} preferences require product certification review." else ""
   val pantryNames=(studio.ingredients.filter{it.id in studio.owned}.map{it.name}+PantryStore(getApplication()).read().map{it.name}).distinct().take(40)
   val pantryContext=if(pantryNames.isNotEmpty()) "\nConfirmed pantry: "+pantryNames.joinToString().take(500)+". Review sufficient quantity; only exclude ingredients used by this meal." else ""
-  val message=preference+profileContext+pantryContext
+  val defaults="\nSaved defaults, only when this request or the existing conversation has no value: ${studio.people} servings, budget $${studio.budget.toInt()}, at most ${studio.minutes.toInt()} minutes."+(if(studio.vegetarian)" Vegetarian only." else "")
+  val message=preference+defaults+profileContext+pantryContext
+  val goal=planningGoal
+  val recent=(studio.history+suggestedRecipeIds).distinct().takeLast(20)
   aiBusy=true; aiError=null; agentPlan=null; generatedRecipe=null; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList()
   viewModelScope.launch {
    try {
-    val payload=JSONObject().put("message",message).put("studentEligible",studentEligible).put("userId",userId)
+    val payload=JSONObject().put("message",message).put("studentEligible",studentEligible).put("userId",userId).put("goal",goal).put("cuisine",studio.cuisine).put("avoid",studio.avoid).put("recentRecipeIds",JSONArray(recent)).apply { if(goal=="profile") put("preferredRecipeId",mealMoods[studio.pickedMood].recipeId) }
     agentSession?.let { payload.put("sessionId",it) }
     val result=request("/plan",payload)
     val plan=result.optJSONObject("plan")
@@ -95,6 +109,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
     generatedRecipe=draft
     ownedHints=result.optJSONArray("ownedHints")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).let { o -> OwnedHint(o.getString("ingredientId"), o.getString("name"), o.getString("text")) } } } ?: emptyList()
     agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
+    plan?.let { suggestedRecipeIds=(suggestedRecipeIds+it.getString("recipeId")).takeLast(20) }
     val changes=result.optJSONArray("changes")
     agentChanges=if(changes!=null) (0 until changes.length()).map { changes.getString(it) } else emptyList()
     val trace=result.getJSONArray("trace")
@@ -113,13 +128,13 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  val planTime get() = agentPlan?.getJSONObject("constraints")?.getInt("maxPrepMinutes") ?: 0
  fun approvePlan() {
   val p=agentPlan ?: return
-  if(!planWithinBudget || aiBusy || !canEditCheckout) return
+  if(aiBusy || !canEditCheckout) return
   studio.record(p.getString("recipeId"))
   clearPayment()
   servings=p.optInt("servings",2); fulfillment=p.optString("fulfillment","pickup"); organicOnly=p.optBoolean("organicOnly",false)
   studentEligible=p.optBoolean("studentEligible",false)
   personalRecipe=null; recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
-  attempt=UUID.randomUUID().toString(); error=null; step=2
+  attempt=UUID.randomUUID().toString(); error=null; illustrativeComparison=false; step=2
  }
  fun approveGeneratedRecipe() {
   val draft=generatedRecipe ?: return
@@ -130,9 +145,10 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   val budget=draft.getJSONObject("constraints").getLong("budgetCents")
   choosePersonal(value)
   selected=included
+  servings=draft.getInt("servings")
   personalBudget=budget
  }
- fun newPlan() { ownedHints=emptyList(); servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; generatedRecipe=null; personalBudget=-1L; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList(); aiError=null; preference="" }
+ fun newPlan() { illustrativeComparison=false; planningGoal="balanced"; ownedHints=emptyList(); servings=2; fulfillment="pickup"; organicOnly=false; agentSession=null; agentPlan=null; generatedRecipe=null; personalBudget=-1L; agentReply=""; agentChanges=emptyList(); agentTrace=emptyList(); aiError=null; preference="" }
 
  // ---- Purchase memory: anonymous per-install id; the backend remembers verified purchases under it ----
  data class OwnedHint(val ingredientId: String, val name: String, val text: String)
@@ -268,7 +284,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
  private fun clearPayment() { pending=null; pendingPayload=null; intentId=null; error=null; attempt=UUID.randomUUID().toString() }
  fun choose(id: String) { if(!canEditCheckout) return; if(!studio.fits(catalog.recipes.first{it.id==id})){error="This recipe contains an ingredient in your exclusions.";return}; clearPayment(); newPlan(); personalRecipe=null; recipeId=id; selected=recipe.ingredients.map { it.id }.toSet()-studio.owned; servings=studio.people; studio.record(id); storeId=""; cardId=""; step=1 }
  fun toggle(id: String) { if(!canEditCheckout) return; clearPayment(); selected=if(id in selected) selected-id else selected+id }
- fun compare() { if(!canEditCheckout || !canCompare) return; val best=rankings.firstOrNull { it.complete } ?: return; storeId=best.store.id; cardId=best.card.id; step=2 }
+ fun compare() { if(!canEditCheckout || selected.isEmpty() || !studio.fits(recipe)) return; val best=rankings.firstOrNull { it.complete }; storeId=best?.store?.id.orEmpty(); cardId=best?.card?.id.orEmpty(); step=2 }
  fun checkout(store: String) { if(!canEditCheckout || selected.isEmpty() || rankings.none { it.store.id==store && it.complete }) return; clearPayment(); storeId=store; cardId=rankings.first { it.store.id==store }.card.id; step=3 }
  fun switchCard(id: String) { if(!canEditCheckout || id==current.card.id) return; clearPayment(); cardId=id }
  fun back() { if(canEditCheckout && step in 1..3) { step--; error=null } }

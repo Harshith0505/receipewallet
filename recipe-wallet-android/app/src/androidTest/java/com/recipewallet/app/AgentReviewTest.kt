@@ -34,14 +34,15 @@ class AgentReviewTest {
  }
  @Test fun approvedBasketUsesExactReviewedIngredientsAndAmount() {
   val vm=showPlan()
-  compose.onNodeWithText("Pay today").performScrollTo().assertIsDisplayed()
-  compose.onAllNodesWithText("$15.80").onFirst().assertExists()
+  compose.onNodeWithText("Pay today").assertDoesNotExist()
+  compose.onNodeWithText("Your shopping total is calculated",substring=true).performScrollTo().assertIsDisplayed()
   compose.onNodeWithText("02  Already owned").performScrollTo().performClick()
   compose.onNodeWithText("✓ Garlic · This meal only").assertExists()
   compose.onNodeWithText("Review basket →").performScrollTo().assertIsEnabled()
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
   File(compose.activity.getExternalFilesDir(null),"agent-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
   compose.onNodeWithText("Review basket →").performClick()
+        compose.runOnIdle { ViewModelProvider(compose.activity)[WalletViewModel::class.java].illustrativeComparison=true }
   compose.runOnIdle {
    assertEquals(2,vm.step);assertEquals(1580L,vm.current.charge)
    assertFalse(vm.selected.contains("garlic"));assertEquals("fresh",vm.storeId)
@@ -62,11 +63,10 @@ class AgentReviewTest {
    assertFalse(vm.receiptIngredients.any { it.id=="garlic" })
   }
  }
- @Test fun overBudgetPlanCannotBeApproved() {
+ @Test fun illustrativeBudgetDoesNotBlockReviewOfCurrentRetailerProducts() {
   val vm=showPlan(100)
-  compose.onNodeWithText("! Above your meal budget").performScrollTo().assertIsDisplayed()
-  compose.onNodeWithText("Review basket →").performScrollTo().assertIsNotEnabled()
-  compose.runOnIdle {vm.approvePlan();assertEquals(0,vm.step)}
+  compose.onNodeWithText("Review basket →").performScrollTo().assertIsEnabled()
+  compose.runOnIdle {vm.approvePlan();assertEquals(2,vm.step)}
  }
  @Test fun deliveryRevisionCannotBypassTheApprovedBudget() {
   val vm=showPlan(1600)
@@ -96,6 +96,7 @@ class AgentReviewTest {
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
   File(compose.activity.getExternalFilesDir(null),"agent-live-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
   compose.onNodeWithText("Review basket →").performClick()
+        compose.runOnIdle { ViewModelProvider(compose.activity)[WalletViewModel::class.java].illustrativeComparison=true }
   compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().performClick()
   // Native PaymentSheet is exercised by StripeCheckoutTest without a Compose test clock.
   compose.onNodeWithText("Approve & pay ${money(vm.current.charge)}").performScrollTo().assertIsEnabled()

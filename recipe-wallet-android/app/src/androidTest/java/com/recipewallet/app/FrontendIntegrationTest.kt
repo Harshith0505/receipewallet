@@ -38,8 +38,8 @@ class FrontendIntegrationTest {
    vm.studio.updateAvoid("");vm.choose("noodles");vm.selected=vm.selected-"garlic";vm.compare()
    assertEquals(2,vm.step)
   }
-  compose.onNodeWithText("Check live retailer prices").performScrollTo().performClick()
-  compose.onNodeWithText("US ZIP code").assertExists()
+  compose.onNodeWithText("Your shopping basket").assertExists()
+  compose.onNodeWithText("Check live retailer prices").assertDoesNotExist()
   compose.runOnIdle{
    val retailer=ViewModelProvider(compose.activity)[RetailerViewModel::class.java]
    assertEquals(vm.selected,retailer.needs.map{it.id}.toSet());assertFalse(retailer.needs.any{it.id=="garlic"})
@@ -85,8 +85,8 @@ class FrontendIntegrationTest {
   compose.runOnIdle{assertNull(vm.aiError);assertNotNull(vm.generatedRecipe);assertTrue(vm.generatedRecipe!!.getString("name").contains("pizza",true));assertNull(vm.agentPlan)}
   compose.onNodeWithText("Review ingredients →").performScrollTo().performClick()
   compose.runOnIdle{assertTrue(vm.isPersonal);assertTrue(vm.recipe.name.contains("pizza",true));assertEquals(1,vm.step);assertEquals(3000L,vm.planBudget)}
-  compose.onNodeWithText("Look up retailer prices").performScrollTo().performClick()
-  compose.onNodeWithText("US ZIP code").assertExists()
+  compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+  compose.onNodeWithText("Your shopping basket").assertExists()
  }
 
 }

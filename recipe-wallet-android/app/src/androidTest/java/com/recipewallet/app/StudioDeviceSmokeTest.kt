@@ -35,9 +35,10 @@ class StudioDeviceSmokeTest {
   shot("studio-home.png")
   click("My pantry");assertTrue(device.hasObject(By.text("Meet your ingredients.")));shot("studio-pantry.png")
   click("Garlic")
-  click("My week");click("Build a local catalog plan instead");find("MONDAY");shot("studio-week.png")
+  click("My week");click("Plan without AI");find("MONDAY");shot("studio-week.png")
   click("Build manually");shot("studio-manual.png")
   click("Spicy garlic noodles");click("Compare complete baskets →")
+  click("Illustrative comparison");click("Use illustrative store comparison")
   find("Find your basket");shot("studio-map.png")
   val latch=java.util.concurrent.CountDownLatch(1)
   var mapHeight=0.0

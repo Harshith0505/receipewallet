@@ -32,7 +32,7 @@ class MealStudioTest {
  @Test fun weeklyQuantitiesCombineFiveMealsAndSwapsUpdateTheList(){
   compose.onNodeWithText("My week").performScrollTo().performClick()
   compose.onNodeWithText("Planning options").performScrollTo().performClick()
-  compose.onNodeWithText("Build a local catalog plan instead").performScrollTo().performClick()
+  compose.onNodeWithText("Plan without AI").performScrollTo().performClick()
   compose.runOnIdle {
    val s=vm().studio;assertEquals(5,s.weeklyIds.size)
    val before=s.weeklyIds;s.swapDay(0);assertNotEquals(before,s.weeklyIds)
@@ -53,6 +53,7 @@ class MealStudioTest {
   screenshot("studio-manual.png")
   compose.onNodeWithText("Spicy garlic noodles").performScrollTo().performClick()
   compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
+        compose.runOnIdle { ViewModelProvider(compose.activity)[WalletViewModel::class.java].illustrativeComparison=true }
   compose.onNodeWithText("Find your basket").assertExists()
   screenshot("studio-map.png")
   compose.onNodeWithText("Review checkout →").performScrollTo().performClick()

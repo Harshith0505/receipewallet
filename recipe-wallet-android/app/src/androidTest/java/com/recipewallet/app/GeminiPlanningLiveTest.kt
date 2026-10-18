@@ -45,14 +45,14 @@ class GeminiPlanningLiveTest {
             assertTrue("garlic" in vm.planIds("ownedIngredientIds"));assertTrue("soy" in vm.planIds("ownedIngredientIds"))
             assertTrue(vm.plannedQuote!!.charge<original)
         }
-        compose.onNodeWithText("Review package-priced basket  →").performScrollTo().assertIsEnabled()
+        compose.onNodeWithText("Review basket →").performScrollTo().assertIsEnabled()
         compose.waitForIdle()
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         File(compose.activity.getExternalFilesDir(null),"gemini-merged-plan.png").outputStream().use {
             instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)
         }
-        compose.onNodeWithText("Review package-priced basket  →").performClick()
-        compose.onNodeWithText("Choose your shop").assertExists()
+        compose.onNodeWithText("Review basket →").performClick()
+        compose.onNodeWithText("Your shopping basket").assertExists()
         compose.runOnIdle {assertEquals(2,vm.step);assertTrue(vm.studentEligible);assertTrue(vm.current.studentDiscount>0)}
     }
 }

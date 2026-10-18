@@ -25,7 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-@Composable internal fun HomeScreen(vm:WalletViewModel,onRetailerPrices:()->Unit={}){
+@Composable internal fun HomeScreen(vm:WalletViewModel){
  var mode by rememberSaveable { mutableIntStateOf(0) }
  var libraryPage by rememberSaveable { mutableStateOf(if(vm.isPersonal)"saved" else "home") }
  LaunchedEffect(mode){if(mode !in 0..3)mode=0}
@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
     }
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
      TextButton(enabled=!vm.aiBusy,onClick={dismiss();accountReturnPage="home";libraryPage="account"}){Text(if(library.state.email==null)"Login"else "Account")}
-     TextButton(enabled=!vm.aiBusy,onClick={dismiss();onRetailerPrices()}){Text("Check retailer prices")}
+
     }
     JournalNavigation(listOf("Build with AI","Build manually","My pantry","My week"),mode,!vm.aiBusy){dismiss();mode=it}
     if(mode in 0..1)JourneySteps(0)
@@ -87,7 +87,7 @@ import kotlinx.coroutines.withContext
      3->WeeklyStudio(vm)
 
     }
-    SmallNote("Live retailer lookup available · Other prices & rewards are estimates")
+    SmallNote("Current retailer products are matched when you review your basket")
     InfoDisclosure("About prices & privacy"){SmallNote("Preferences and pantry are stored on this device. AI receives submitted meal details; photos are uploaded only when you choose to scan. Saved recipes sync to your account when signed in. Store comparisons and card profiles are illustrative; live retailer prices are labeled separately. Checkout uses Stripe test mode and places no grocery order.")}
    }
   }
@@ -99,9 +99,12 @@ import kotlinx.coroutines.withContext
   Eyebrow(if(vm.agentReply.isBlank())"Your meal studio"else "Keep the good. Remix the rest.")
   StudioTitle(if(vm.agentReply.isBlank())"What sounds good?"else "Adjust your meal")
   if(vm.agentReply.isNotBlank())Text("Keep your conversation going. Your earlier budget and preferences stay in this session.",color=ShopMuted,fontSize=13.sp)
-  OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=1200)vm.preference=it},enabled=!vm.aiBusy,label={Text(if(vm.agentReply.isBlank())"Tell us what you're craving"else "What would you like to change?")},placeholder={Text("Something cozy, under $30. I have garlic.")},minLines=2,maxLines=5,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+  OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=1200){vm.planningGoal="balanced";vm.preference=it}},enabled=!vm.aiBusy,label={Text(if(vm.agentReply.isBlank())"Tell us what you're craving"else "What would you like to change?")},placeholder={Text("Something cozy, under $30. I have garlic.")},minLines=2,maxLines=5,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
   ChipRail(if(vm.agentReply.isBlank())listOf("Use my taste profile ✨","Use what I have 🥬","Surprise me")else listOf("Less heat","More pantry, less shopping","Lower the cost","Try another recipe"),enabled=!vm.aiBusy){i->
-   vm.preference=if(vm.agentReply.isBlank())when(i){0->vm.studio.prompt();1->vm.studio.prompt()+" Prioritize ingredients I already own.";else->vm.studio.prompt()+" Suggest a different recipe from my recent choices."}else when(i){0->"Make this meal mild by removing chili if present. Keep my budget and dietary constraints.";1->"Use my confirmed pantry: "+vm.studio.ingredients.filter{it.id in vm.studio.owned}.joinToString{it.name}+". Keep my other constraints.";2->"Find a cheaper complete basket while keeping my dietary constraints.";else->"Choose another supported recipe with ${mealMoods[vm.studio.mood].prompt}, keeping my budget and dietary constraints."}
+   if(vm.agentReply.isBlank()) vm.chooseMealShortcut(i) else {
+   vm.planningGoal=when(i){1->"pantry";2->"cheapest";3->"surprise";else->"balanced"}
+   vm.preference=when(i){0->"Make this meal mild by removing chili if present. Keep my budget and dietary constraints.";1->"Use my confirmed pantry: "+vm.studio.ingredients.filter{it.id in vm.studio.owned}.joinToString{it.name}+". Keep my other constraints.";2->"Find a cheaper complete basket while keeping my dietary constraints.";else->"Choose another supported recipe with ${mealMoods[vm.studio.mood].prompt}, keeping my budget and dietary constraints."}
+   }
   }
   ShopButton(if(vm.aiBusy)"Creating your meal…"else if(vm.agentReply.isBlank())"Build my meal"else "Update my meal",enabled=!vm.aiBusy&&vm.preference.isNotBlank(),onClick={dismiss();vm.suggest()})
   if(vm.aiBusy){LinearProgressIndicator(Modifier.fillMaxWidth());SmallNote("Planning your meal and shopping list…")}

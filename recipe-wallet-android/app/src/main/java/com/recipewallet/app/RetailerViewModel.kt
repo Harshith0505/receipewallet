@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,7 +18,7 @@ import java.net.URI
 import java.util.UUID
 
 internal data class RetailerStore(val id: String, val name: String, val address: String)
-internal data class RetailerNeed(val id: String, val name: String, val amount: String)
+internal data class RetailerNeed(val id: String, val name: String, val amount: String, val quantity:Double?=null, val unit:String?=null)
 internal data class RetailerProduct(val name: String, val size: String?, val price: Long?,
     val promo: Long?, val stock: String?, val soldBy: String?, val productId: String, val itemId: String) {
     val key get() = "$productId:$itemId"
@@ -58,6 +62,10 @@ internal suspend fun retailerRequest(path: String, payload: JSONObject): JSONObj
 internal class RetailerViewModel(
     private val request: suspend (String, JSONObject) -> JSONObject = ::retailerRequest
 ) : ViewModel() {
+    var candidatesByNeed by mutableStateOf<Map<String,List<RetailerProduct>>>(emptyMap()); private set
+    var matchErrors by mutableStateOf<Map<String,String>>(emptyMap()); private set
+    var packagesReviewed by mutableStateOf(false); private set
+    fun confirmPackages(value:Boolean) { if(!editingBlocked) packagesReviewed=value }
     var postalCode by mutableStateOf("")
     var query by mutableStateOf("")
     var stores by mutableStateOf<List<RetailerStore>>(emptyList()); private set
@@ -95,9 +103,67 @@ internal class RetailerViewModel(
         if (cartUncertain) return
         if (context == id && needs == ingredients) return
         context = id; needs = ingredients
+        candidatesByNeed=emptyMap(); matchErrors=emptyMap(); packagesReviewed=false
         requestId++; busy = false; products = emptyList(); searchedQuery = ""; activeNeed = null
         selections = emptyMap(); basket = null; reviewing = false; error = null
     }
+
+    fun startShopping(id:String, ingredients:List<RetailerNeed>, defaultZip:String="98105") {
+        val changed=context!=id||needs!=ingredients
+        configure(id,ingredients)
+        if(cartUncertain||ingredients.isEmpty())return
+        if(postalCode.isBlank())postalCode=defaultZip
+        if(changed||searchedZip.isBlank()) loadShopping()
+    }
+    fun loadShopping(store:RetailerStore?=selectedStore) {
+        if(editingBlocked)return
+        val zip=postalCode.trim()
+        if(!zip.matches(Regex("[0-9]{5}"))){error="Enter a five-digit US ZIP code.";return}
+        val id=++requestId
+        busy=true;error=null;reviewing=false;basket=null;packagesReviewed=false
+        candidatesByNeed=emptyMap();matchErrors=emptyMap();selections=emptyMap()
+        viewModelScope.launch {
+            try {
+                var chosen=store
+                if(chosen==null||searchedZip!=zip){
+                    val result=request("/retailers/stores",JSONObject().put("postalCode",zip))
+                    if(id!=requestId)return@launch
+                    val rows=result.getJSONArray("stores")
+                    stores=List(rows.length()){i->rows.getJSONObject(i).let{RetailerStore(it.getString("id"),it.getString("name"),it.getString("address"))}}
+                    searchedZip=zip;chosen=stores.firstOrNull()
+                }
+                selectedStore=chosen
+                if(chosen==null){error="No Kroger-family stores were found near this ZIP. Try another area.";return@launch}
+                val storeId=chosen.id
+                val limit=Semaphore(2)
+                needs.map { need->async {
+                    limit.withPermit {
+                        try {
+                            val result=request("/retailers/products",JSONObject().put("storeId",storeId).put("query",need.name.take(80)))
+                            check(result.getString("storeId")==storeId&&result.getString("currency")=="usd"){"The returned products do not match your store."}
+                            val rows=result.getJSONArray("products")
+                            val matches=rankRetailerMatches(need,List(rows.length()){parseRetailerProduct(rows.getJSONObject(it))})
+                            if(id==requestId){
+                                candidatesByNeed=candidatesByNeed+(need.id to matches)
+                                fetchedAt=result.getString("fetchedAt")
+                                matches.firstOrNull{isConfidentRetailerMatch(need,it)}?.let{product->
+                                    selections=selections+(need.id to RetailerSelection(need.name,product,suggestedPackageCount(need,product)?:1))
+                                }
+                            }
+                        }catch(e:Exception){if(id==requestId)matchErrors=matchErrors+(need.id to (e.message?:"Product search failed. Try again."))}
+                    }
+                }}.awaitAll()
+            }catch(e:Exception){if(id==requestId)error=e.message?:"Could not load retailer products. Please retry."}
+            finally{if(id==requestId)busy=false}
+        }
+    }
+    fun selectForNeed(needId:String,product:RetailerProduct) {
+        if(editingBlocked||selectedStore==null||!product.selectable||product !in candidatesByNeed[needId].orEmpty())return
+        val need=needs.firstOrNull{it.id==needId}?:return
+        selections=selections+(needId to RetailerSelection(need.name,product,suggestedPackageCount(need,product)?:1))
+        basket=null;packagesReviewed=false;error=null
+    }
+
     private fun perform(path: String, payload: JSONObject, onFailure: (Exception) -> Unit = {}, apply: (JSONObject) -> Unit) {
         val id = ++requestId
         busy = true; error = null
@@ -146,6 +212,7 @@ internal class RetailerViewModel(
             }
             val rows = result.getJSONArray("products")
             products = List(rows.length()) { parseRetailerProduct(rows.getJSONObject(it)) }
+            needId?.let { id -> candidatesByNeed=candidatesByNeed+(id to rankRetailerMatches(needs.first{it.id==id},products));matchErrors=matchErrors-id }
             searchedQuery = search; fetchedAt = result.getString("fetchedAt")
         }
     }
@@ -156,17 +223,19 @@ internal class RetailerViewModel(
         val id = need?.id ?: "product:${product.key}"
         val count = selections[id]?.takeIf { it.product.key == product.key }?.quantity ?: 1
         selections = selections + (id to RetailerSelection(need?.name ?: product.name, product, count))
+        packagesReviewed=false
         basket = null; error = null
     }
     fun setQuantity(id: String, count: Int) {
         if (editingBlocked) return
         val row = selections[id] ?: return
         selections = selections + (id to row.copy(quantity = count.coerceIn(1, 20)))
+        packagesReviewed=false
         basket = null
     }
     fun remove(id: String) {
         if (editingBlocked) return
-        selections = selections - id; basket = null
+        selections = selections - id; basket = null;packagesReviewed=false
     }
     fun refreshBasket() {
         if (editingBlocked || !canReview) return
