@@ -40,7 +40,7 @@ import kotlinx.coroutines.withContext
  }
  StudioCard(tint=Mint){
   Eyebrow("Pantry lens")
-  StudioTitle("Meet your ingredients.")
+  StudioTitle("Add pantry items")
   Text("Snap your fridge or pantry. Review what Gemini sees, then decide what belongs in your pantry.",color=ShopInk,fontSize=15.sp)
   Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
    Button(enabled=!state.scanBusy,onClick={runCatching{camera.launch(null)}.onFailure{localError="Camera unavailable. Choose a photo instead."}},modifier=Modifier.weight(1f)){Text("Take photo")}
@@ -66,10 +66,13 @@ import kotlinx.coroutines.withContext
  StudioCard{
   Eyebrow("Confirmed by you")
   StudioTitle("My pantry · ${state.owned.size} items")
+  InfoDisclosure("Edit pantry ingredients","${state.owned.size} confirmed items") {
   SmallNote("Green checks mean you confirmed the ingredient. Verify you have enough for each meal. Tap to add or remove; changes affect your next basket, not an already approved checkout.")
+
   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
    state.ingredients.forEach{item->FilterChip(selected=item.id in state.owned,onClick={state.toggleOwned(item.id)},label={Text(item.name)},leadingIcon={Text(if(item.id in state.owned)"✓"else "+")})}
   }
+ }
  }
  StudioTitle("What can I make?")
  SmallNote("Ranked by the share of ingredients you have. Dietary and time filters from your meal studio still apply.")
@@ -82,23 +85,27 @@ import kotlinx.coroutines.withContext
  val state=vm.studio
  StudioCard(tint=Lilac){
   Eyebrow("Your weekly ritual · week of ${state.currentWeek}")
-  StudioTitle(if(state.weekDue)"Make room for a good week."else "Five dinners. One clear list.")
-  Text("Your mood, recent choices and confirmed pantry help shape a five-day plan. Swap any dinner before making your list.",color=ShopInk,fontSize=14.sp)
+  StudioTitle(if(state.weekDue)"Plan your week"else "Your weekly plan")
+  Text("Plan five dinners using your preferences and pantry.",color=ShopInk,fontSize=14.sp)
   SmallNote("${state.people} people · ${state.minutes.toInt()} min per meal · ${mealMoods[state.mood].name} · ${if(state.vegetarian)"Vegetarian"else "Any diet"}")
   ShopButton(if(state.weekBusy)"Planning your week…"else "Let AI plan my week",enabled=!state.weekBusy,onClick={state.buildWeek()})
   if(state.weekBusy)LinearProgressIndicator(Modifier.fillMaxWidth())
   state.weekError?.let{Text(it,color=Danger,fontSize=13.sp)}
+  InfoDisclosure("Planning options","Automatic plan: ${if(state.autoWeek)"on"else "off"} · Automatic cart: ${if(state.autoCart)"on"else "off"}"){
   TextButton(enabled=!state.weekBusy,onClick={state.buildLocalWeek()}){Text("Build a local catalog plan instead")}
   Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Switch(checked=state.autoWeek,onCheckedChange={state.updateAutoWeek(it)});Text("Auto-plan on my first visit each week",modifier=Modifier.weight(1f).padding(start=10.dp),color=ShopInk,fontSize=13.sp)}
   Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Switch(checked=state.autoCart,onCheckedChange={state.updateAutoCart(it)});Text("Automatically prepare my weekly grocery cart",modifier=Modifier.weight(1f).padding(start=10.dp),color=ShopInk,fontSize=13.sp)}
   SmallNote("Builds a saved cart draft when your weekly plan is generated or edited. Review quantities and pantry stock before shopping; no automatic payment.")
   SmallNote("When enabled, your first visit each week sends your taste profile, recent recipe choices and pantry IDs to the backend. No background purchases or notifications.")
+  }
  }
  if(state.weeklyIds.isNotEmpty())ShopButton("Prepare weekly grocery cart",onClick={state.prepareWeeklyCart()})
  state.groceryCart?.let{cart->StudioCard(tint=Peach){
   Eyebrow("Saved shopping cart · ${state.cartPeople} people")
   StudioTitle("Groceries, planned ahead")
+  InfoDisclosure("View cart ingredients","${cart.ingredients.size} grocery items"){
   cart.ingredients.forEach{item->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(item.name,color=ShopInk,modifier=Modifier.weight(1f));Text("${item.quantity} ${item.unit}",color=ShopInk)}}
+  }
   SmallNote("Includes pantry items until you confirm enough stock for the whole week. This draft is saved on this tablet. Shop individual dinners below.")
  }}
  if(state.weeklyIds.isNotEmpty()){
@@ -119,9 +126,11 @@ import kotlinx.coroutines.withContext
    Eyebrow("The big picture")
    StudioTitle("One weekly grocery list")
    SmallNote("Quantities combine all five dinners for ${state.people} people. Pantry items remain in this list until you verify the total quantity; a photo cannot count stock.")
+   InfoDisclosure("View weekly ingredients","${recipe.ingredients.size} grocery items"){
    recipe.ingredients.forEach { item->
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(item.name,color=ShopInk,modifier=Modifier.weight(1f));Text("${item.quantity} ${item.unit}",color=ShopInk)}
     if(item.id in state.owned)Signal("✓ In pantry · check weekly quantity")
+   }
    }
    val quote=vm.catalog.stores.map{s->packageQuote(recipe,recipe.ingredients.map{it.id}.toSet(),s,vm.catalog.cards.first(),vm.catalog.productOffers,state.people,"pickup",false)}.filter{it.complete}.minByOrNull{it.charge}
    if(quote!=null){Signal("Combined package estimate · ${quote.store.name}");Text(money(quote.charge),fontSize=32.sp,color=ShopInk);SmallNote("Whole packages, pickup fees and demo tax. Before pantry deductions and future rewards. Shop each dinner above; combined weekly checkout is not available.")}

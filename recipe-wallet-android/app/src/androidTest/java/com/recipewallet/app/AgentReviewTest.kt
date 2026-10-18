@@ -37,11 +37,12 @@ class AgentReviewTest {
   val vm=showPlan()
   compose.onNodeWithText("Pay today").performScrollTo().assertIsDisplayed()
   compose.onAllNodesWithText("$15.80").onFirst().assertExists()
+  compose.onNodeWithText("02  Already owned").performScrollTo().performClick()
   compose.onNodeWithText("✓ Garlic · This meal only").assertExists()
-  compose.onNodeWithText("Review package-priced basket  →").performScrollTo().assertIsEnabled()
+  compose.onNodeWithText("Review basket →").performScrollTo().assertIsEnabled()
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
   File(compose.activity.getExternalFilesDir(null),"agent-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
-  compose.onNodeWithText("Review package-priced basket  →").performClick()
+  compose.onNodeWithText("Review basket →").performClick()
   compose.runOnIdle {
    assertEquals(2,vm.step);assertEquals(1580L,vm.current.charge)
    assertFalse(vm.selected.contains("garlic"));assertEquals("fresh",vm.storeId)
@@ -65,7 +66,7 @@ class AgentReviewTest {
  @Test fun overBudgetPlanCannotBeApproved() {
   val vm=showPlan(100)
   compose.onNodeWithText("! Above your meal budget").performScrollTo().assertIsDisplayed()
-  compose.onNodeWithText("Review package-priced basket  →").performScrollTo().assertIsNotEnabled()
+  compose.onNodeWithText("Review basket →").performScrollTo().assertIsNotEnabled()
   compose.runOnIdle {vm.approvePlan();assertEquals(0,vm.step)}
  }
  @Test fun deliveryRevisionCannotBypassTheApprovedBudget() {
@@ -92,10 +93,10 @@ class AgentReviewTest {
   compose.onNodeWithText("Update my meal").performScrollTo().performClick()
   compose.waitUntil(95000) { !vm.aiBusy }
   compose.runOnIdle {assertNull(vm.aiError);assertTrue(vm.plannedQuote!!.charge<original);assertTrue("soy" in vm.planIds("ownedIngredientIds"))}
-  compose.onNodeWithText("Review package-priced basket  →").performScrollTo()
+  compose.onNodeWithText("Review basket →").performScrollTo()
   val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
   File(compose.activity.getExternalFilesDir(null),"agent-live-review.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG,100,it) }
-  compose.onNodeWithText("Review package-priced basket  →").performClick()
+  compose.onNodeWithText("Review basket →").performClick()
   compose.onAllNodesWithText("Review checkout →").onFirst().performScrollTo().performClick()
   compose.onNodeWithText("Approve & pay ${money(vm.current.charge)}").performScrollTo().performClick()
   compose.waitUntil(35000) { vm.canVerify || vm.error!=null }

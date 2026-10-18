@@ -55,30 +55,28 @@ import androidx.compose.ui.unit.sp
       Box(Modifier.defaultMinSize(minWidth=130.dp,minHeight=48.dp).background(if(mode==i)ShopInk else listOf(Peach,Citrus,Mint,Lilac,Peach)[i].copy(alpha=.45f),RoundedCornerShape(9.dp)).selectable(selected=mode==i,enabled=!vm.aiBusy,role=Role.Tab,onClick={dismiss();mode=i}).padding(horizontal=14.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,color=if(mode==i)Color.White else ShopInk,fontWeight=FontWeight.SemiBold)}
      }
     }
-    if(vm.studio.weekDue&&mode!=3&&mode!=4)StudioCard(tint=Lilac){
-     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-      Column(Modifier.weight(1f)){Eyebrow("A fresh week awaits");Text("Five dinners, one less thing to think about.",fontSize=14.sp,color=ShopInk)}
-      TextButton(onClick={dismiss();mode=3}){Text("Plan my week →")}
-     }
-    }
+    if(vm.studio.avoid.isNotBlank())Signal("Avoiding: ${vm.studio.avoid}",Warn)
+    if(vm.studio.faith!="None")Signal("${vm.studio.faith} · verify product certification",Warn)
     when(mode){
      0->{
-      if(wide)Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
-       Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(20.dp)){MealComposer(vm,{mode=1},dismiss);if(vm.agentReply.isNotBlank())MoodDeck(vm.studio,!vm.aiBusy)else HistorySuggestions(vm)}
-       Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(20.dp)){if(vm.agentReply.isNotBlank())AgentPlanReview(vm)else {MoodDeck(vm.studio,!vm.aiBusy);TasteControls(vm.studio,!vm.aiBusy)}}
-      }else{MoodDeck(vm.studio,!vm.aiBusy);MealComposer(vm,{mode=1},dismiss);if(vm.agentReply.isNotBlank())AgentPlanReview(vm);TasteControls(vm.studio,!vm.aiBusy);HistorySuggestions(vm)}
+      if(vm.agentReply.isNotBlank())AgentPlanReview(vm)
+      MealComposer(vm,{mode=1},dismiss)
+      InfoDisclosure("Preferences & dietary needs","${vm.studio.people} people · $${vm.studio.budget.toInt()} budget · ${vm.studio.minutes.toInt()} min"){TasteControls(vm.studio,!vm.aiBusy)}
+      InfoDisclosure("Choose a mood",mealMoods[vm.studio.pickedMood].name){MoodDeck(vm.studio,!vm.aiBusy)}
+      if(vm.studio.favorite!=null)InfoDisclosure("Your recent favorites",vm.studio.favorite?.name?:""){HistorySuggestions(vm)}
+      if(vm.studio.weekDue)TextButton(onClick={dismiss();mode=3}){Text("Plan groceries for the week →")}
      }
      1->{
-      if(wide)Row(horizontalArrangement=Arrangement.spacedBy(24.dp)){
-       Column(Modifier.weight(.65f),verticalArrangement=Arrangement.spacedBy(18.dp)){MoodDeck(vm.studio);TasteControls(vm.studio)}
-       Column(Modifier.weight(1.35f),verticalArrangement=Arrangement.spacedBy(18.dp)){ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
-      }else{MoodDeck(vm.studio);TasteControls(vm.studio);ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}}
+      InfoDisclosure("Preferences & dietary needs","${vm.studio.people} people · $${vm.studio.budget.toInt()} budget · ${vm.studio.minutes.toInt()} min"){TasteControls(vm.studio)}
+      InfoDisclosure("Choose a mood",mealMoods[vm.studio.pickedMood].name){MoodDeck(vm.studio)}
+      ManualRecipes(vm){dismiss();selectedId=null;libraryPage="add"}
      }
      2->PantryStudio(vm)
      3->WeeklyStudio(vm)
      4->WeeklyWrapScreen(vm)
     }
-    SmallNote("Demo groceries & rewards · No real grocery order. Preferences and pantry stay on this device; AI requests send the details you submit. Photos are sent only when you choose to scan.")
+    SmallNote("Demo prices & rewards · No real grocery order")
+    InfoDisclosure("About this demo & privacy"){SmallNote("Preferences and pantry stay on this device. AI requests send the details you submit; photos are sent only when you choose to scan.")}
    }
   }
  }
@@ -89,7 +87,7 @@ import androidx.compose.ui.unit.sp
   Eyebrow(if(vm.agentReply.isBlank())"Your meal studio"else "Keep the good. Remix the rest.")
   StudioTitle(if(vm.agentReply.isBlank())"What sounds good?"else "Adjust your meal")
   if(vm.agentReply.isNotBlank())Text("Keep your conversation going. Your earlier budget and preferences stay in this session.",color=ShopMuted,fontSize=13.sp)
-  OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=1200)vm.preference=it},enabled=!vm.aiBusy,label={Text(if(vm.agentReply.isBlank())"Tell us what you're craving"else "What would you like to change?")},placeholder={Text("Something cozy, under $30. I have garlic.")},minLines=3,maxLines=5,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+  OutlinedTextField(value=vm.preference,onValueChange={if(it.length<=1200)vm.preference=it},enabled=!vm.aiBusy,label={Text(if(vm.agentReply.isBlank())"Tell us what you're craving"else "What would you like to change?")},placeholder={Text("Something cozy, under $30. I have garlic.")},minLines=2,maxLines=5,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
   ChipRail(if(vm.agentReply.isBlank())listOf("Use my taste profile ✨","Use what I have 🥬","Surprise me")else listOf("Less heat","More pantry, less shopping","Lower the cost","Try another recipe"),enabled=!vm.aiBusy){i->
    vm.preference=if(vm.agentReply.isBlank())when(i){0->vm.studio.prompt();1->vm.studio.prompt()+" Prioritize ingredients I already own.";else->vm.studio.prompt()+" Suggest a different recipe from my recent choices."}else when(i){0->"Make this meal mild by removing chili if present. Keep my budget and dietary constraints.";1->"Use my confirmed pantry: "+vm.studio.ingredients.filter{it.id in vm.studio.owned}.joinToString{it.name}+". Keep my other constraints.";2->"Find a cheaper complete basket while keeping my dietary constraints.";else->"Choose another supported recipe with ${mealMoods[vm.studio.mood].prompt}, keeping my budget and dietary constraints."}
   }
@@ -109,8 +107,7 @@ import androidx.compose.ui.unit.sp
  }
 }
 @Composable private fun ManualRecipes(vm:WalletViewModel,add:()->Unit){
- Eyebrow("Pin it. Cook it. Love it.")
- SmallNote("A short list tuned by your time, diet, pantry and recent choices. Mood nudges the order; prices come from whole packages.")
+
  RecipePinboard(vm)
  ShopButton("+ Add a recipe",outlined=true,onClick=add)
 }

@@ -253,17 +253,19 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
     StudioCard(tint=Mint) {
         Eyebrow("Your meal · ready for your touch")
         StudioTitle(vm.plannedRecipe?.name ?: "Let's fine-tune your request")
-        Text(vm.agentReply,color=ShopInk,fontSize=14.sp)
+        val recipe=vm.plannedRecipe
+        val quote=vm.plannedQuote
+        if(recipe==null||quote==null)Text(vm.agentReply,color=ShopInk,fontSize=14.sp)
+        if(recipe!=null&&quote!=null) {
+            Signal("${recipe.prepTime} min · ${vm.agentPlan?.optInt("servings",2)} servings · ${vm.planDiet} · ${if(vm.planBudget>=0)money(vm.planBudget)+" budget"else "No budget set"}")
+            PriceTicket(quote,budget=vm.planBudget)
+            ShopButton("Review basket →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
+        InfoDisclosure("AI meal summary",vm.agentReply.take(100)+if(vm.agentReply.length>100)"…"else ""){Text(vm.agentReply,color=ShopInk,fontSize=14.sp)}
         if(vm.agentChanges.isNotEmpty()) {
-            StudioCard(tint=androidx.compose.ui.graphics.Color.White) {
-                Signal("↻ What changed",Good)
+            InfoDisclosure("What changed","${vm.agentChanges.size} updates to your meal") {
                 vm.agentChanges.forEach { Text("• $it",color=ShopInk,fontSize=15.sp) }
             }
         }
-        val recipe=vm.plannedRecipe
-        val quote=vm.plannedQuote
-        if(recipe!=null&&quote!=null) {
-            Signal("${recipe.prepTime} min · ${vm.agentPlan?.optInt("servings",2)} servings · ${vm.planDiet} · ${if(vm.planBudget>=0)money(vm.planBudget)+" budget"else "No budget set"}")
             ReviewSection("01  To buy", "Whole packages in your next basket", Peach) {
                 recipe.ingredients.filter { it.id in vm.planIds("ingredientIds") }.forEach { Text("+ "+it.name,color=ShopInk) }
             }
@@ -282,8 +284,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
                 if(omissions!=null&&omissions.length()>0) SmallNote("Left out of the recipe: "+(0 until omissions.length()).map { omissions.getString(it) }.mapNotNull { id->recipe.ingredients.firstOrNull { it.id==id }?.name }.joinToString())
                 SmallNote("Only supported catalog ingredients can change. Review the result before approving.")
             }
-            PriceTicket(quote,budget=vm.planBudget)
-            ShopButton("Review package-priced basket  →",enabled=vm.planWithinBudget&&!vm.aiBusy,onClick={vm.approvePlan()})
+
         }
         var details by remember { mutableStateOf(false) }
         TextButton(onClick={details=!details}) { Text(if(details)"Hide comparison details"else "How this was chosen") }
@@ -292,11 +293,7 @@ internal fun AgentPlanReview(vm: WalletViewModel) {
     }
 }
 @Composable private fun ReviewSection(title:String,subtitle:String,tint:androidx.compose.ui.graphics.Color,content:@Composable ColumnScope.()->Unit) {
-    var open by remember { mutableStateOf(true) }
-    StudioCard(tint=tint) {
-        TextButton(onClick={open=!open},modifier=Modifier.fillMaxWidth()) { Text(title,modifier=Modifier.weight(1f),fontWeight=FontWeight.Bold);Text(if(open)"−"else "+") }
-        if(open) {SmallNote(subtitle);content()}
-    }
+    InfoDisclosure(title,subtitle,content)
 }
 
 @Composable private fun ShoppingControls(vm:WalletViewModel) {

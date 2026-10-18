@@ -13,10 +13,12 @@ class RecipeGardenTest {
   val oldMinutes=state.minutes;val oldAvoid=state.avoid;val oldFaith=state.faith;val oldMood=state.mood;val oldPicked=state.pickedMood
   try {
    compose.onNodeWithText("Build manually").performScrollTo().performClick()
+   compose.onNodeWithText("Choose a mood").performScrollTo().performClick()
    val shown=state.mood
    compose.onNodeWithText("The flavor of your day",ignoreCase=true).performScrollTo().performTouchInput{swipeRight()}
    compose.runOnIdle{assertEquals(shown,state.pickedMood);assertEquals((shown+1)%4,state.mood);state.updateAvoid("milk, gluten");state.updateMinutes(45f)}
    compose.runOnIdle{assertTrue(state.rankedRecipes().all{it.id=="bowl"});assertTrue(state.rankedRecipes().isNotEmpty())}
+   compose.onNodeWithText("Preferences & dietary needs").performScrollTo().performClick()
    compose.onNodeWithText("Kosher").performSemanticsAction(SemanticsActions.OnClick){it()}
    compose.runOnIdle{assertEquals("Kosher",state.faith)}
    compose.onNodeWithText("Choose a recipe").performScrollTo().assertIsDisplayed()

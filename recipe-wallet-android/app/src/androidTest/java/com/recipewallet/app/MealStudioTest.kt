@@ -31,6 +31,7 @@ class MealStudioTest {
  }
  @Test fun weeklyQuantitiesCombineFiveMealsAndSwapsUpdateTheList(){
   compose.onNodeWithText("My week").performScrollTo().performClick()
+  compose.onNodeWithText("Planning options").performScrollTo().performClick()
   compose.onNodeWithText("Build a local catalog plan instead").performScrollTo().performClick()
   compose.runOnIdle {
    val s=vm().studio;assertEquals(5,s.weeklyIds.size)
@@ -44,10 +45,11 @@ class MealStudioTest {
  @Test fun pantryAndManualScreensAreReachable(){
   screenshot("studio-home.png")
   compose.onNodeWithText("My pantry").performScrollTo().performClick()
-  compose.onNodeWithText("Meet your ingredients.").assertExists()
+  compose.onNodeWithText("Add pantry items").assertExists()
   screenshot("studio-pantry.png")
   compose.onNodeWithText("Build manually").performScrollTo().performClick()
-  compose.onNodeWithText("Next mood →").performScrollTo().performClick()
+  compose.onNodeWithText("Choose a mood").performScrollTo().performClick()
+  compose.onNodeWithText("Love this ♥ →").performScrollTo().performClick()
   screenshot("studio-manual.png")
   compose.onNodeWithText("Spicy garlic noodles").performScrollTo().performClick()
   compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()

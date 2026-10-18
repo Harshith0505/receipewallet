@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +47,21 @@ internal val Danger=Color(0xFFA64451)
    while(x<size.width){drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,0f));drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,size.height));x+=4.dp.toPx()}
   }.padding(start=30.dp,end=22.dp,top=27.dp,bottom=22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
   WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFD0A8BF))
+ }
+}
+/** Secondary information opens on demand; its current summary stays visible. */
+@Composable internal fun InfoDisclosure(title:String,summary:String="",content:@Composable ColumnScope.()->Unit){
+ var open by rememberSaveable(title){mutableStateOf(false)}
+ Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)){
+  TextButton(onClick={open=!open},modifier=Modifier.fillMaxWidth().semantics{stateDescription=if(open)"Expanded"else "Collapsed"}){
+   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+    Text(title,color=ShopInk,fontWeight=FontWeight.SemiBold)
+    if(summary.isNotBlank())Text(summary,color=ShopMuted,fontSize=12.sp)
+   }
+   Text(if(open)"−"else "+",color=ShopInk,fontSize=22.sp)
+  }
+  AnimatedVisibility(open){Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)}
+  HorizontalDivider(color=ShopLine.copy(alpha=.5f))
  }
 }
 @Composable internal fun Eyebrow(text:String){Text(text.uppercase(),fontSize=11.sp,letterSpacing=1.5.sp,color=ShopMuted,fontWeight=FontWeight.Bold)}
@@ -119,8 +137,9 @@ internal val Danger=Color(0xFFA64451)
    Column{Text("Pay today",color=Color.White.copy(alpha=.8f),fontSize=13.sp);Text(if(quote.complete)money(quote.charge)else "Incomplete",fontSize=36.sp,fontWeight=FontWeight.Bold,color=Color.White)}
    Text(quote.fulfillment.uppercase(),color=Citrus,fontSize=11.sp,fontWeight=FontWeight.Bold)
   }
-  HorizontalDivider(color=Color.White.copy(alpha=.2f))
-  listOf("Whole packages" to quote.groceries,"Fees" to quote.fees,"Demo tax (0%)" to quote.tax).forEach{(label,value)->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,color=Color.White.copy(alpha=.8f),fontSize=13.sp);Text(money(value),color=Color.White,fontSize=13.sp)}}
+  var breakdown by remember(quote){mutableStateOf(false)}
+  TextButton(onClick={breakdown=!breakdown}){Text(if(breakdown)"Hide price breakdown −"else "View price breakdown +",color=Color.White)}
+  if(breakdown) listOf("Whole packages" to quote.groceries,"Fees" to quote.fees,"Demo tax (0%)" to quote.tax).forEach{(label,value)->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,color=Color.White.copy(alpha=.8f),fontSize=13.sp);Text(money(value),color=Color.White,fontSize=13.sp)}}
   Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha=.1f),RoundedCornerShape(12.dp)).padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween){Text("Estimated future rewards",color=Color.White,fontSize=12.sp);Text("+ ${money(quote.rewards)}",color=Citrus,fontWeight=FontWeight.Bold)}
   Text("Rewards arrive later and do not lower today's charge.",color=Color.White.copy(alpha=.75f),fontSize=11.sp)
  }
