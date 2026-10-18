@@ -35,3 +35,24 @@ The approved and optimized home screenshots were visually checked for matching l
 - All 21 existing JVM unit tests pass.
 - Both new `PricingCacheTest` instrumentation tests pass on the Lenovo. They compare cached totals against fresh pricing, verify reuse for unrelated UI state, and check invalidation for servings, ingredient selection, fulfillment, organic preference, store/card choice and pantry ownership.
 - No backend code or pricing formula changes.
+
+## Tab-switch follow-up
+
+The remaining delay came from discarding each destination's UI and building it again on selection. Home now retains four prepared **viewports**. Only the active viewport is placed, drawn and exposed through accessibility semantics. Each viewport uses a keyed lazy list, so long recipe lists, pantry matches and weekly details are still composed as needed. Recipe rows keep the same responsive column thresholds and spacing; the 1200 dp page-width cap is preserved.
+
+This trades some one-time home preparation and retained viewport memory for faster navigation. The final cold launch measured 6,812 ms, compared with 5,362 ms in the earlier pass (one launch each); startup is slower in these samples, while subsequent navigation improves. No navigation destinations, controls, colors, pricing rules or backend requests were added or removed. Photo-picker launchers stay registered while Home is open. The normal Android Studio debug build supports this change; experimental native-compilation build settings were not retained.
+
+### Selection-to-draw measurement
+
+The optional debug-only `TabSwitchTrace` listener records elapsed time from the navigation callback (including focus/keyboard dismissal) until the selected destination is drawn. Without a test listener it records nothing. Measure three cycles of Build manually → My pantry → My week → Build with AI on the same Lenovo. Both sides use ordinary debug preview builds. End-to-end test-idle timings are also captured, but are not the first-draw metric below.
+
+| Destination | Previous median, ms | Retained viewport median, ms | First retained switch, ms |
+| --- | ---: | ---: | ---: |
+| Build manually | 1137 | 119 | 535 |
+| My pantry | 734 | 176 | 293 |
+| My week | 801 | 125 | 272 |
+| Build with AI | 704 | 115 | 102 |
+
+Single-device, three-sample development measurements; initial rendering and later switches differ. The first manual-tab draw still takes about half a second in this sample. Test runs made while the tablet was locked were excluded.
+
+All 21 JVM tests pass. Five tablet instrumentation tests pass: the timing/navigation test, deferred-content/calendar reachability, both pricing-cache tests, and mood/dietary-filter interaction. The deferred-content test confirms the last recipe remains reachable in both discovery and pantry, and that calendar selection and the weekly grocery summary remain accessible. Hidden tabs do not create duplicate controls in the accessibility tree. Test windows keep the screen awake only while their activity exists.

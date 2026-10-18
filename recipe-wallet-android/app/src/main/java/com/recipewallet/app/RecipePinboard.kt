@@ -17,19 +17,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@Composable internal fun RecipePinboard(vm:WalletViewModel,recipes:List<Recipe> = vm.studio.rankedRecipes()){
+@Composable internal fun rememberRecipeSections(vm:WalletViewModel,columns:Int):List<HomeSection>{
  var pinnedOnly by rememberSaveable{mutableStateOf(false)}
- Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){StudioTitle("Choose a recipe");FilterChip(selected=pinnedOnly,onClick={pinnedOnly=!pinnedOnly},label={Text(if(pinnedOnly)"♥ Pinned"else "♡ My pins")})}
- val items=recipes.filter{!pinnedOnly||it.id in vm.studio.pinnedIds}
- if(items.isEmpty())SmallNote("No recipes match. Try another cuisine, adjust filters, or turn off My pins.")
- BoxWithConstraints{
-  val columns=if(maxWidth>=840.dp)3 else if(maxWidth>=440.dp)2 else 1
-  Column(verticalArrangement=Arrangement.spacedBy(16.dp)){
-   items.chunked(columns).forEach{row->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)){
+ val recipes=vm.studio.rankedRecipes().filter{!pinnedOnly||it.id in vm.studio.pinnedIds}
+ return buildList {
+  add(HomeSection("recipe-heading"){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){StudioTitle("Choose a recipe");FilterChip(selected=pinnedOnly,onClick={pinnedOnly=!pinnedOnly},label={Text(if(pinnedOnly)"♥ Pinned"else "♡ My pins")})}
+  })
+  if(recipes.isEmpty())add(HomeSection("recipe-empty"){SmallNote("No recipes match. Try another cuisine, adjust filters, or turn off My pins.")})
+  val rows=recipes.chunked(columns)
+  rows.forEachIndexed{index,row->add(HomeSection("recipe-row:"+row.joinToString{it.id},if(index==rows.lastIndex)22.dp else 16.dp){
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)){
     row.forEach{recipe->RecipeCard(vm,recipe,Modifier.weight(1f))}
     repeat(columns-row.size){Spacer(Modifier.weight(1f))}
-   }}
-  }
+   }
+  })}
  }
 }
 @Composable private fun RecipeCard(vm:WalletViewModel,recipe:Recipe,modifier:Modifier){

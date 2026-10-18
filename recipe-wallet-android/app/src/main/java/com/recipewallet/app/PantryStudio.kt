@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun PantryStudio(vm:WalletViewModel){
+@Composable internal fun rememberPantrySections(vm:WalletViewModel):List<HomeSection>{
  val state=vm.studio;val context=LocalContext.current;val scope=rememberCoroutineScope()
  var localError by remember { mutableStateOf<String?>(null) }
  var pendingPhoto by remember { mutableStateOf<Uri?>(null) }
@@ -46,7 +46,8 @@ import kotlinx.coroutines.withContext
    };state.scan(bitmap)
   }catch(e:Exception){localError=e.message?:"Choose another photo."}finally{pendingPhoto=null}}
  }
- StudioCard(tint=androidx.compose.ui.graphics.Color.White){
+ return buildList {
+ add(HomeSection("pantry-photo"){StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Pantry lens")
   StudioTitle("Add pantry items")
   Text("Snap your fridge or pantry. Review what Gemini sees, then decide what belongs in your pantry.",color=ShopInk,fontSize=15.sp)
@@ -65,7 +66,8 @@ import kotlinx.coroutines.withContext
   if(state.scanBusy){LinearProgressIndicator(Modifier.fillMaxWidth());Text("Looking for familiar ingredients…",color=ShopInk)}
   state.scanError?.let{Text(it,color=Danger,fontSize=13.sp)}
  }
- if(state.scanIds.isNotEmpty())StudioCard(tint=androidx.compose.ui.graphics.Color.White){
+ })
+ if(state.scanIds.isNotEmpty())add(HomeSection("scan-review"){StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Signal("? Photo suggestions · not confirmed",Warn)
   StudioTitle("Did we get these right?")
   SmallNote("Tap to exclude mistakes. Photos cannot establish how much you have, food safety, or freshness.")
@@ -75,7 +77,8 @@ import kotlinx.coroutines.withContext
   ShopButton("Confirm ${state.scanSelected.size} pantry items",enabled=state.scanSelected.isNotEmpty(),onClick={state.confirmScan()})
   TextButton(onClick={state.discardScan()}){Text("Discard suggestions")}
  }
- StudioCard{
+ })
+ add(HomeSection("pantry-owned"){StudioCard{
   Eyebrow("Confirmed by you")
   StudioTitle("My pantry · ${state.owned.size} items")
   InfoDisclosure("Edit pantry ingredients","${state.owned.size} confirmed items") {
@@ -86,18 +89,21 @@ import kotlinx.coroutines.withContext
   }
  }
  }
- StudioTitle("What can I make?")
- SmallNote("Ranked by the share of ingredients you have. Dietary and time filters from your meal studio still apply.")
+ })
+ add(HomeSection("pantry-heading"){StudioTitle("What can I make?")})
+ add(HomeSection("pantry-description"){SmallNote("Ranked by the share of ingredients you have. Dietary and time filters from your meal studio still apply.")})
  val matches=state.rankedRecipes().sortedByDescending { r->r.ingredients.count { it.id in state.owned }.toFloat()/r.ingredients.size }
- if(matches.isEmpty())SmallNote("No supported recipes match your time and dietary preferences.")
- matches.forEachIndexed{i,r->RecipeTile(r,state,i){vm.choose(r.id)}}
+ if(matches.isEmpty())add(HomeSection("pantry-empty"){SmallNote("No supported recipes match your time and dietary preferences.")})
+ matches.forEachIndexed{i,r->add(HomeSection("pantry-recipe:${r.id}"){RecipeTile(r,state,i){vm.choose(r.id)}})}
+ }
 }
 
-@Composable internal fun WeeklyStudio(vm:WalletViewModel){
+@Composable internal fun rememberWeeklySections(vm:WalletViewModel):List<HomeSection>{
  val state=vm.studio
  var selectedDay by rememberSaveable(state.currentWeek){mutableIntStateOf((java.time.LocalDate.now().dayOfWeek.value-1).coerceIn(0,4))}
- WeekCalendar(state,selectedDay){selectedDay=it}
- StudioCard(tint=androidx.compose.ui.graphics.Color.White){
+ return buildList {
+ add(HomeSection("week-calendar"){WeekCalendar(state,selectedDay){selectedDay=it}})
+ add(HomeSection("week-planner"){StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Your weekly ritual · week of ${state.currentWeek}")
   StudioTitle(if(state.weekDue)"Plan your week"else "Your weekly plan")
   Text("Plan five dinners using your preferences and pantry.",color=ShopInk,fontSize=14.sp)
@@ -113,21 +119,22 @@ import kotlinx.coroutines.withContext
   SmallNote("When enabled, your first visit each week sends your taste profile, recent recipe choices and pantry IDs to the backend. No background purchases or notifications.")
   }
  }
- if(state.weeklyIds.isNotEmpty())ShopButton("Prepare weekly grocery cart",onClick={state.prepareWeeklyCart()})
- state.groceryCart?.let{cart->StudioCard(tint=androidx.compose.ui.graphics.Color.White){
+ })
+ if(state.weeklyIds.isNotEmpty())add(HomeSection("week-prepare-cart"){ShopButton("Prepare weekly grocery cart",onClick={state.prepareWeeklyCart()})})
+ state.groceryCart?.let{cart->add(HomeSection("week-cart"){StudioCard(tint=androidx.compose.ui.graphics.Color.White){
   Eyebrow("Saved shopping cart · ${state.cartPeople} people")
   StudioTitle("Groceries, planned ahead")
   InfoDisclosure("View cart ingredients","${cart.ingredients.size} grocery items"){
   cart.ingredients.forEach{item->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(item.name,color=ShopInk,modifier=Modifier.weight(1f));Text("${item.quantity} ${item.unit}",color=ShopInk)}}
   }
   SmallNote("Includes pantry items until you confirm enough stock for the whole week. This draft is saved on this tablet. Shop individual dinners below.")
- }}
+ }})}
  if(state.weeklyIds.isNotEmpty()){
-  if(state.weekSource=="gemini")SmallNote("AI arranged · edited by you")
+  if(state.weekSource=="gemini")add(HomeSection("week-source"){SmallNote("AI arranged · edited by you")})
   state.weeklyIds.forEachIndexed{index,id->
    if(index==selectedDay){
    val recipe=vm.catalog.recipes.first{it.id==id}
-   StudioCard(tint=androidx.compose.ui.graphics.Color.White){
+   add(HomeSection("week-dinner:$index"){StudioCard(tint=androidx.compose.ui.graphics.Color.White){
     Eyebrow(listOf("Monday","Tuesday","Wednesday","Thursday","Friday")[index])
     FoodSticker(recipe.id,Modifier.fillMaxWidth().height(190.dp))
     Text(recipe.name,fontSize=21.sp,fontWeight=FontWeight.Bold,color=ShopInk)
@@ -137,8 +144,10 @@ import kotlinx.coroutines.withContext
      TextButton(onClick={vm.choose(recipe.id)}){Text("Shop this meal →")}
     }
    }
+  })
   }
   }
+  add(HomeSection("week-groceries"){
   val recipe=state.weeklyRecipe()!!
   StudioCard{
    Eyebrow("The big picture")
@@ -154,6 +163,8 @@ import kotlinx.coroutines.withContext
    if(quote!=null){Signal("Combined package estimate · ${quote.store.name}");Text(money(quote.charge),fontSize=32.sp,color=ShopInk);SmallNote("Whole packages, pickup fees and demo tax. Before pantry deductions and future rewards. Shop each dinner above; combined weekly checkout is not available.")}
    else SmallNote("No single demo store can supply the full week. Shop each meal separately.")
   }
+  })
+ }
  }
 }
 
