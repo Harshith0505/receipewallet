@@ -19,6 +19,15 @@ import org.junit.Test
 class HomeScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
+    @Test fun homeLoginOpensAccountAndReturnsToTheMealDraft() {
+        compose.onNodeWithText("Try: vegetarian noodles under $30").performClick()
+        compose.onNodeWithText("Login").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Your recipe library").assertIsDisplayed()
+        compose.onNodeWithText("← Home").performClick()
+        compose.onNodeWithText("Login").assertIsDisplayed()
+        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $30. I already have garlic.")
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         val image = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
@@ -74,5 +83,22 @@ class HomeScreenTest {
         compose.onNodeWithText("Choose a recipe instead").performScrollTo().performClick()
         compose.onNodeWithText("Build manually").assertIsSelected()
         compose.onNodeWithText("Choose a recipe").assertIsDisplayed()
+    }
+
+    @Test fun expiredPlanningCanBeResetFromTheError() {
+        lateinit var vm: WalletViewModel
+        compose.runOnIdle {
+            vm = ViewModelProvider(compose.activity)[WalletViewModel::class.java]
+            vm.preference = "Make it cheaper"
+            vm.aiError = "Your planning session expired. Start a new shop."
+        }
+        compose.onNodeWithText("Start a new shop").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(null, vm.aiError)
+            assertEquals("", vm.preference)
+            assertEquals(null, vm.agentPlan)
+        }
+        compose.onNodeWithText("Try: vegetarian noodles under $30").performScrollTo().performClick()
+        compose.onNodeWithText("Build my meal").performScrollTo().assertIsEnabled()
     }
 }
