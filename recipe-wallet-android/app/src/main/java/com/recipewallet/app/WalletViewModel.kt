@@ -28,7 +28,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   aiBusy=true; aiError=null; agentPlan=null; agentReply=""; agentTrace=emptyList()
   viewModelScope.launch {
    try {
-    val payload=JSONObject().put("message",message)
+    val payload=JSONObject().put("message",message).put("userId",userId)
     agentSession?.let { payload.put("sessionId",it) }
     val result=request("/plan",payload)
     val plan=result.optJSONObject("plan")
@@ -41,6 +41,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
      val q=quote(r.ingredients.filter { it.id in ids }.sumOf { it.basePrice },s,c)
      check(q.charge==plan.getLong("amount") && q.rewards==plan.getLong("rewards") && q.net==plan.getLong("net")) { "Prices changed. Please plan your shop again." }
     }
+    ownedHints=result.optJSONArray("ownedHints")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).let { o -> OwnedHint(o.getString("ingredientId"), o.getString("name"), o.getString("text")) } } } ?: emptyList()
     agentPlan=plan; agentReply=result.getString("reply"); agentSession=result.getString("sessionId")
     val trace=result.getJSONArray("trace")
     agentTrace=(0 until trace.length()).map { trace.getJSONObject(it).getString("summary") }
@@ -62,7 +63,79 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   recipeId=p.getString("recipeId"); selected=planIds("ingredientIds"); storeId=p.getString("storeId"); cardId=p.getString("cardId")
   attempt=UUID.randomUUID().toString(); error=null; step=3
  }
- fun newPlan() { agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
+
+ // ---- Purchase memory: anonymous per-install id; the backend remembers verified purchases under it ----
+ data class OwnedHint(val ingredientId: String, val name: String, val text: String)
+ data class RecentItem(val id: String, val name: String, val boughtDaysAgo: Int)
+ val userId: String = app.getSharedPreferences("recipe_wallet_pantry", android.content.Context.MODE_PRIVATE).let { p ->
+  p.getString("user_id", null) ?: UUID.randomUUID().toString().also { p.edit().putString("user_id", it).apply() }
+ }
+ var ownedHints by mutableStateOf<List<OwnedHint>>(emptyList())
+ var recentItems by mutableStateOf<List<RecentItem>>(emptyList())
+ fun loadMemory() {
+  viewModelScope.launch {
+   try {
+    val rows = request("/memory", JSONObject().put("userId", userId)).getJSONArray("likelyOwned")
+    recentItems = (0 until rows.length()).map { rows.getJSONObject(it).let { o -> RecentItem(o.getString("id"), o.getString("name"), o.getInt("boughtDaysAgo")) } }
+   } catch(e: Exception) { /* memory is optional; the app works without it */ }
+  }
+ }
+ /** "I already have this": tells the planner, which removes it from the basket and reprices. */
+ fun confirmOwned(h: OwnedHint) {
+  if(aiBusy) return
+  preference = "I already have ${h.name.lowercase()}"
+  suggest()
+ }
+ fun notOwned(h: OwnedHint) {
+  ownedHints = ownedHints.filter { it.ingredientId != h.ingredientId }
+  viewModelScope.launch { try { request("/used-up", JSONObject().put("userId", userId).put("ingredientId", h.ingredientId)) } catch(e: Exception) {} }
+ }
+ fun addRecentToPantry() {
+  pantry = pantry + recentItems.map { it.id }
+  prefs.edit().putStringSet("ids", pantry).apply()
+  pantrySuggestions = emptyList(); pantryReply = ""
+ }
+
+ // ---- Pantry: "what can I cook with what I have" (calls backend /suggest) ----
+ data class PantrySuggestion(val recipeId: String, val haveIds: List<String>, val missingIds: List<String>, val canCookNow: Boolean, val summary: String)
+ private val prefs = app.getSharedPreferences("recipe_wallet_pantry", android.content.Context.MODE_PRIVATE)
+ var pantry by mutableStateOf(prefs.getStringSet("ids", emptySet())?.toSet() ?: emptySet())
+ var pantryBusy by mutableStateOf(false)
+ var pantryError by mutableStateOf<String?>(null)
+ var pantryReply by mutableStateOf("")
+ var pantrySuggestions by mutableStateOf<List<PantrySuggestion>>(emptyList())
+ val allIngredients get() = catalog.recipes.flatMap { it.ingredients }.distinctBy { it.id }
+ fun togglePantry(id: String) {
+  pantry = if(id in pantry) pantry - id else pantry + id
+  prefs.edit().putStringSet("ids", pantry).apply()
+  pantrySuggestions = emptyList(); pantryReply = ""
+ }
+ fun suggestFromPantry() {
+  if(pantryBusy) return
+  pantryBusy = true; pantryError = null
+  viewModelScope.launch {
+   try {
+    val result = request("/suggest", JSONObject().put("pantryIds", JSONArray(pantry.toList())))
+    val rows = result.getJSONArray("suggestions")
+    fun ids(a: JSONArray) = (0 until a.length()).map { a.getString(it) }
+    pantrySuggestions = (0 until rows.length()).map { i ->
+     val o = rows.getJSONObject(i)
+     PantrySuggestion(o.getString("recipeId"), ids(o.getJSONArray("haveIds")), ids(o.getJSONArray("missingIds")), o.getBoolean("canCookNow"), o.getString("summary"))
+    }.filter { s -> catalog.recipes.any { it.id == s.recipeId } }
+    pantryReply = result.optString("reply")
+   } catch(e: Exception) { pantryError = e.message ?: "Could not reach the suggestion service." }
+   pantryBusy = false
+  }
+ }
+ /** Opens the normal basket flow with only the missing ingredients selected. */
+ fun cookFromPantry(s: PantrySuggestion) {
+  if(s.canCookNow || s.missingIds.isEmpty()) return
+  newPlan(); recipeId = s.recipeId
+  selected = s.missingIds.toSet()
+  storeId = ""; cardId = ""; attempt = UUID.randomUUID().toString(); step = 1; error = null
+ }
+ fun newPlan() { ownedHints=emptyList(); agentSession=null; agentPlan=null; agentReply=""; agentTrace=emptyList(); aiError=null; preference="" }
+ init { loadMemory() }
  var step by mutableIntStateOf(0)
  var recipeId by mutableStateOf(catalog.recipes.first().id)
  var selected by mutableStateOf(catalog.recipes.first().ingredients.map { it.id }.toSet())
@@ -101,7 +174,7 @@ class WalletViewModel(app: Application): AndroidViewModel(app) {
   busy=true; error=null; pending=current
   viewModelScope.launch {
    try {
-    val result=request("/payment-intent",JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt))
+    val result=request("/payment-intent",JSONObject().put("recipeId",recipeId).put("ingredientIds",JSONArray(selected.toList())).put("storeId",storeId).put("cardId",cardId).put("attempt",attempt).put("userId",userId))
     check(result.getString("publishableKey").startsWith("pk_test_")) { "Only Stripe test keys are allowed" }
     check(result.getLong("amount")==pending!!.charge) { "Price changed. Please review your basket." }
     intentId=result.getString("paymentIntentId")

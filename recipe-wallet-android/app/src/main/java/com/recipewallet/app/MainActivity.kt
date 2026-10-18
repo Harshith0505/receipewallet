@@ -92,6 +92,15 @@ class MainActivity: ComponentActivity() {
         Text("Interpreted preferences: ${vm.planDiet} · ${if(vm.planBudget>=0) money(vm.planBudget)+" upfront budget" else "no budget set"}${if(vm.planTime>0) " · under ${vm.planTime} minutes" else ""}",color=Muted,fontSize=12.sp)
         Text("To buy: "+planned.ingredients.filter { it.id in vm.planIds("ingredientIds") }.joinToString { it.name },color=Ink,fontSize=13.sp)
         Text("Already owned: "+planned.ingredients.filter { it.id in vm.planIds("ownedIngredientIds") }.joinToString { it.name }.ifBlank { "None specified" },color=Muted,fontSize=13.sp)
+        vm.ownedHints.forEach { h ->
+         Column(Modifier.fillMaxWidth().background(Color(0xFFE9EDDC),RoundedCornerShape(12.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+          Text("\uD83D\uDECD  "+h.text,color=Ink,fontSize=13.sp)
+          Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+           TextButton(onClick={vm.confirmOwned(h)},enabled=!vm.aiBusy) { Text("I have it, remove") }
+           TextButton(onClick={vm.notOwned(h)},enabled=!vm.aiBusy) { Text("I\u2019m out of it") }
+          }
+         }
+        }
         Text("${q.store.name} · ${q.card.name}",color=Ink,fontWeight=FontWeight.Bold)
         Text("★ ${q.store.rating} · ${q.store.distanceMiles} mi · ${q.store.address}",color=Muted,fontSize=12.sp)
         Line("Grocery estimate",money(q.groceries)); Line("Delivery estimate",money(q.store.deliveryFee))
@@ -107,6 +116,7 @@ class MainActivity: ComponentActivity() {
        DemoNote()
       }
      }
+     PantryPanel(vm)
      Eyebrow("OR CHOOSE A RECIPE YOURSELF")
      vm.catalog.recipes.forEach { r ->
       Panel(Modifier.clickable(enabled=!vm.aiBusy) { vm.choose(r.id) }) {
