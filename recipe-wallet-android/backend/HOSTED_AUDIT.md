@@ -4,7 +4,7 @@ Prepared from updated `main` at `4060a53`; deployment changes are on `codex/veyz
 
 ## Deployment
 
-Deploy the `backend/` directory as a separate Vercel project named `recipe-wallet-veyzl-audit`, using the user-selected `codinglakshmis-projects` workspace. Select the Other framework preset and Node.js 24. `vercel.json` routes requests to `api/index.mjs` with a 120-second maximum duration.
+Deploy the `backend/` directory as a separate Vercel project named `recipe-wallet-veyzl-audit`, using the user-selected `codinglakshmis-projects` workspace. Select the Other framework preset. `package.json` pins Node.js 24 to prevent an automatic major-runtime upgrade; `vercel.json` routes requests to `api/index.mjs` with a 120-second maximum duration.
 
 Configure these server-side secret environment variables before deploying:
 
