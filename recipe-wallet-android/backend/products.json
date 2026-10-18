@@ -252,5 +252,35 @@
       "black pepper",
       "pepper"
     ]
+  },
+  {
+    "id": "cumin",
+    "name": "Ground cumin",
+    "pack": "40 g pack",
+    "price": 299,
+    "aliases": [
+      "ground cumin",
+      "cumin"
+    ]
+  },
+  {
+    "id": "masala",
+    "name": "Garam masala",
+    "pack": "50 g pack",
+    "price": 399,
+    "aliases": [
+      "garam masala",
+      "masala"
+    ]
+  },
+  {
+    "id": "cucumber",
+    "name": "Cucumber",
+    "pack": "1 each pack",
+    "price": 99,
+    "aliases": [
+      "cucumber",
+      "cucumber"
+    ]
   }
 ]

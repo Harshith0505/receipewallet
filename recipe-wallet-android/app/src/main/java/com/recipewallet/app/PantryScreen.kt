@@ -38,6 +38,7 @@ internal fun PantryScreen(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val pantry: PantryViewModel = viewModel()
+    LaunchedEffect(Unit) { pantry.refresh() }
     val items = pantry.items
     val photo = pantry.photo
     val loading = pantry.busy

@@ -69,15 +69,13 @@ class SavedRecipeFlowTest {
         }
         compose.onNodeWithText("Compare complete baskets →").assertIsEnabled()
     }
-    @Test fun aboutMenuOpensAUsableDialog() {
+    @Test fun aboutDisclosureExplainsTheDemoAndPrivacy() {
         compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
-        compose.onNodeWithContentDescription("More options").performClick()
-        compose.onNodeWithText("About this demo").performClick()
-        compose.onNodeWithText("About Recipe Wallet").assertIsDisplayed()
-        compose.onNodeWithText("Got it").assertIsDisplayed()
+        compose.onNodeWithText("About this demo & privacy").performScrollTo().performClick()
+        compose.onNodeWithText("Preferences and pantry stay on this device.",substring=true).assertExists()
         screenshot("shopping-about.png")
-        compose.onNodeWithText("Got it").performClick()
-        compose.onNodeWithText("Build with AI").assertIsDisplayed()
+        compose.onNodeWithText("Build with AI").performScrollTo()
+        compose.onNodeWithText("Build with AI").assertExists()
     }
 
 }

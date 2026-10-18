@@ -20,12 +20,12 @@ class HomeScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test fun homeLoginOpensAccountAndReturnsToTheMealDraft() {
-        compose.onNodeWithText("Try: vegetarian noodles under $30").performClick()
+        compose.onNodeWithText("Use my taste profile ✨").performScrollTo().performClick()
         compose.onNodeWithText("Login").assertIsDisplayed().performClick()
         compose.onNodeWithText("Your recipe library").assertIsDisplayed()
         compose.onNodeWithText("← Home").performClick()
         compose.onNodeWithText("Login").assertIsDisplayed()
-        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $30. I already have garlic.")
+        compose.onNode(hasSetTextAction()).assertTextContains("I want comforting and familiar",substring=true)
     }
 
     private fun screenshot(name: String) {
@@ -36,9 +36,13 @@ class HomeScreenTest {
         }
     }
 
+ @org.junit.Before fun resetLocalProfile() {
+  InstrumentationRegistry.getInstrumentation().targetContext.getSharedPreferences("meal-studio-v1",android.content.Context.MODE_PRIVATE).edit().clear().commit()
+  compose.activityRule.scenario.recreate()
+ }
     @Test fun switchingBuildModesPreservesTheMealDraft() {
         compose.onNodeWithText("Build with AI").assertIsSelected()
-        compose.onNodeWithText("Try: vegetarian noodles under $30").performClick()
+        compose.onNodeWithText("Use my taste profile ✨").performClick()
         compose.onNodeWithText("Build my meal").assertIsEnabled()
         screenshot("front-page-ai.png")
         compose.onNode(hasSetTextAction()).performClick()
@@ -47,7 +51,7 @@ class HomeScreenTest {
         assertTrue("Keyboard did not open", device.wait(Until.hasObject(By.pkg(keyboardPackage)), 5000))
         compose.onNodeWithText("Build manually").performScrollTo().performClick()
         compose.onNodeWithText("Build manually").assertIsSelected()
-        compose.onNodeWithText("Choose a recipe").assertIsDisplayed()
+        compose.onNodeWithText("Choose a recipe").performScrollTo().assertIsDisplayed()
         compose.waitUntil(5000) {
             val insets = compose.activity.window.decorView.rootWindowInsets
             insets != null && !WindowInsetsCompat.toWindowInsetsCompat(insets).isVisible(WindowInsetsCompat.Type.ime())
@@ -55,7 +59,7 @@ class HomeScreenTest {
         assertTrue("Keyboard stayed open in manual mode", device.wait(Until.gone(By.pkg(keyboardPackage)), 5000))
         screenshot("front-page-manual.png")
         compose.onNodeWithText("Build with AI").performScrollTo().performClick()
-        compose.onNode(hasSetTextAction()).assertTextContains("Find me a vegetarian noodle dinner under $30. I already have garlic.")
+        compose.onNode(hasSetTextAction()).assertTextContains("I want comforting and familiar",substring=true)
     }
 
     @Test fun manualRecipeOpensAnEditableBasket() {
@@ -82,7 +86,7 @@ class HomeScreenTest {
         }
         compose.onNodeWithText("Choose a recipe instead").performScrollTo().performClick()
         compose.onNodeWithText("Build manually").assertIsSelected()
-        compose.onNodeWithText("Choose a recipe").assertIsDisplayed()
+        compose.onNodeWithText("Choose a recipe").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun retailerLookupReturnsToTheEditedIngredientBasket() {
@@ -113,7 +117,7 @@ class HomeScreenTest {
             assertEquals("", vm.preference)
             assertEquals(null, vm.agentPlan)
         }
-        compose.onNodeWithText("Try: vegetarian noodles under $30").performScrollTo().performClick()
+        compose.onNodeWithText("Use my taste profile ✨").performScrollTo().performClick()
         compose.onNodeWithText("Build my meal").performScrollTo().assertIsEnabled()
     }
     @Test fun generatedPizzaOpensItsOwnIngredientsAndExcludesOwnedFlour() {

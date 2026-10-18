@@ -28,6 +28,7 @@ class PantryScanLiveTest {
         try {
             compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
             compose.onNodeWithText("My pantry").performScrollTo().performClick()
+            compose.onNodeWithText("Edit pantry names & amounts").performScrollTo().performClick()
             compose.runOnIdle {
                 model = ViewModelProvider(compose.activity)[PantryViewModel::class.java]
                 modelReady = true

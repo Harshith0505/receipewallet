@@ -15,6 +15,7 @@ class StudentDiscountFlowTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     @Test fun studentOffersAppearInShopsAndReduceCheckoutAndReceiptTotals() {
         compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+        compose.onNodeWithText("Build manually").performScrollTo().performClick()
         compose.onNodeWithText("Tomato basil pasta").performScrollTo().performClick()
         compose.onNodeWithText("Compare complete baskets →").performScrollTo().performClick()
         compose.onNodeWithText("10% student offer · demo · applied").performScrollTo().assertIsDisplayed()

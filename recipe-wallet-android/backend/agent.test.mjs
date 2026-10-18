@@ -1,12 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createToolRunner,planShop,diffPlans} from './agent.mjs';
+import {catalog} from './pricing.mjs';
 
 const constraints={mealPreference:'noodle dinner',diet:'vegetarian',maxPrepMinutes:0,budgetCents:3000,pantryIds:['garlic']};
 test('pantry exclusion, diet filtering and pricing are grounded in catalog tools',()=>{
  const r=createToolRunner();
  const found=r.run('find_recipes',constraints);
- assert.deepEqual(found.recipes.map(x=>x.id),['noodles','bowl']);
+ assert.deepEqual(found.recipes.map(x=>x.id),catalog.recipes.filter(r=>r.id!=='pasta').map(r=>r.id));
  const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
  assert.equal(options[0].amount,1580);
  assert.equal(options[0].rewards,79);
@@ -117,4 +118,11 @@ test('generated follow-ups receive the actual previous recipe and replace stale 
  assert.equal(previous.previousGeneratedRecipe.servings,4);
  assert.equal(second.generatedRecipe.constraints.budgetCents,3000);
  assert.equal(previous.previousPlan,undefined);
+});
+test('mood remix omits chili without claiming ownership and prices requested servings',()=>{
+ const r=createToolRunner();r.run('find_recipes',{...constraints,servings:4,omitIds:['chili']});
+ const {options}=r.run('compare_baskets',{recipeIds:['noodles']});
+ const p=options[0];assert.equal(p.servings,4);assert.ok(!p.ingredientIds.includes('chili'));assert.ok(!p.ownedIngredientIds.includes('chili'));assert.deepEqual(p.omittedIngredientIds,['chili']);
+ assert.ok(p.groceries>0);
+ assert.throws(()=>r.run('find_recipes',{...constraints,servings:99}),/Invalid servings/);
 });

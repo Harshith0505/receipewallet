@@ -1,3 +1,11 @@
+# Scrapbook & weekly food story
+
+See [SCRAPBOOK_WRAP.md](SCRAPBOOK_WRAP.md) for the visual update, nutrition estimation limits, agent workflow, and Android Studio tablet preview.
+
+# Meal studio update
+
+See [MEAL_STUDIO.md](MEAL_STUDIO.md) for the frontend demo, pantry photo setup, weekly planning, and feature limits.
+
 # Recipe Wallet — Android AI grocery planner
 
 Kotlin + Jetpack Compose, API 26+, JDK 17 and Android SDK 36. This version combines the Android home and saved recipe library, whole-package grocery planner, and basket-bound Stripe test checkout.

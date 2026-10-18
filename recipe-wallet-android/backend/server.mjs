@@ -15,6 +15,9 @@ let activeScans=0;
 import {openMemory,recordPurchase,likelyOwned,ownedHints,markUsedUp,validUser} from './memory.mjs';
 let memoryPromise;
 const purchaseMemory=()=>memoryPromise??=openMemory();
+import {weeklyPlan} from './studio.mjs';
+import {buildWeeklyWrap} from './wrapup.mjs';
+import {studioScan} from './pantry-adapter.mjs';
 const secret=process.env.STRIPE_SECRET_KEY||'';
 const publishableKey=process.env.STRIPE_PUBLISHABLE_KEY||'';
 const configured=secret.startsWith('sk_test_')&&publishableKey.startsWith('pk_test_');
@@ -40,10 +43,10 @@ export async function handleRequest(req,res) {
   res.writeHead(200);res.end(krogerReturnHtml());return;
  }
  if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured,krogerCartConfigured:krogerCart.configured,pantryScanConfigured:!!process.env.PERCEPTRON_API_KEY});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/memory','/used-up','/pantry-scan','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/memory','/used-up','/pantry-scan','/weekly-plan','/weekly-wrap','/retailers/stores','/retailers/products','/retailers/basket','/retailers/cart/connect','/retailers/cart/status','/retailers/cart/add','/retailers/cart/disconnect'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
-  const limit=req.url==='/pantry-scan'?4_001_024:8192;
+  const limit=req.url==='/pantry-scan'?4_001_024:req.url==='/weekly-wrap'?64000:8192;
   let body='',bodyBytes=0;for await(const chunk of req) {bodyBytes+=Buffer.byteLength(chunk);if(bodyBytes>limit) return send(413,{error:'Request too large'});body+=chunk;}
   let input;try {input=JSON.parse(body);} catch{return send(400,{error:'Invalid JSON'});}
   if(req.url.startsWith('/retailers/cart/')) {
@@ -57,9 +60,12 @@ export async function handleRequest(req,res) {
   if(req.url==='/pantry-scan') {
    if(activeScans>=2) return send(429,{error:'Photo scanning is busy. Please try again shortly.'});
    activeScans++;
-   try {return send(200,await scanPantry(input));}
+   try {return send(200,studioScan(await scanPantry({...input,imageBase64:input?.imageBase64??input?.image})));}
    catch(e) {return send(e instanceof ScanError?e.status:502,{error:e instanceof ScanError?e.message:'Couldn’t scan this photo. Please retry.'});}
    finally {activeScans--;}
+  }
+  if(req.url==='/weekly-plan'||req.url==='/weekly-wrap') {
+   try {return send(200,await (req.url==='/weekly-plan'?weeklyPlan(input):buildWeeklyWrap(input)));} catch(e){return send(e.message.startsWith('Invalid')?400:503,{error:e.message});}
   }
   if(req.url==='/grocery-quotes') {
    try {return send(200,planGroceries(input,catalog));} catch(e) {return send(400,{error:e.message});}

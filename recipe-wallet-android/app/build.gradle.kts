@@ -19,13 +19,14 @@ android {
  namespace = "com.recipewallet.app"
  compileSdk = 36
  defaultConfig {
-  applicationId = "com.recipewallet.app"
+  applicationId = if(providers.gradleProperty("previewInstall").orNull=="true") "com.recipewallet.app.preview" else "com.recipewallet.app"
+  manifestPlaceholders["appLabel"] = if(providers.gradleProperty("previewInstall").orNull=="true") "Recipe Wallet Preview" else "Recipe Wallet"
   buildConfigField("String", "SUPABASE_URL", quoteBuildString(cloudUrl))
   buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", quoteBuildString(cloudKey))
   minSdk = 26
   targetSdk = 36
-  versionCode = 2
-  versionName = "1.2-task3"
+  versionCode = 4
+  versionName = "1.4-scrapbook"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   buildConfigField("String", "BACKEND_URL", "\"${providers.gradleProperty("BACKEND_URL").getOrElse("http://127.0.0.1:4242")}\"")
  }

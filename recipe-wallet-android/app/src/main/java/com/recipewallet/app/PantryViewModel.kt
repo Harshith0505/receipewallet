@@ -24,6 +24,10 @@ internal class PantryViewModel(app: Application) : AndroidViewModel(app) {
     var notice by mutableStateOf<String?>(null); private set
     val busy get() = loading || scanning
 
+    fun refresh() {
+        if (busy) return
+        runCatching { store.read() }.onSuccess { items = it }.onFailure { error = "Couldn’t reload your pantry. Please reopen the app." }
+    }
     fun showError(message: String) { error = message }
     fun loadPhoto(load: () -> Bitmap) {
         if (busy) return

@@ -25,6 +25,7 @@ class PantryScreenTest {
         try {
             compose.runOnUiThread { compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
             compose.onNodeWithText("My pantry").performScrollTo().performClick()
+            compose.onNodeWithText("Edit pantry names & amounts").performScrollTo().performClick()
             compose.onNodeWithText("Take a photo").assertIsDisplayed()
             compose.onNodeWithText("Choose a photo").assertIsDisplayed()
             screenshot("pantry-page-empty.png")
@@ -44,7 +45,7 @@ class PantryScreenTest {
             compose.onNodeWithText(title).assertDoesNotExist()
             assertFalse(store.read().any { it.id == saved.id })
             compose.onNodeWithText("← Back").performScrollTo().performClick()
-            compose.onNodeWithText("What’s for dinner?").assertIsDisplayed()
+            compose.onNodeWithText("Add pantry items").assertIsDisplayed()
         } finally { store.write(store.read().filterNot { it.name == title }) }
     }
 }
