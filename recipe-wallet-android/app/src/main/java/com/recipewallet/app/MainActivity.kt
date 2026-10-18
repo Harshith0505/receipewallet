@@ -78,8 +78,10 @@ class MainActivity : ComponentActivity() {
 private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
     var retailerPrices by rememberSaveable { mutableStateOf(false) }
     if (retailerPrices) {
-        RetailerScreen(if (vm.step == 1) vm.recipe.ingredients.filter { it.id in vm.selected }.map { it.name } else emptyList(),
-            onBack = { retailerPrices = false })
+        RetailerScreen(if (vm.step == 1) vm.recipe.ingredients.filter { it.id in vm.selected }.map {
+            RetailerNeed(it.id, it.name, if (vm.isPersonal) "Review the saved recipe amount and choose sufficient packages."
+                else "${kotlin.math.ceil(it.quantity.toDouble() * vm.servings / vm.recipe.baseServings).toLong()} ${it.unit} needed for ${vm.servings} servings")
+        } else emptyList(), onBack = { retailerPrices = false }, contextId = if (vm.step == 1) vm.recipeId else "browse")
         return
     }
     val openRetailerPrices: () -> Unit = { if (vm.canEditCheckout) retailerPrices = true }

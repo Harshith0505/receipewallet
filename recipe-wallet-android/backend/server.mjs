@@ -22,13 +22,13 @@ export async function handleRequest(req,res) {
  res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
  const send=(status,data)=>{res.writeHead(status);res.end(JSON.stringify(data));};
  if(req.method==='GET'&&req.url==='/health') return send(200,{ok:true,stripeConfigured:configured,aiConfigured:!!process.env.GEMINI_API_KEY,krogerConfigured:retailer.configured});
- if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/retailers/stores','/retailers/products'].includes(req.url)) return send(404,{error:'Not found'});
+ if(req.method!=='POST'||!['/payment-intent','/verify','/recommend','/plan','/grocery-quotes','/suggest','/retailers/stores','/retailers/products','/retailers/basket'].includes(req.url)) return send(404,{error:'Not found'});
  if(['/payment-intent','/verify'].includes(req.url)&&!configured) return send(503,{error:'Stripe test keys are not configured on the backend. Follow README setup, or use the confirmation preview.'});
  try {
   let body='';for await(const chunk of req) {body+=chunk;if(body.length>8192) return send(413,{error:'Request too large'});}
   let input;try {input=JSON.parse(body);} catch{return send(400,{error:'Invalid JSON'});}
   if(req.url.startsWith('/retailers/')) {
-   try { return send(200,await retailer[req.url.endsWith('/stores')?'stores':'products'](input)); }
+   try { return send(200,await retailer[req.url.split('/').pop()](input)); }
    catch(e) {return send(e instanceof RetailerFailure?e.status:502,{error:e instanceof RetailerFailure?e.message:'Retailer search is unavailable. Please try again.'});}
   }
   if(req.url==='/grocery-quotes') {

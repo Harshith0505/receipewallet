@@ -14,7 +14,7 @@ See [Grocery planner](GROCERY_PLANNER.md) and [Tablet setup](TABLET_SETUP.md) fo
 
 ## Retailer price lookup
 
-**Check retailer prices** on the home screen and **Look up retailer prices** on the ingredient screen search Kroger-family stores by ZIP and fetch product prices for the selected location. Requires backend-only Kroger client credentials; see [Kroger setup](RETAILER_SETUP.md). Missing prices/stock remain unknown, and no sample prices are used as fallback. Lookup has provider/timestamp labels and store directions. Recipe recommendations and Stripe test baskets still use sample catalog prices; retailer ordering and real rewards are not enabled by this lookup.
+**Check retailer prices** on the home screen and **Look up retailer prices** on the ingredient screen search Kroger-family stores by ZIP and fetch product prices for the selected location. Match each remaining recipe ingredient to a unit-priced product, review its package size, choose whole-package counts, then **Refresh & review live basket**. The backend re-fetches product prices before calculating the item subtotal; product edits discard the quote and store changes clear selections. Package-to-recipe conversions require human review. Requires backend-only Kroger client credentials; see [Kroger setup](RETAILER_SETUP.md). Missing prices/stock remain unknown, and no sample prices are used as fallback. Live subtotals exclude unconfirmed tax, fees, promotions and rewards. AI recommendations, multi-store comparison and Stripe test baskets still use sample catalog prices; the live basket does not place an order or payment.
 
 ## Planning and pricing
 

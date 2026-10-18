@@ -75,5 +75,7 @@ test('retailer routes distinguish unavailable credentials from invalid requests 
  assert.equal(missing.body.stores,undefined);
  assert.equal((await request({postalCode:'bad'}, {url:'/retailers/stores'})).status,400);
  assert.equal((await request(null, {url:'/retailers/products'})).status,400);
+ assert.equal((await request({storeId:'1',items:[]}, {url:'/retailers/basket'})).status,400);
+ assert.equal((await request({storeId:'1',items:[{productId:'1',itemId:'1',quantity:1}]}, {url:'/retailers/basket'})).status,503);
  assert.equal((await request({}, {method:'GET',url:'/health'})).body.krogerConfigured,false);
 });

@@ -97,3 +97,80 @@ test('malformed provider responses fail clearly instead of fabricating a catalog
   const client = createRetailer({...credentials, fetcher: async url => url.includes('/token') ? response({access_token: 'token', expires_in: 1800}) : response({data: null})});
   await assert.rejects(client.stores({postalCode: '98105'}), e => e.status === 502);
 });
+
+const packageProduct = (overrides = {}) => ({productId: '0001', description: 'Penne', items: [{
+  itemId: 'v1', size: '16 oz', soldBy: 'UNIT', price: {regular: 1.33, promo: 0.99}, inventory: {stockLevel: 'HIGH'}, ...overrides
+}]});
+function basketFixture(product = packageProduct()) {
+  const calls = [];
+  const client = createRetailer({...credentials, fetcher: async url => {
+    calls.push(url);
+    return url.includes('/token') ? response({access_token: 'token', expires_in: 1800}) : response({data: product});
+  }});
+  return {client, calls};
+}
+const selection = {storeId: '70500123', items: [{productId: '0001', itemId: 'v1', quantity: 3}]};
+
+test('basket re-fetches store-specific unit prices and ignores client totals and promotions', async () => {
+  const {client, calls} = basketFixture();
+  const result = await client.basket({...selection, subtotalCents: 1, items: selection.items.map(item => ({...item, priceCents: 1}))});
+  assert.equal(result.subtotalCents, 399);
+  assert.equal(result.items[0].quantity, 3);
+  assert.equal(result.items[0].regularPriceCents, 133);
+  assert.equal(result.items[0].promotionalPriceCents, 99);
+  assert.equal(result.pricingScope, 'item-subtotal-only');
+  assert.equal(result.finalChargeCents, null);
+  assert.equal(result.taxCents, null);
+  assert.equal(result.feesCents, null);
+  assert.equal(result.rewardsCents, null);
+  assert.equal(result.orderPlaced, false);
+  assert.equal(result.stockQuantitiesVerified, false);
+  const url = new URL(calls.find(url => url.includes('/products/')));
+  assert.equal(url.pathname, '/v1/products/0001');
+  assert.equal(url.searchParams.get('filter.locationId'), '70500123');
+});
+
+test('basket rejects duplicate variants, invalid quantities and oversized requests before network use', async () => {
+  const client = createRetailer({...credentials, fetcher: () => assert.fail('network called')});
+  const row = selection.items[0];
+  for (const items of [null, [], [row, row], [{...row, quantity: 0}], [{...row, quantity: 1.5}], [{...row, quantity: 21}], [{...row, productId: '../token'}], Array.from({length:13}, (_, i) => ({...row, productId:String(i)}))]) {
+    await assert.rejects(client.basket({storeId: selection.storeId, items}), e => e.status === 400);
+  }
+});
+
+test('basket cannot turn unknown, by-weight, out-of-stock or unpriced items into a package subtotal', async () => {
+  for (const overrides of [{soldBy: 'WEIGHT'}, {soldBy: undefined}, {size: null}, {price: {}}, {price: {regular: 0.001}}, {inventory: {stockLevel: 'TEMPORARILY_OUT_OF_STOCK'}}]) {
+    const {client} = basketFixture(packageProduct(overrides));
+    await assert.rejects(client.basket(selection), e => e.status === 409);
+  }
+  const {client} = basketFixture();
+  await assert.rejects(client.basket({...selection, items:[{...selection.items[0], itemId:'notfound'}]}), e => e.status === 409);
+});
+
+test('basket refresh reflects changed regular prices, while unknown stock remains explicitly unverified', async () => {
+  const product = packageProduct({inventory: undefined});
+  const {client} = basketFixture(product);
+  assert.equal((await client.basket(selection)).subtotalCents,399);
+  product.items[0].price.regular = 1.49;
+  const refreshed = await client.basket(selection);
+  assert.equal(refreshed.subtotalCents,447);
+  assert.equal(refreshed.items[0].stockLevel,null);
+  assert.equal(refreshed.stockQuantitiesVerified,false);
+});
+
+test('basket preserves different variants and fetches each product only once', async () => {
+  const product = packageProduct();
+  product.items.push({...product.items[0], itemId:'v2', size:'32 oz', price:{regular:2.49}});
+  const {client,calls} = basketFixture(product);
+  const result = await client.basket({...selection, items:[...selection.items,{productId:'0001',itemId:'v2',quantity:2}]});
+  assert.equal(result.subtotalCents,897);
+  assert.equal(calls.filter(url=>url.includes('/products/')).length,1);
+  assert.deepEqual(result.items.map(item=>item.itemId),['v1','v2']);
+});
+
+test('basket does not accept the wrong provider product or an unsafe monetary total', async () => {
+  const wrong = basketFixture({...packageProduct(),productId:'other'});
+  await assert.rejects(wrong.client.basket(selection), e => e.status === 502);
+  const overflow = basketFixture(packageProduct({price:{regular:Number.MAX_SAFE_INTEGER/100}}));
+  await assert.rejects(overflow.client.basket(selection), e => e.status === 502);
+});
