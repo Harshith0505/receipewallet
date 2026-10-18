@@ -27,6 +27,14 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  val ingredients=catalog.recipes.flatMap { it.ingredients }.distinctBy { it.id }
  var pinnedIds by mutableStateOf(ids("pins").toSet());private set
  fun togglePin(id:String){pinnedIds=if(id in pinnedIds)pinnedIds-id else pinnedIds+id;saved.edit().putString("pins",JSONArray(pinnedIds.toList()).toString()).apply()}
+ var avoid by mutableStateOf(saved.getString("avoid","")?:"");private set
+ var faith by mutableStateOf(saved.getString("faith","None")?:"None");private set
+ var pickedMood by mutableIntStateOf(saved.getInt("pickedMood",0));private set
+ fun chooseMood(){pickedMood=mood;saved.edit().putInt("pickedMood",mood).apply()}
+ fun updateAvoid(value:String){avoid=value.take(180);saved.edit().putString("avoid",avoid).apply()}
+ fun updateFaith(value:String){faith=value;saved.edit().putString("faith",value).apply()}
+ fun conflicts(recipe:Recipe)=excludedIngredientNames(recipe.ingredients.map{it.name},avoid)
+ fun fits(recipe:Recipe)=conflicts(recipe).isEmpty()
  var history by mutableStateOf(ids("history").filter { id->catalog.recipes.any { it.id==id } });private set
  var owned by mutableStateOf(ids("owned").filter { id->ingredients.any { it.id==id } }.toSet());private set
  var mood by mutableIntStateOf(saved.getInt("mood",0).coerceIn(0,3));private set
@@ -48,7 +56,7 @@ internal class MealStudioState(private val context:Context,private val catalog:C
  var autoCart by mutableStateOf(saved.getBoolean("autoCart",false));private set
  var cartIds by mutableStateOf(ids("cartIds").filter{id->catalog.recipes.any{it.id==id}});private set
  var cartPeople by mutableIntStateOf(saved.getInt("cartPeople",people));private set
- fun prepareWeeklyCart(){if(weeklyIds.isEmpty())return;cartIds=weeklyIds.toList();cartPeople=people;saved.edit().putString("cartIds",JSONArray(cartIds).toString()).putInt("cartPeople",cartPeople).apply()}
+ fun prepareWeeklyCart(){if(weeklyIds.isEmpty())return;if(weeklyIds.any{id->!fits(catalog.recipes.first{it.id==id})}){weekError="Your plan contains excluded ingredients. Rebuild it with your current filters.";return};cartIds=weeklyIds.toList();cartPeople=people;saved.edit().putString("cartIds",JSONArray(cartIds).toString()).putInt("cartPeople",cartPeople).apply()}
  fun updateAutoCart(value:Boolean){autoCart=value;saved.edit().putBoolean("autoCart",value).apply();if(value)prepareWeeklyCart()}
  val groceryCart get()=weeklyRecipe(cartIds,cartPeople)
  var weekBusy by mutableStateOf(false);private set
@@ -89,21 +97,23 @@ internal class MealStudioState(private val context:Context,private val catalog:C
   scope.launch {try {
    val result=request("/weekly-plan",JSONObject().put("preferences",prompt()).put("history",JSONArray(history)).put("pantryIds",JSONArray(owned.toList())).put("vegetarian",vegetarian).put("maxMinutes",minutes.toInt()))
    val a=result.getJSONArray("recipeIds");val ids=List(a.length()){a.getString(it)}
-   check(ids.size==5&&ids.all { id->catalog.recipes.any { it.id==id } }) { "Unsupported weekly plan. Try again." }
+   check(ids.size==5&&ids.all { id->catalog.recipes.any { it.id==id && fits(it) && (!vegetarian||it.id!="pasta") } }) { "Unsupported weekly plan. Try again." }
    weeklyIds=ids;weekSource=result.getString("source");weekStamp=currentWeek;saveWeek()
   }catch(e:Exception){weekError=e.message?:"Connect the backend to build your week."}finally{weekBusy=false}}
  }
  fun buildLocalWeek(){
-  val recipes=rankedRecipes();if(recipes.isEmpty())return
+  val recipes=rankedRecipes();if(recipes.isEmpty()){weekError="No catalog recipe matches these exclusions. Revise your filters.";return}
   weeklyIds=List(5){recipes[it%recipes.size].id};weekSource="local";weekStamp=currentWeek;weekError=null;saveWeek()
  }
  fun swapDay(index:Int){val options=rankedRecipes();if(index !in weeklyIds.indices||options.isEmpty())return;val next=options[(options.indexOfFirst { it.id==weeklyIds[index] }+1)%options.size];weeklyIds=weeklyIds.toMutableList().apply { set(index,next.id) };saveWeek()}
  private fun saveWeek(){if(autoCart)prepareWeeklyCart();saved.edit().putString("week",JSONArray(weeklyIds).toString()).putString("weekSource",weekSource).putString("weekStamp",weekStamp).apply()}
- fun rankedRecipes()=catalog.recipes.filter { (!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(when(mood){0->if(r.id=="pasta")4 else 0;1->if(r.id=="bowl")4 else 0;2->if(r.id=="noodles")4 else 0;else->45-r.prepTime}) }
+ fun rankedRecipes()=catalog.recipes.filter { fits(it)&&(!vegetarian||it.id!="pasta")&&it.prepTime<=minutes.toInt() }.sortedByDescending { r->r.ingredients.count { it.id in owned }*3+history.count { it==r.id }*(if(novelty>.65f)-1 else 1)+(when(pickedMood){0->if(r.id=="pasta")4 else 0;1->if(r.id=="bowl")4 else 0;2->if(r.id=="noodles")4 else 0;else->45-r.prepTime}) }
  fun estimate(recipe:Recipe)=catalog.stores.map { store->packageQuote(recipe,recipe.ingredients.map { it.id }.toSet()-owned,store,catalog.cards.first(),catalog.productOffers,people,"pickup",false) }.filter { it.complete }.minByOrNull { it.charge }
  fun prompt():String=buildString {
-  append("I want ${mealMoods[mood].prompt}, for $people people, under $${budget.toInt()}, at most ${minutes.toInt()} minutes.")
+  append("I want ${mealMoods[pickedMood].prompt}, for $people people, under $${budget.toInt()}, at most ${minutes.toInt()} minutes.")
   append(if(novelty>.65f)" I want something different from my recent choices." else " Familiar flavors are welcome.")
+  if(avoid.isNotBlank())append(" Exclude these allergens or ingredients: $avoid. Check product labels and cross-contact separately.")
+  if(faith!="None")append(" $faith preferences: flag ingredients requiring certification review; do not claim certification.")
   if(vegetarian)append(" Vegetarian only.")
   if(owned.isNotEmpty())append(" I already have "+ingredients.filter { it.id in owned }.joinToString { it.name }+".")
   favorite?.let { append(" I often choose ${it.name}; suggest something that fits those tastes.") }

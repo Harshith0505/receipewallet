@@ -1,5 +1,7 @@
 package com.recipewallet.app
 
+import androidx.compose.ui.graphics.Color
+
 import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
@@ -79,6 +81,8 @@ private fun Wallet(vm: WalletViewModel, pay: () -> Unit) {
 @Composable
 private fun IngredientPage(vm: WalletViewModel) {
     PageHeading("Ingredients", vm.recipe.name)
+    if(!vm.studio.fits(vm.recipe))Signal("Excluded ingredients: "+vm.studio.conflicts(vm.recipe).joinToString()+". Choose another recipe or revise your exclusions.",Danger)
+    if(vm.studio.faith!="None")Signal("${vm.studio.faith}: verify product certification and preparation.",Warn)
     SmallNote(if(vm.isPersonal) "Confirm the suggested products and pack counts against your saved recipe. Uncheck pantry items." else "Unchecked ingredients are already in your pantry. Purchases use whole packages.")
     ShoppingControls(vm)
     Signal("${vm.selected.size} to buy · ${vm.recipe.ingredients.size-vm.selected.size} already owned")
@@ -174,7 +178,8 @@ private fun ShopComparison(vm: WalletViewModel) {
     StudioTitle("At a glance")
     SmallNote("Green = lowest upfront total · Amber = higher total · Red = unavailable. Estimated future rewards are separate.")
     quotes.forEach { quote ->
-        QuietCard(selected=quote.store.id==selected,modifier=Modifier.clickable { selected=quote.store.id }) {
+        StudioCard(tint=when(quote.store.id){"market"->Color(0xFFE2E9F7);"fresh"->Color(0xFFF6DFDC);else->Color(0xFFE1EADA)},modifier=Modifier.clickable { selected=quote.store.id }) {
+            Text(when(quote.store.id){"market"->"QFC  /  FRESH PICKS";"fresh"->"TRADER JOE’S  /  NEIGHBORHOOD FINDS";else->"WHOLE FOODS  /  MARKET FINDS"},color=when(quote.store.id){"market"->Color(0xFF254C87);"fresh"->Color(0xFFA33235);else->Color(0xFF31593B)},fontWeight=FontWeight.Bold)
             AmountRow(quote.store.name,if(quote.complete)money(quote.charge)else "Unavailable",prominent=true)
             Signal(if(!quote.complete)"! Cannot supply this basket"else if(quote.charge==best)"✓ Lowest upfront total"else "↗ ${money(quote.charge-(best?:quote.charge))} more",if(!quote.complete)Danger else if(quote.charge==best)Good else Warn)
         }

@@ -223,7 +223,7 @@ private fun shortDate(date:LocalDate)=date.format(DateTimeFormatter.ofPattern("M
     }
    }
    val id=result.optString("nextRecipeId");val next=vm.catalog.recipes.firstOrNull{it.id==id}
-   if(next!=null){SmallNote("A recipe idea, not a nutrition prescription. Review ingredients and your dietary needs.");ShopButton("Make ${next.name} →",onClick={vm.choose(next.id)})}
+   if(next!=null&&vm.studio.fits(next)){SmallNote("A recipe idea, not a nutrition prescription. Review ingredients and your dietary needs.");ShopButton("Make ${next.name} →",onClick={vm.choose(next.id)})}
    var traceOpen by remember(result){mutableStateOf(false)}
    TextButton(onClick={traceOpen=!traceOpen}){Text(if(traceOpen)"Hide the agent's steps ↑"else "See how it got here ↓")}
    if(traceOpen){val trace=result.optJSONArray("trace");if(trace!=null)repeat(trace.length()){n->Text("${n+1}. ${trace.getJSONObject(n).optString("summary")}",fontSize=13.sp,lineHeight=20.sp,color=ShopInk)}}

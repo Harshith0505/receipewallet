@@ -1,6 +1,8 @@
 # Scrapbook & food-story wrap-up
 
-The Android app now uses a warm paper-and-sticker design: cream dot paper, plum ink, strawberry pink, apricot, lilac, and butter yellow. Food characters are native Canvas vectors (no remote images, neon theme, pot badge, or circular hero). Recipe discovery uses a responsive staggered pinboard with persistent hearts and an optional pinned filter.
+The Android app uses warm fibrous paper, gently torn edges, rose gingham tape and real bundled food photographs (see PHOTO_CREDITS.md). Mood cards support left-to-pass and right-to-choose, with a persistent chosen mood. Recipe discovery uses a draggable floating recipe garden with persistent hearts and a pinned filter. The catalog currently contains three recipes; it does not invent extra options.
+
+Custom ingredient exclusions apply to catalog discovery, weekly-plan validation, AI-plan acceptance, and checkout eligibility, including ingredients marked as already owned. This is ingredient-name screening with a small alias list, not a product safety guarantee. Halal/kosher preferences enter agent requests and display certification-review reminders. No products are represented as certified. Store comparison cards use store-inspired colors and names with simulated pricing.
 
 ## My wrap-up
 

@@ -2,6 +2,10 @@ package com.recipewallet.app
 
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import kotlin.random.Random
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.*
@@ -34,11 +38,12 @@ internal val Danger=Color(0xFFA64451)
 @Composable internal fun StudioCard(tint:Color=Color(0xFFFFFCF5),modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
  Box(modifier.fillMaxWidth().padding(top=8.dp)) {
   Column(Modifier.fillMaxWidth().shadow(2.dp,RoundedCornerShape(8.dp)).background(tint,RoundedCornerShape(8.dp)).border(1.dp,ShopLine,RoundedCornerShape(8.dp)).drawBehind {
-   val margin=17.dp.toPx()
-   drawLine(Color(0xFFC7838C).copy(alpha=.35f),androidx.compose.ui.geometry.Offset(margin,0f),androidx.compose.ui.geometry.Offset(margin,size.height),1.dp.toPx())
-   var y=42.dp.toPx();while(y<size.height){drawLine(ShopInk.copy(alpha=.055f),androidx.compose.ui.geometry.Offset(margin,y),androidx.compose.ui.geometry.Offset(size.width,y),.6.dp.toPx());y+=28.dp.toPx()}
+   val random=Random(42)
+   repeat(1800){val x=random.nextFloat()*size.width;val y=random.nextFloat()*size.height;drawLine(ShopInk.copy(alpha=.07f),Offset(x,y),Offset(x+random.nextFloat()*5f,y+1.3f),.6f)}
+   val edge=Random(9);var x=0f
+   while(x<size.width){drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,0f));drawCircle(ShopPaper,edge.nextFloat()*2.dp.toPx()+1.dp.toPx(),Offset(x,size.height));x+=4.dp.toPx()}
   }.padding(start=30.dp,end=22.dp,top=27.dp,bottom=22.dp),verticalArrangement=Arrangement.spacedBy(14.dp),content=content)
-  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Citrus)
+  WashiTape(Modifier.align(Alignment.TopCenter).offset(y=(-7).dp).size(72.dp,17.dp),color=Color(0xFFD0A8BF))
  }
 }
 @Composable internal fun Eyebrow(text:String){Text(text.uppercase(),fontSize=11.sp,letterSpacing=1.5.sp,color=ShopMuted,fontWeight=FontWeight.Bold)}
@@ -49,19 +54,21 @@ internal val Danger=Color(0xFFA64451)
 }
 @Composable internal fun MoodDeck(state:MealStudioState,enabled:Boolean=true){
  var drag by remember { mutableFloatStateOf(0f) }
+ val movement by animateFloatAsState(drag, spring(),label="Mood card motion")
  val mood=mealMoods[state.mood]
  val tint=listOf(Peach,Mint,Lilac,Citrus)[state.mood]
- StudioCard(tint=tint,modifier=Modifier.graphicsLayer { translationX=drag*.18f;rotationZ=drag/100f }.pointerInput(enabled,state.mood){if(enabled)detectHorizontalDragGestures(onDragStart={drag=0f},onDragEnd={if(kotlin.math.abs(drag)>70)state.updateMood(state.mood+if(drag<0)1 else 3);drag=0f},onDragCancel={drag=0f}){change,delta->change.consume();drag+=delta}}){
+ StudioCard(tint=tint,modifier=Modifier.graphicsLayer { translationX=movement;rotationZ=movement/24f }.pointerInput(enabled,state.mood){if(enabled)detectHorizontalDragGestures(onDragStart={drag=0f},onDragEnd={if(kotlin.math.abs(drag)>100){if(drag>0)state.chooseMood();state.updateMood(state.mood+1)};drag=0f},onDragCancel={drag=0f}){change,delta->change.consume();drag+=delta}}){
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){Eyebrow("The flavor of your day");Text("${state.mood+1} / 4",fontSize=12.sp,color=ShopMuted)}
   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)){
-   FoodSticker(when(state.mood){0->"bread";1->"avo";2->"tomato";else->"lemon"},Modifier.size(78.dp))
+   FoodSticker(when(state.mood){0->"bread";1->"avo";2->"tomato";else->"lemon"},Modifier.size(145.dp))
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)){StudioTitle(mood.name);Text(mood.subtitle,color=ShopInk,fontSize=14.sp)}
   }
+  if(kotlin.math.abs(drag)>35)Signal(if(drag>0)"LOVE THIS ♥" else "PASS ↶",if(drag>0)Good else Warn)
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-   OutlinedButton(enabled=enabled,onClick={state.updateMood(state.mood+3)}){Text("← Previous mood")}
-   TextButton(enabled=enabled,onClick={state.updateMood(state.mood+1)}){Text("Next mood →")}
+   OutlinedButton(enabled=enabled,onClick={state.updateMood(state.mood+1)}){Text("← Pass")}
+   TextButton(enabled=enabled,onClick={state.chooseMood();state.updateMood(state.mood+1)}){Text("Love this ♥ →")}
   }
-  Text("Swipe to explore · Tap “Use my taste profile” to apply to AI",fontSize=11.sp,color=ShopMuted)
+  Text("Swipe left to pass · Swipe right to choose · Chosen: ${mealMoods[state.pickedMood].name}",fontSize=11.sp,color=ShopMuted)
  }
 }
 @Composable internal fun TasteControls(state:MealStudioState,enabled:Boolean=true){
@@ -79,6 +86,10 @@ internal val Danger=Color(0xFFA64451)
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){SmallNote("Familiar favorites");SmallNote("Something new")}
   Text("Meal budget · $${state.budget.toInt()}",fontWeight=FontWeight.Medium,color=ShopInk)
   Slider(modifier=Modifier.semantics { contentDescription="Meal budget in dollars" },value=state.budget,onValueChange={state.updateBudget(it)},valueRange=10f..80f,steps=13,enabled=enabled)
+  Text("Dietary preferences",fontWeight=FontWeight.Bold,color=ShopInk)
+  OutlinedTextField(value=state.avoid,onValueChange={state.updateAvoid(it)},enabled=enabled,label={Text("Allergens / ingredients to avoid")},placeholder={Text("milk, wheat, sesame, peanuts")},supportingText={Text("Comma-separated. Matches named ingredients; labels and cross-contact still need review.")},modifier=Modifier.fillMaxWidth())
+  Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("None","Halal","Kosher").forEach{choice->FilterChip(selected=state.faith==choice,onClick={state.updateFaith(choice)},enabled=enabled,label={Text(choice)})}}
+  if(state.faith!="None")Signal("${state.faith} · certification must be checked",Warn)
   Row(verticalAlignment=Alignment.CenterVertically){Switch(enabled=enabled,checked=state.vegetarian,onCheckedChange={state.updateVegetarian(it)});Text("Vegetarian recipes",Modifier.padding(start=12.dp),color=ShopInk)}
  }
 }
