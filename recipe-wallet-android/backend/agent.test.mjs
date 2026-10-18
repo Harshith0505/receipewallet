@@ -59,10 +59,14 @@ test('real orchestration executes model-requested tools and preserves signed ste
  assert.ok(requests[1].input.some(s=>s.type==='thought'&&s.signature==='test-signature'));
  assert.ok(requests[1].input.some(s=>s.type==='function_result'&&s.call_id==='call_0'));
 });
-test('provider failures and tool-less text never become an approved plan',async()=>{
+test('provider failures remain errors and plain replies never become a payable plan',async()=>{
  await assert.rejects(()=>planShop('Dinner',{}, {apiKey:''}),/GEMINI_API_KEY/);
  await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:false,status:429,json:async()=>({})})}),/rate limit/);
- await assert.rejects(()=>planShop('Dinner',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'model_output',content:[{type:'text',text:'Paid!'}]}]})})}),/did not check/);
+ const result=await planShop('A question',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[{type:'thought',content:[{type:'text',text:'Private reasoning'}]},{type:'model_output',content:[{type:'text',text:'A plain answer, without a basket.'}]}]})})});
+ assert.equal(result.reply,'A plain answer, without a basket.');
+ assert.equal(result.plan,null);assert.deepEqual(result.trace,[]);
+ assert.ok(!JSON.stringify(result).includes('Private reasoning'));
+ await assert.rejects(()=>planShop('A question',{}, {apiKey:'test',fetchImpl:async()=>({ok:true,json:async()=>({steps:[]})})}),/empty reply/);
 });
 test('follow-up context is passed to Gemini, with no hidden default budget',async()=>{
  let captured;

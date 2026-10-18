@@ -36,7 +36,7 @@ export async function handleRequest(req,res) {
       (input.message!==undefined&&input.prompt!==undefined&&input.message!==input.prompt)) {
     return send(400,{error:'Describe your shop in 1–600 characters using message or prompt.'});
    }
-   try {return send(200,await sessionPlan({...input,message}));} catch(e) {return send(503,{error:e.message});}
+   try {return send(200,await sessionPlan({...input,message}));} catch(e) {return send(e.status===429?429:503,{error:e.message});}
   }
   if(req.url==='/suggest') {
    try {return send(200,await suggestFromPantry(input));} catch(e) {return send(e.message.startsWith('Invalid')?400:503,{error:e.message});}
